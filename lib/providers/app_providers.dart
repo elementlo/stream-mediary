@@ -1,0 +1,237 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../data/db/app_database.dart';
+import '../data/repositories/drift_engine_task_store.dart';
+import '../data/repositories/settings_repository.dart';
+import '../engine/download_engine.dart';
+import '../engine/engine_events.dart';
+import '../engine/engine_store.dart';
+import '../engine/task/task_state.dart';
+
+/// Singleton application database.
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase();
+  ref.onDispose(db.close);
+  return db;
+});
+
+final settingsRepositoryProvider = Provider<SettingsRepository>(
+    (ref) => SettingsRepository(ref.watch(appDatabaseProvider)));
+
+final engineTaskStoreProvider = Provider<EngineTaskStore>(
+    (ref) => DriftEngineTaskStore(ref.watch(appDatabaseProvider)));
+
+/// Default save directory resolved per platform.
+final defaultSaveDirProvider = FutureProvider<String>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  final configured = await settings.defaultSaveDir();
+  if (configured != null && configured.isNotEmpty) return configured;
+
+  final dir = await getApplicationDocumentsDirectory();
+  return dir.path;
+});
+
+/// The download engine, configured from settings.
+final downloadEngineProvider = Provider<DownloadEngine>((ref) {
+  final store = ref.watch(engineTaskStoreProvider);
+  final engine = DownloadEngine(store: store);
+  ref.onDispose(engine.dispose);
+  return engine;
+});
+
+/// Live task view model surfaced to the UI.
+class TaskViewModel {
+  const TaskViewModel({
+    required this.id,
+    required this.title,
+    required this.url,
+    required this.state,
+    this.doneSegments = 0,
+    this.totalSegments = 0,
+    this.downloadedBytes = 0,
+    this.totalBytes = 0,
+    this.bytesPerSecond = 0,
+    this.mergeFraction = 0,
+    this.outputPath,
+    this.errorMsg,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String title;
+  final String url;
+  final TaskState state;
+  final int doneSegments;
+  final int totalSegments;
+  final int downloadedBytes;
+  final int totalBytes;
+  final double bytesPerSecond;
+  final double mergeFraction;
+  final String? outputPath;
+  final String? errorMsg;
+  final int createdAt;
+
+  double get downloadFraction =>
+      totalBytes <= 0 ? 0 : downloadedBytes / totalBytes;
+
+  TaskViewModel copyWith({
+    TaskState? state,
+    int? doneSegments,
+    int? totalSegments,
+    int? downloadedBytes,
+    int? totalBytes,
+    double? bytesPerSecond,
+    double? mergeFraction,
+    String? outputPath,
+    String? errorMsg,
+  }) =>
+      TaskViewModel(
+        id: id,
+        title: title,
+        url: url,
+        state: state ?? this.state,
+        doneSegments: doneSegments ?? this.doneSegments,
+        totalSegments: totalSegments ?? this.totalSegments,
+        downloadedBytes: downloadedBytes ?? this.downloadedBytes,
+        totalBytes: totalBytes ?? this.totalBytes,
+        bytesPerSecond: bytesPerSecond ?? this.bytesPerSecond,
+        mergeFraction: mergeFraction ?? this.mergeFraction,
+        outputPath: outputPath ?? this.outputPath,
+        errorMsg: errorMsg,
+        createdAt: createdAt,
+      );
+}
+
+/// Notifier maintaining the live map of task view models, fed by both the
+/// persisted database stream and engine events.
+class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
+  StreamSubscription<List<Task>>? _dbSub;
+  StreamSubscription<EngineEvent>? _eventSub;
+
+  @override
+  Map<String, TaskViewModel> build() {
+    final db = ref.watch(appDatabaseProvider);
+    final engine = ref.watch(downloadEngineProvider);
+
+    _dbSub?.cancel();
+    _dbSub = db.watchAllTasks().listen((rows) {
+      final next = <String, TaskViewModel>{};
+      for (final row in rows) {
+        next[row.id] = TaskViewModel(
+          id: row.id,
+          title: row.title,
+          url: row.url,
+          state: TaskState.values[row.status],
+          doneSegments: row.doneSegments,
+          totalSegments: row.totalSegments,
+          downloadedBytes: row.downloadedBytes,
+          totalBytes: row.totalBytes,
+          outputPath: row.outputPath,
+          errorMsg: row.errorMsg,
+          createdAt: row.createdAt,
+        );
+      }
+      state = next;
+    });
+
+    _eventSub?.cancel();
+    _eventSub = engine.events.listen(_onEngineEvent);
+
+    ref.onDispose(() {
+      _dbSub?.cancel();
+      _eventSub?.cancel();
+    });
+
+    // Restore unfinished tasks on startup.
+    Future.microtask(engine.restoreUnfinished);
+
+    return state;
+  }
+
+  void _onEngineEvent(EngineEvent event) {
+    final current = state[event.taskId];
+    if (current == null) return;
+
+    switch (event) {
+      case TaskStateChangedEvent():
+        state = {
+          ...state,
+          event.taskId: current.copyWith(
+            state: event.state,
+            errorMsg: event.error,
+          ),
+        };
+      case ProgressEvent():
+        state = {
+          ...state,
+          event.taskId: current.copyWith(
+            doneSegments: event.doneSegments,
+            totalSegments: event.totalSegments,
+            downloadedBytes: event.downloadedBytes,
+            totalBytes: event.totalBytes,
+            bytesPerSecond: event.bytesPerSecond,
+          ),
+        };
+      case MergeProgressEvent():
+        state = {
+          ...state,
+          event.taskId: current.copyWith(mergeFraction: event.fraction),
+        };
+      case TaskCompletedEvent():
+        state = {
+          ...state,
+          event.taskId: current.copyWith(
+            state: TaskState.completed,
+            outputPath: event.outputPath,
+          ),
+        };
+      case ErrorOccurredEvent():
+        state = {
+          ...state,
+          event.taskId: current.copyWith(errorMsg: event.message),
+        };
+    }
+  }
+}
+
+final taskListProvider =
+    NotifierProvider<TaskListNotifier, Map<String, TaskViewModel>>(
+        TaskListNotifier.new);
+
+/// Theme mode backed by settings.
+final themeModeProvider =
+    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    _load();
+    return ThemeMode.system;
+  }
+
+  Future<void> _load() async {
+    final settings = ref.read(settingsRepositoryProvider);
+    final mode = await settings.themeMode();
+    state = _parse(mode);
+  }
+
+  ThemeMode _parse(String mode) => switch (mode) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    final settings = ref.read(settingsRepositoryProvider);
+    await settings.setThemeMode(switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      _ => 'system',
+    });
+  }
+}

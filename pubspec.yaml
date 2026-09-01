@@ -1,0 +1,71 @@
+name: stream_mediary
+description: "Cross-platform M3U8 media downloader"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^3.0.0
+  riverpod_annotation: ^3.0.0
+
+  # Routing
+  go_router: ^16.0.0
+
+  # Networking
+  dio: ^5.7.0
+
+  # Crypto (pure Dart AES-CBC)
+  pointycastle: ^4.0.0
+
+  # Database
+  drift: ^2.20.0
+  sqlite3_flutter_libs: ^0.5.0
+
+  # Video playback (supports desktop + .ts)
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.5
+
+  # Platform utilities
+  path_provider: ^2.1.0
+  path: ^1.9.0
+  file_selector: ^1.0.0
+  permission_handler: ^12.0.0
+  window_manager: ^0.5.0
+  open_filex: ^4.5.0
+
+  # Models & utils
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+  intl: ^0.20.0
+  collection: ^1.19.0
+  logging: ^1.3.0
+  uuid: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # Code generation
+  build_runner: ^2.7.0
+  drift_dev: ^2.20.0
+  freezed: ^3.0.0
+  json_serializable: ^6.9.0
+  riverpod_generator: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
