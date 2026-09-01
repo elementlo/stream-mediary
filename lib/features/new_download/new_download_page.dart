@@ -349,16 +349,22 @@ class _PreviewCard extends StatelessWidget {
                     Text(l10n.selectVariant,
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 8),
-                    for (var i = 0; i < master.variants.length; i++)
-                      RadioListTile<int>(
-                        value: i,
-                        groupValue: selectedVariant,
-                        onChanged: (v) =>
-                            v != null ? onVariantChanged(v) : null,
-                        title: Text(master.variants[i].displayName),
-                        subtitle: Text(master.variants[i].codecs ?? ''),
-                        dense: true,
+                    RadioGroup<int>(
+                      groupValue: selectedVariant,
+                      onChanged: (v) =>
+                          v != null ? onVariantChanged(v) : null,
+                      child: Column(
+                        children: [
+                          for (var i = 0; i < master.variants.length; i++)
+                            RadioListTile<int>(
+                              value: i,
+                              title: Text(master.variants[i].displayName),
+                              subtitle: Text(master.variants[i].codecs ?? ''),
+                              dense: true,
+                            ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
               MediaParseResult(:final media) => _MediaSummary(media: media),

@@ -38,8 +38,7 @@ class DownloadEngine {
   })  : _store = store,
         _config = config,
         _dio = dio ?? Dio(),
-        _defaultSaveDir = defaultSaveDir;
-  final EngineTaskStore _store;
+        _defaultSaveDir = defaultSaveDir;  final EngineTaskStore _store;
   EngineConfig _config;
   final Dio _dio;
   final String? _defaultSaveDir;
