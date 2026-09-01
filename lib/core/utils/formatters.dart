@@ -15,7 +15,7 @@ String formatBytes(int bytes) {
 }
 
 String formatSpeed(double bytesPerSecond) =>
-    '${formatBytes(bytesPerSecond.round())}';
+    formatBytes(bytesPerSecond.round());
 
 String formatDuration(double seconds) {
   if (seconds <= 0 || !seconds.isFinite) return '--:--';
