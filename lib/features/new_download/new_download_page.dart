@@ -89,41 +89,48 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
     final engine = ref.read(downloadEngineProvider);
     final l10n = AppLocalizations.of(context);
 
-    MediaPlaylist media;
-    String effectiveUrl = _parsedUrl;
+    try {
+      MediaPlaylist media;
+      String effectiveUrl = _parsedUrl;
 
-    switch (result) {
-      case MasterParseResult(:final master):
-        final variant = master.variants[_selectedVariant];
-        effectiveUrl = variant.url;
-        final content = await engine.parseForPreview(
-          variant.url,
-          headers: _headerMap,
-        );
-        if (content is! MediaParseResult) {
-          setState(() => _error = l10n.errorParseFailed('variant not media'));
-          return;
-        }
-        media = content.media;
-      case MediaParseResult(media: final parsed):
-        media = parsed;
+      switch (result) {
+        case MasterParseResult(:final master):
+          final variant = master.variants[_selectedVariant];
+          effectiveUrl = variant.url;
+          final content = await engine.parseForPreview(
+            variant.url,
+            headers: _headerMap,
+          );
+          if (content is! MediaParseResult) {
+            setState(() =>
+                _error = l10n.errorParseFailed('variant not media'));
+            return;
+          }
+          media = content.media;
+        case MediaParseResult(media: final parsed):
+          media = parsed;
+      }
+
+      final id = const Uuid().v4();
+      final request = DownloadRequest(
+        url: effectiveUrl,
+        headers: _headerMap,
+        customKeyHex: _keyController.text.trim().isEmpty
+            ? null
+            : _keyController.text.trim(),
+        customIvHex: _ivController.text.trim().isEmpty
+            ? null
+            : _ivController.text.trim(),
+        saveDir: _saveDir,
+      );
+
+      await engine.startTask(id: id, request: request, playlist: media);
+      if (mounted) context.go('/downloads');
+    } on M3u8ParseException catch (e) {
+      if (mounted) setState(() => _error = l10n.errorParseFailed(e.message));
+    } catch (e) {
+      if (mounted) setState(() => _error = l10n.errorParseFailed('$e'));
     }
-
-    final id = const Uuid().v4();
-    final request = DownloadRequest(
-      url: effectiveUrl,
-      headers: _headerMap,
-      customKeyHex: _keyController.text.trim().isEmpty
-          ? null
-          : _keyController.text.trim(),
-      customIvHex: _ivController.text.trim().isEmpty
-          ? null
-          : _ivController.text.trim(),
-      saveDir: _saveDir,
-    );
-
-    await engine.startTask(id: id, request: request, playlist: media);
-    if (mounted) context.go('/downloads');
   }
 
   @override
