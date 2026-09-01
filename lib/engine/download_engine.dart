@@ -34,14 +34,17 @@ class DownloadEngine {
     required EngineTaskStore store,
     EngineConfig config = const EngineConfig(),
     Dio? dio,
-    String? defaultSaveDir,
+    this.defaultSaveDir,
   })  : _store = store,
         _config = config,
-        _dio = dio ?? Dio(),
-        _defaultSaveDir = defaultSaveDir;  final EngineTaskStore _store;
+        _dio = dio ?? Dio();
+
+  final EngineTaskStore _store;
   EngineConfig _config;
   final Dio _dio;
-  final String? _defaultSaveDir;
+
+  /// Directory used when a request does not specify one.
+  String? defaultSaveDir;
 
   final M3u8Parser _parser = const M3u8Parser();
   final SegmentDownloader _downloader = SegmentDownloader();
@@ -112,7 +115,7 @@ class DownloadEngine {
     required DownloadRequest request,
     required MediaPlaylist playlist,
   }) async {
-    final saveDir = request.saveDir ?? _defaultSaveDir ?? '.';
+    final saveDir = request.saveDir ?? defaultSaveDir ?? '.';
     final now = DateTime.now().millisecondsSinceEpoch;
 
     final record = EngineTaskRecord(

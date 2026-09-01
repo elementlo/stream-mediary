@@ -57,6 +57,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (dir != null) {
         setState(() => _saveDir = dir);
         await ref.read(settingsRepositoryProvider).setDefaultSaveDir(dir);
+        ref.read(downloadEngineProvider).defaultSaveDir = dir;
       }
     } catch (_) {
       // Platform without directory picker; keep current value.
@@ -185,6 +186,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   await ref
                       .read(settingsRepositoryProvider)
                       .setMergePreference(_mergePreference);
+                  final engine = ref.read(downloadEngineProvider);
+                  engine.updateConfig(engine.config.copyWith(
+                    preferMp4: _mergePreference == 'prefer_mp4',
+                  ));
                 },
               ),
             ),
