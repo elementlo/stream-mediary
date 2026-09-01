@@ -38,8 +38,29 @@ final defaultSaveDirProvider = FutureProvider<String>((ref) async {
 /// The download engine, configured from settings.
 final downloadEngineProvider = Provider<DownloadEngine>((ref) {
   final store = ref.watch(engineTaskStoreProvider);
+  final settings = ref.watch(settingsRepositoryProvider);
   final engine = DownloadEngine(store: store);
   ref.onDispose(engine.dispose);
+
+  // Apply persisted settings (concurrency, merge preference, ffmpeg path,
+  // default save dir) once the database is readable.
+  Future.microtask(() async {
+    final taskConcurrency = await settings.taskConcurrency();
+    final segmentConcurrency = await settings.segmentConcurrency();
+    final merge = await settings.mergePreference();
+    final ffmpegPath = await settings.ffmpegPath();
+    engine.updateConfig(engine.config.copyWith(
+      taskConcurrency: taskConcurrency,
+      segmentConcurrency: segmentConcurrency,
+      preferMp4: merge == 'prefer_mp4',
+      ffmpegPath: ffmpegPath,
+    ));
+    final saveDir = await settings.defaultSaveDir();
+    if (saveDir != null && saveDir.isNotEmpty) {
+      engine.defaultSaveDir = saveDir;
+    }
+  });
+
   return engine;
 });
 
