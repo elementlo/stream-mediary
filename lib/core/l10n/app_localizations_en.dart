@@ -230,4 +230,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String speed(Object speed) {
     return '$speed/s';
   }
+
+  @override
+  String get storagePermissionHint =>
+      'Grant \"All files access\" in system settings to save into the chosen folder';
+
+  @override
+  String get storagePermissionGranted => 'Storage permission granted';
 }

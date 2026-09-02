@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +32,12 @@ final defaultSaveDirProvider = FutureProvider<String>((ref) async {
   final configured = await settings.defaultSaveDir();
   if (configured != null && configured.isNotEmpty) return configured;
 
+  if (Platform.isAndroid) {
+    // App-specific external dir is user-visible and needs no permission.
+    final ext = await getExternalStorageDirectory();
+    if (ext != null) return ext.path;
+  }
+
   final dir = await getApplicationDocumentsDirectory();
   return dir.path;
 });
@@ -55,10 +62,8 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
       preferMp4: merge == 'prefer_mp4',
       ffmpegPath: ffmpegPath,
     ));
-    final saveDir = await settings.defaultSaveDir();
-    if (saveDir != null && saveDir.isNotEmpty) {
-      engine.defaultSaveDir = saveDir;
-    }
+    final saveDir = await ref.read(defaultSaveDirProvider.future);
+    engine.defaultSaveDir = saveDir;
   });
 
   return engine;

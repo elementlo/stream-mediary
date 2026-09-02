@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/utils/storage_access.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../engine/merge/ffmpeg_remuxer.dart';
 import '../../providers/app_providers.dart';
@@ -50,9 +51,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _chooseSaveDir() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await StorageAccess.hasAccess()) {
+      final granted = await StorageAccess.requestAccess();
+      if (!granted) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.storagePermissionHint)),
+          );
+        }
+        return;
+      }
+    }
     try {
       final dir = await file_selector.getDirectoryPath(
-        confirmButtonText: AppLocalizations.of(context).chooseDirectory,
+        confirmButtonText: l10n.chooseDirectory,
       );
       if (dir != null) {
         setState(() => _saveDir = dir);

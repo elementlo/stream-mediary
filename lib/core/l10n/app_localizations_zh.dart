@@ -228,4 +228,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String speed(Object speed) {
     return '$speed/s';
   }
+
+  @override
+  String get storagePermissionHint => '需在系统设置中授予「所有文件访问」权限，才能保存到所选目录';
+
+  @override
+  String get storagePermissionGranted => '已获取存储权限';
 }
