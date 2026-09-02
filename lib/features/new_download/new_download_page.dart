@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/l10n/app_localizations.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/storage_access.dart';
 import '../../engine/engine_config.dart';
 import '../../engine/m3u8/m3u8_parser.dart';
 import '../../engine/m3u8/playlist.dart';
@@ -229,9 +230,22 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   }
 
   Future<void> _chooseDir() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await StorageAccess.hasAccess()) {
+      final granted = await StorageAccess.requestAccess();
+      if (!granted) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.storagePermissionHint)),
+          );
+        }
+        return;
+      }
+    }
     try {
       final dir = await file_selector.getDirectoryPath(
-        confirmButtonText: AppLocalizations.of(context).chooseDirectory,
+        confirmButtonText: l10n.chooseDirectory,
       );
       if (dir != null) setState(() => _saveDir = dir);
     } catch (_) {

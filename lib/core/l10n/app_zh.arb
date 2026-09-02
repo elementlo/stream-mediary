@@ -81,5 +81,7 @@
     "placeholders": {
       "speed": {}
     }
-  }
+  },
+  "storagePermissionHint": "需在系统设置中授予「所有文件访问」权限，才能保存到所选目录",
+  "storagePermissionGranted": "已获取存储权限"
 }

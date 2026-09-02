@@ -115,7 +115,7 @@ class DownloadEngine {
     required DownloadRequest request,
     required MediaPlaylist playlist,
   }) async {
-    final saveDir = request.saveDir ?? defaultSaveDir ?? '.';
+    final saveDir = await _resolveSaveDir(request.saveDir);
     final now = DateTime.now().millisecondsSinceEpoch;
 
     final record = EngineTaskRecord(
@@ -242,6 +242,13 @@ class DownloadEngine {
         final file = _segmentFile(segmentsDir, seq);
         final size = file.existsSync() ? file.lengthSync() : 0;
         runtime.downloadedBytes += size;
+        // Estimate total size from the average of completed segments so the
+        // progress bar and speed are meaningful before all sizes are known.
+        if (runtime.doneSegments > 0 && runtime.totalSegments > 0) {
+          runtime.totalBytes = runtime.downloadedBytes *
+              runtime.totalSegments ~/
+              runtime.doneSegments;
+        }
         runtime.sampleSpeed();
         _emitProgress(record, runtime);
         unawaited(_markSegment(record.id, seq, SegmentStatus.done, size));
@@ -302,6 +309,32 @@ class DownloadEngine {
 
   String _taskDir(EngineTaskRecord record) =>
       p.join(record.saveDir, _sanitize(record.title));
+
+  /// Resolves a writable save directory.
+  ///
+  /// Prefers the user-chosen directory, falling back to the configured
+  /// default and finally the app documents directory when the chosen path
+  /// cannot be created/written (e.g. a SAF URI without write permission).
+  Future<String> _resolveSaveDir(String? requested) async {
+    final candidates = <String>[
+      if (requested != null && requested.isNotEmpty) requested,
+      if (defaultSaveDir != null && defaultSaveDir!.isNotEmpty) defaultSaveDir!,
+    ];
+    for (final dir in candidates) {
+      try {
+        final d = Directory(dir);
+        await d.create(recursive: true);
+        final probe = File(p.join(d.path, '.write_probe'));
+        await probe.writeAsString('ok');
+        await probe.delete();
+        return dir;
+      } catch (_) {
+        _log.warning('Save dir not writable, trying next: $dir');
+      }
+    }
+    // Last resort: current directory.
+    return '.';
+  }
 
   String _sanitize(String name) =>
       name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
@@ -446,6 +479,13 @@ class DownloadEngine {
           // Ignore.
         }
       }
+    }
+
+    // Segments are fully merged; free the disk space.
+    try {
+      await segmentsDir.delete(recursive: true);
+    } on FileSystemException {
+      // Ignore.
     }
 
     return finalOutput;

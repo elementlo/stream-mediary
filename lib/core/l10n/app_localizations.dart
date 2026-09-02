@@ -529,6 +529,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{speed}/s'**
   String speed(Object speed);
+
+  /// No description provided for @storagePermissionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'需在系统设置中授予「所有文件访问」权限，才能保存到所选目录'**
+  String get storagePermissionHint;
+
+  /// No description provided for @storagePermissionGranted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已获取存储权限'**
+  String get storagePermissionGranted;
 }
 
 class _AppLocalizationsDelegate

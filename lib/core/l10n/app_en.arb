@@ -81,5 +81,7 @@
     "placeholders": {
       "speed": {}
     }
-  }
+  },
+  "storagePermissionHint": "Grant \"All files access\" in system settings to save into the chosen folder",
+  "storagePermissionGranted": "Storage permission granted"
 }
