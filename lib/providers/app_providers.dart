@@ -178,7 +178,9 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
     // Restore unfinished tasks on startup.
     Future.microtask(engine.restoreUnfinished);
 
-    return state;
+    // Initial state; the database stream above populates it shortly after.
+    // (Reading `state` inside build is illegal in Riverpod 3.)
+    return const {};
   }
 
   void _onEngineEvent(EngineEvent event) {
