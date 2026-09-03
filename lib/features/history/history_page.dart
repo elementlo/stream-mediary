@@ -90,7 +90,7 @@ class _HistoryTile extends ConsumerWidget {
           onSelected: (value) async {
             switch (value) {
               case 'play':
-                context.go('/player/${task.id}');
+                context.push('/player/${task.id}');
               case 'redownload':
                 await engine.retryTask(task.id);
                 if (context.mounted) context.go('/downloads');

@@ -83,5 +83,8 @@
     }
   },
   "storagePermissionHint": "需在系统设置中授予「所有文件访问」权限，才能保存到所选目录",
-  "storagePermissionGranted": "已获取存储权限"
+  "storagePermissionGranted": "已获取存储权限",
+  "playerNoOutput": "该任务没有可播放的输出文件",
+  "playerFileMissing": "输出文件不存在，可能已被删除",
+  "playerOpenFailed": "无法播放该文件（格式不受支持或已损坏）"
 }

@@ -234,4 +234,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get storagePermissionGranted => '已获取存储权限';
+
+  @override
+  String get playerNoOutput => '该任务没有可播放的输出文件';
+
+  @override
+  String get playerFileMissing => '输出文件不存在，可能已被删除';
+
+  @override
+  String get playerOpenFailed => '无法播放该文件（格式不受支持或已损坏）';
 }

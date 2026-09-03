@@ -237,4 +237,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storagePermissionGranted => 'Storage permission granted';
+
+  @override
+  String get playerNoOutput => 'This task has no playable output file';
+
+  @override
+  String get playerFileMissing =>
+      'The output file does not exist; it may have been deleted';
+
+  @override
+  String get playerOpenFailed =>
+      'Cannot play this file (unsupported format or corrupted)';
 }

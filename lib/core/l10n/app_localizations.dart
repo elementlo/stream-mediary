@@ -541,6 +541,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已获取存储权限'**
   String get storagePermissionGranted;
+
+  /// No description provided for @playerNoOutput.
+  ///
+  /// In zh, this message translates to:
+  /// **'该任务没有可播放的输出文件'**
+  String get playerNoOutput;
+
+  /// No description provided for @playerFileMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'输出文件不存在，可能已被删除'**
+  String get playerFileMissing;
+
+  /// No description provided for @playerOpenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法播放该文件（格式不受支持或已损坏）'**
+  String get playerOpenFailed;
 }
 
 class _AppLocalizationsDelegate
