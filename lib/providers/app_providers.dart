@@ -52,17 +52,20 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
   // Apply persisted settings (concurrency, merge preference, ffmpeg path,
   // default save dir) once the database is readable.
   Future.microtask(() async {
-    final taskConcurrency = await settings.taskConcurrency();
-    final segmentConcurrency = await settings.segmentConcurrency();
-    final merge = await settings.mergePreference();
-    final ffmpegPath = await settings.ffmpegPath();
+    final (taskConcurrency, segmentConcurrency, merge, ffmpegPath, saveDir) =
+        await (
+      settings.taskConcurrency(),
+      settings.segmentConcurrency(),
+      settings.mergePreference(),
+      settings.ffmpegPath(),
+      ref.read(defaultSaveDirProvider.future),
+    ).wait;
     engine.updateConfig(engine.config.copyWith(
       taskConcurrency: taskConcurrency,
       segmentConcurrency: segmentConcurrency,
       preferMp4: merge == 'prefer_mp4',
       ffmpegPath: ffmpegPath,
     ));
-    final saveDir = await ref.read(defaultSaveDirProvider.future);
     engine.defaultSaveDir = saveDir;
   });
 

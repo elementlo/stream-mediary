@@ -36,8 +36,14 @@ class FfmpegRemuxer {
 
   /// Probes for a usable ffmpeg binary.
   ///
-  /// [userPath], when provided, is tried first.
+  /// [userPath], when provided, is tried first. On mobile platforms ffmpeg is
+  /// not expected to be installed, so probing (which forks a process per
+  /// candidate) is skipped entirely to avoid UI stalls.
   Future<FfmpegProbeResult> probe({String? userPath}) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return const FfmpegProbeResult(available: false);
+    }
+
     final candidates = <String>[
       if (userPath != null && userPath.trim().isNotEmpty) userPath.trim(),
       ..._candidatePaths,
