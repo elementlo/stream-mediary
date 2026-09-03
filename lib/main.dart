@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
@@ -11,8 +10,8 @@ import 'app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize media_kit native libraries (must be called once).
-  MediaKit.ensureInitialized();
+  // media_kit native libraries are loaded lazily on first Player creation
+  // (see playerProvider) to keep cold start fast.
 
   // Basic logging.
   Logger.root.level = Level.INFO;

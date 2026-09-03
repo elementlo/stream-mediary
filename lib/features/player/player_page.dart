@@ -11,6 +11,8 @@ import '../../providers/app_providers.dart';
 
 /// Provides a [Player] for a given task's output file.
 final playerProvider = Provider.family<Player, String>((ref, path) {
+  // Load media_kit native libraries on first use so cold start stays fast.
+  MediaKit.ensureInitialized();
   final player = Player();
   ref.onDispose(player.dispose);
   player.open(Media(path), play: true);

@@ -37,9 +37,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _load() async {
     final settings = ref.read(settingsRepositoryProvider);
-    final concurrency = await settings.taskConcurrency();
-    final merge = await settings.mergePreference();
-    final dir = await settings.defaultSaveDir();
+    final (concurrency, merge, dir) = await (
+      settings.taskConcurrency(),
+      settings.mergePreference(),
+      settings.defaultSaveDir(),
+    ).wait;
     if (mounted) {
       setState(() {
         _taskConcurrency = concurrency;
