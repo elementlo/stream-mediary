@@ -83,5 +83,8 @@
     }
   },
   "storagePermissionHint": "Grant \"All files access\" in system settings to save into the chosen folder",
-  "storagePermissionGranted": "Storage permission granted"
+  "storagePermissionGranted": "Storage permission granted",
+  "playerNoOutput": "This task has no playable output file",
+  "playerFileMissing": "The output file does not exist; it may have been deleted",
+  "playerOpenFailed": "Cannot play this file (unsupported format or corrupted)"
 }
