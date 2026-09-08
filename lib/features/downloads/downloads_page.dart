@@ -24,7 +24,7 @@ class DownloadsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.downloads)),
       body: active.isEmpty
-          ? _EmptyState(onAdd: () => context.go('/new'))
+          ? _EmptyState(onAdd: () => context.push('/new'))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: active.length,

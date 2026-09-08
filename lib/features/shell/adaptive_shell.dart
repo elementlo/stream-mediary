@@ -67,7 +67,7 @@ class AdaptiveShell extends StatelessWidget {
                   leading: Padding(
                     padding: const EdgeInsets.only(top: 8, bottom: 16),
                     child: FloatingActionButton(
-                      onPressed: () => context.go('/new'),
+                      onPressed: () => context.push('/new'),
                       tooltip: l10n.newDownload,
                       child: const Icon(Icons.add),
                     ),
@@ -90,7 +90,7 @@ class AdaptiveShell extends StatelessWidget {
         return Scaffold(
           body: child,
           floatingActionButton: FloatingActionButton(
-            onPressed: () => context.go('/new'),
+            onPressed: () => context.push('/new'),
             tooltip: l10n.newDownload,
             child: const Icon(Icons.add),
           ),

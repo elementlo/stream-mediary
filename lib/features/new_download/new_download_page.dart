@@ -143,7 +143,8 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
         title: Text(l10n.newDownload),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/downloads'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/downloads'),
         ),
       ),
       body: ListView(
