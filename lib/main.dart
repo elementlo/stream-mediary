@@ -28,7 +28,7 @@ Future<void> main() async {
       const WindowOptions(
         minimumSize: Size(960, 600),
         size: Size(1120, 720),
-        title: 'Stream Mediary',
+        title: 'Mediary',
       ),
       () async {
         await windowManager.show();

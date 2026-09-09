@@ -10,7 +10,7 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => 'Stream Mediary';
+  String get appTitle => 'Mediary';
 
   @override
   String get navDownloads => '下载';

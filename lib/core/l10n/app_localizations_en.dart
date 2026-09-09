@@ -10,7 +10,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Stream Mediary';
+  String get appTitle => 'Mediary';
 
   @override
   String get navDownloads => 'Downloads';
