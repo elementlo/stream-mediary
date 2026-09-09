@@ -1,8 +1,9 @@
 name: Build Windows
 
 on:
+  # Build only on demand: manual trigger from the Actions page, or when a
+  # release tag (v*) is pushed. Ordinary pushes no longer build.
   push:
-    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
