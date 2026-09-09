@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/app_localizations.dart';
 import '../../core/utils/formatters.dart';
-import '../../data/db/app_database.dart';
+import '../../engine/download_engine.dart';
 import '../../engine/task/task_state.dart';
 import '../../providers/app_providers.dart';
 
@@ -23,8 +23,22 @@ class HistoryPage extends ConsumerWidget {
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
+    final completedCount =
+        terminal.where((t) => t.state == TaskState.completed).length;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.history)),
+      appBar: AppBar(
+        title: Text(l10n.history),
+        actions: [
+          if (completedCount > 0)
+            IconButton(
+              tooltip: l10n.clearCompleted,
+              icon: const Icon(Icons.cleaning_services_rounded),
+              onPressed: () =>
+                  _confirmClearCompleted(context, ref, completedCount),
+            ),
+        ],
+      ),
       body: terminal.isEmpty
           ? Center(
               child: Column(
@@ -45,6 +59,88 @@ class HistoryPage extends ConsumerWidget {
               itemBuilder: (context, i) =>
                   _HistoryTile(task: terminal[i]),
             ),
+    );
+  }
+
+  Future<void> _confirmClearCompleted(
+    BuildContext context,
+    WidgetRef ref,
+    int completedCount,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final engine = ref.read(downloadEngineProvider);
+    final tasks = ref.read(taskListProvider);
+
+    final deleteFiles = await showDialog<bool>(
+      context: context,
+      builder: (context) => _DeleteConfirmDialog(
+        title: l10n.confirmClearCompletedTitle,
+        message: l10n.confirmClearCompletedMessage,
+      ),
+    );
+    if (deleteFiles == null) return;
+
+    final completedIds = tasks.values
+        .where((t) => t.state == TaskState.completed)
+        .map((t) => t.id)
+        .toList();
+    for (final id in completedIds) {
+      await engine.removeTask(id, deleteFiles: deleteFiles);
+    }
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.clearedCompleted(completedIds.length))),
+    );
+  }
+}
+
+/// Confirm dialog with an "also delete local files" checkbox.
+///
+/// Pops `true` (delete files), `false` (keep files) or null (canceled).
+class _DeleteConfirmDialog extends StatefulWidget {
+  const _DeleteConfirmDialog({required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  State<_DeleteConfirmDialog> createState() => _DeleteConfirmDialogState();
+}
+
+class _DeleteConfirmDialogState extends State<_DeleteConfirmDialog> {
+  bool _deleteFiles = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(widget.message),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            value: _deleteFiles,
+            onChanged: (v) => setState(() => _deleteFiles = v ?? false),
+            title: Text(l10n.deleteLocalFiles),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _deleteFiles),
+          child: Text(l10n.confirm),
+        ),
+      ],
     );
   }
 }
@@ -69,7 +165,6 @@ class _HistoryTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final db = ref.read(appDatabaseProvider);
     final engine = ref.read(downloadEngineProvider);
 
     return Card(
@@ -97,7 +192,7 @@ class _HistoryTile extends ConsumerWidget {
               case 'open':
                 await _openFolder();
               case 'delete':
-                await _confirmDelete(context, db);
+                await _confirmDelete(context, engine);
             }
           },
           itemBuilder: (context) => [
@@ -157,27 +252,16 @@ class _HistoryTile extends ConsumerWidget {
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, AppDatabase db) async {
+  Future<void> _confirmDelete(BuildContext context, DownloadEngine engine) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final deleteFiles = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.confirmDeleteTitle),
-        content: Text(l10n.confirmDeleteMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.confirm),
-          ),
-        ],
+      builder: (context) => _DeleteConfirmDialog(
+        title: l10n.confirmDeleteTitle,
+        message: l10n.confirmDeleteMessage,
       ),
     );
-    if (confirmed == true) {
-      await db.deleteTask(task.id);
-    }
+    if (deleteFiles == null) return;
+    await engine.removeTask(task.id, deleteFiles: deleteFiles);
   }
 }

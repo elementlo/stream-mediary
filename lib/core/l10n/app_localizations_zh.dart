@@ -304,4 +304,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mergeOpenOutput => '打开文件';
+
+  @override
+  String get deleteLocalFiles => '同时删除本地文件';
+
+  @override
+  String get clearCompleted => '清除已完成';
+
+  @override
+  String get confirmClearCompletedTitle => '清除已完成任务';
+
+  @override
+  String get confirmClearCompletedMessage => '确定要清除所有已完成的下载记录吗？';
+
+  @override
+  String clearedCompleted(Object count) {
+    return '已清除 $count 条已完成记录';
+  }
 }

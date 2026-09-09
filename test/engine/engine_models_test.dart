@@ -25,6 +25,32 @@ void main() {
       const r = DownloadRequest(url: 'not-a-url');
       expect(r.effectiveTitle, 'not-a-url');
     });
+
+    test('skips generic playlist names and uses the parent directory', () {
+      const r = DownloadRequest(url: 'https://cdn/live/my-show/index.m3u8');
+      expect(r.effectiveTitle, 'my-show');
+    });
+
+    test('skips multiple stacked generic names', () {
+      const r = DownloadRequest(
+          url: 'https://cdn/ep07/hls/master/index.m3u8?token=x');
+      expect(r.effectiveTitle, 'ep07');
+    });
+
+    test('generic name is case-insensitive', () {
+      const r = DownloadRequest(url: 'https://cdn/show/INDEX.m3u8');
+      expect(r.effectiveTitle, 'show');
+    });
+
+    test('falls back to host when every segment is generic', () {
+      const r = DownloadRequest(url: 'https://cdn.example.com/index.m3u8');
+      expect(r.effectiveTitle, 'cdn.example.com');
+    });
+
+    test('meaningful last segment still wins', () {
+      const r = DownloadRequest(url: 'https://cdn/videos/episode01.m3u8');
+      expect(r.effectiveTitle, 'episode01');
+    });
   });
 
   group('EngineConfig.copyWith', () {

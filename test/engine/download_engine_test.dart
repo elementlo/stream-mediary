@@ -136,6 +136,70 @@ void main() {
     await engine.dispose();
   });
 
+  test('duplicate titles get a numeric suffix so folders never clash',
+      () async {
+    final lines = <String>['#EXTM3U', '#EXT-X-TARGETDURATION:2'];
+    for (var i = 0; i < 2; i++) {
+      server.segments[i] = List.filled(16, i);
+      lines.add('#EXTINF:2.0,');
+      lines.add('seg$i.ts');
+    }
+    lines.add('#EXT-X-ENDLIST');
+    server.playlist = lines.join('\n');
+    await server.start();
+
+    final store = InMemoryTaskStore();
+    final engine = DownloadEngine(
+      store: store,
+      config: const EngineConfig(preferMp4: false),
+      defaultSaveDir: tempDir.path,
+    );
+
+    final media = (await engine.parseForPreview('${server.baseUrl}/index.m3u8')
+        as MediaParseResult)
+        .media;
+
+    // Subscribe before starting: the broadcast stream would drop events
+    // emitted before a listener exists, and these tasks are tiny.
+    final completedIds = <String>[];
+    final sub = engine.events.listen((e) {
+      if (e is TaskCompletedEvent) completedIds.add(e.taskId);
+    });
+
+    await engine.startTask(
+      id: 'dup-1',
+      request: DownloadRequest(url: '${server.baseUrl}/index.m3u8'),
+      playlist: media,
+    );
+    await engine.startTask(
+      id: 'dup-2',
+      request: DownloadRequest(url: '${server.baseUrl}/index.m3u8'),
+      playlist: media,
+    );
+    await engine.startTask(
+      id: 'dup-3',
+      request: DownloadRequest(url: '${server.baseUrl}/index.m3u8'),
+      playlist: media,
+    );
+
+    // Let all three tasks finish so tearDown can remove the temp dir.
+    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    while (completedIds.length < 3 && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    expect(completedIds, hasLength(3));
+    await sub.cancel();
+
+    final t1 = (await store.loadTask('dup-1'))!.title;
+    final t2 = (await store.loadTask('dup-2'))!.title;
+    final t3 = (await store.loadTask('dup-3'))!.title;
+    expect({t1, t2, t3}, hasLength(3), reason: 'titles must be unique');
+    expect(t2, '$t1 (2)');
+    expect(t3, '$t1 (3)');
+
+    await engine.dispose();
+  });
+
   test('restoreUnfinished resumes a persisted downloading task', () async {
     final segData = <int, List<int>>{};
     final lines = <String>['#EXTM3U', '#EXT-X-TARGETDURATION:2'];
