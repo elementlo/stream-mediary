@@ -22,7 +22,8 @@ class AdaptiveShell extends StatelessWidget {
 
   int _indexFor(String path) {
     if (path.startsWith('/history')) return 1;
-    if (path.startsWith('/settings')) return 2;
+    if (path.startsWith('/merge')) return 2;
+    if (path.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -33,6 +34,8 @@ class AdaptiveShell extends StatelessWidget {
       case 1:
         context.go('/history');
       case 2:
+        context.go('/merge');
+      case 3:
         context.go('/settings');
     }
   }
@@ -50,6 +53,7 @@ class AdaptiveShell extends StatelessWidget {
         final destinations = [
           (icon: Icons.download_rounded, label: l10n.navDownloads),
           (icon: Icons.history_rounded, label: l10n.navHistory),
+          (icon: Icons.call_merge_rounded, label: l10n.navMerge),
           (icon: Icons.settings_rounded, label: l10n.navSettings),
         ];
 

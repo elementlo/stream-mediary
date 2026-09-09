@@ -559,6 +559,108 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'无法播放该文件（格式不受支持或已损坏）'**
   String get playerOpenFailed;
+
+  /// No description provided for @navMerge.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并'**
+  String get navMerge;
+
+  /// No description provided for @mergeFolderSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'切片文件夹'**
+  String get mergeFolderSection;
+
+  /// No description provided for @mergeChooseFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择文件夹'**
+  String get mergeChooseFolder;
+
+  /// No description provided for @mergePreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描结果'**
+  String get mergePreview;
+
+  /// No description provided for @mergeSegmentsFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现 {count} 个切片'**
+  String mergeSegmentsFound(Object count);
+
+  /// No description provided for @mergeTotalSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'总大小：{size}'**
+  String mergeTotalSize(Object size);
+
+  /// No description provided for @mergeStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始合并'**
+  String get mergeStart;
+
+  /// No description provided for @mergeInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并中…'**
+  String get mergeInProgress;
+
+  /// No description provided for @mergeRemuxing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在转换为 MP4…'**
+  String get mergeRemuxing;
+
+  /// No description provided for @mergeSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并成功：{path}'**
+  String mergeSuccess(Object path);
+
+  /// No description provided for @mergeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并失败：{message}'**
+  String mergeFailed(Object message);
+
+  /// No description provided for @mergeNoTsFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'该文件夹下没有找到 .ts 切片文件'**
+  String get mergeNoTsFiles;
+
+  /// No description provided for @mergeFolderUnreadable.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取该文件夹'**
+  String get mergeFolderUnreadable;
+
+  /// No description provided for @mergeSegmentMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'切片文件缺失：{path}'**
+  String mergeSegmentMissing(Object path);
+
+  /// No description provided for @mergeMobileTsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'移动端暂不支持转 MP4，已输出 TS 文件'**
+  String get mergeMobileTsHint;
+
+  /// No description provided for @mergeRemuxFailedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'未检测到 ffmpeg 或转换失败，已保留 TS 文件'**
+  String get mergeRemuxFailedHint;
+
+  /// No description provided for @mergeOpenOutput.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开文件'**
+  String get mergeOpenOutput;
 }
 
 class _AppLocalizationsDelegate

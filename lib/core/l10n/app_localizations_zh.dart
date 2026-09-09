@@ -243,4 +243,65 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get playerOpenFailed => '无法播放该文件（格式不受支持或已损坏）';
+
+  @override
+  String get navMerge => '合并';
+
+  @override
+  String get mergeFolderSection => '切片文件夹';
+
+  @override
+  String get mergeChooseFolder => '选择文件夹';
+
+  @override
+  String get mergePreview => '扫描结果';
+
+  @override
+  String mergeSegmentsFound(Object count) {
+    return '发现 $count 个切片';
+  }
+
+  @override
+  String mergeTotalSize(Object size) {
+    return '总大小：$size';
+  }
+
+  @override
+  String get mergeStart => '开始合并';
+
+  @override
+  String get mergeInProgress => '合并中…';
+
+  @override
+  String get mergeRemuxing => '正在转换为 MP4…';
+
+  @override
+  String mergeSuccess(Object path) {
+    return '合并成功：$path';
+  }
+
+  @override
+  String mergeFailed(Object message) {
+    return '合并失败：$message';
+  }
+
+  @override
+  String get mergeNoTsFiles => '该文件夹下没有找到 .ts 切片文件';
+
+  @override
+  String get mergeFolderUnreadable => '无法读取该文件夹';
+
+  @override
+  String mergeSegmentMissing(Object path) {
+    return '切片文件缺失：$path';
+  }
+
+  @override
+  String get mergeMobileTsHint => '移动端暂不支持转 MP4，已输出 TS 文件';
+
+  @override
+  String get mergeRemuxFailedHint => '未检测到 ffmpeg 或转换失败，已保留 TS 文件';
+
+  @override
+  String get mergeOpenOutput => '打开文件';
 }
