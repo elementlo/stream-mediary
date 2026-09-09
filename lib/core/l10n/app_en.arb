@@ -103,5 +103,10 @@
   "mergeSegmentMissing": "Segment file missing: {path}",
   "mergeMobileTsHint": "MP4 conversion is not supported on mobile; a TS file was output",
   "mergeRemuxFailedHint": "ffmpeg not found or conversion failed; the TS file was kept",
-  "mergeOpenOutput": "Open file"
+  "mergeOpenOutput": "Open file",
+  "deleteLocalFiles": "Also delete local files",
+  "clearCompleted": "Clear completed",
+  "confirmClearCompletedTitle": "Clear completed tasks",
+  "confirmClearCompletedMessage": "Remove all completed download records?",
+  "clearedCompleted": "Cleared {count} completed records"
 }

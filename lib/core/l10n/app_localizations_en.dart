@@ -311,4 +311,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mergeOpenOutput => 'Open file';
+
+  @override
+  String get deleteLocalFiles => 'Also delete local files';
+
+  @override
+  String get clearCompleted => 'Clear completed';
+
+  @override
+  String get confirmClearCompletedTitle => 'Clear completed tasks';
+
+  @override
+  String get confirmClearCompletedMessage =>
+      'Remove all completed download records?';
+
+  @override
+  String clearedCompleted(Object count) {
+    return 'Cleared $count completed records';
+  }
 }

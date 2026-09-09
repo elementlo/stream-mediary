@@ -128,5 +128,15 @@
   },
   "mergeMobileTsHint": "移动端暂不支持转 MP4，已输出 TS 文件",
   "mergeRemuxFailedHint": "未检测到 ffmpeg 或转换失败，已保留 TS 文件",
-  "mergeOpenOutput": "打开文件"
+  "mergeOpenOutput": "打开文件",
+  "deleteLocalFiles": "同时删除本地文件",
+  "clearCompleted": "清除已完成",
+  "confirmClearCompletedTitle": "清除已完成任务",
+  "confirmClearCompletedMessage": "确定要清除所有已完成的下载记录吗？",
+  "clearedCompleted": "已清除 {count} 条已完成记录",
+  "@clearedCompleted": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

@@ -661,6 +661,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'打开文件'**
   String get mergeOpenOutput;
+
+  /// No description provided for @deleteLocalFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'同时删除本地文件'**
+  String get deleteLocalFiles;
+
+  /// No description provided for @clearCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除已完成'**
+  String get clearCompleted;
+
+  /// No description provided for @confirmClearCompletedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除已完成任务'**
+  String get confirmClearCompletedTitle;
+
+  /// No description provided for @confirmClearCompletedMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要清除所有已完成的下载记录吗？'**
+  String get confirmClearCompletedMessage;
+
+  /// No description provided for @clearedCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已清除 {count} 条已完成记录'**
+  String clearedCompleted(Object count);
 }
 
 class _AppLocalizationsDelegate

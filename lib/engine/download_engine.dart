@@ -117,11 +117,12 @@ class DownloadEngine {
   }) async {
     final saveDir = await _resolveSaveDir(request.saveDir);
     final now = DateTime.now().millisecondsSinceEpoch;
+    final title = await _uniqueTitle(request.effectiveTitle);
 
     final record = EngineTaskRecord(
       id: id,
       url: request.url,
-      title: request.effectiveTitle,
+      title: title,
       state: TaskState.queued,
       headers: request.headers,
       customKeyHex: request.customKeyHex,
@@ -339,6 +340,26 @@ class DownloadEngine {
   String _sanitize(String name) =>
       name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
 
+  /// Ensures the task title maps to a unique on-disk directory.
+  ///
+  /// Two downloads of the same playlist would otherwise share one folder
+  /// (`saveDir/<title>`) and overwrite each other's output. When a title is
+  /// already taken by another task, a ` (2)`, ` (3)` … suffix is appended.
+  Future<String> _uniqueTitle(String base) async {
+    final sanitizedBase = _sanitize(base);
+    final existing = await _store.loadAllTasks();
+    final taken = existing.map((t) => _sanitize(t.title)).toSet();
+    if (!taken.contains(sanitizedBase)) return sanitizedBase;
+
+    var n = 2;
+    var candidate = '$sanitizedBase ($n)';
+    while (taken.contains(candidate)) {
+      n++;
+      candidate = '$sanitizedBase ($n)';
+    }
+    return candidate;
+  }
+
   Future<void> _markSegment(
       String taskId, int seq, SegmentStatus status, int size) async {
     final segments = await _store.loadSegments(taskId);
@@ -551,9 +572,29 @@ class DownloadEngine {
     _runtimes.remove(id);
   }
 
-  /// Retries a failed or canceled task from scratch (reuses done segments).
-  Future<void> retryTask(String id) async {
+  /// Deletes a task record and, optionally, its files on disk.
+  ///
+  /// Used by the history page. When [deleteFiles] is true the whole task
+  /// directory (`saveDir/<title>`, containing the merged output and any
+  /// leftover segments) is removed.
+  Future<void> removeTask(String id, {bool deleteFiles = false}) async {
     final record = await _store.loadTask(id);
+    if (record != null && deleteFiles) {
+      final dir = Directory(_taskDir(record));
+      if (await dir.exists()) {
+        try {
+          await dir.delete(recursive: true);
+        } on FileSystemException {
+          // Ignore: the record is removed regardless.
+        }
+      }
+    }
+    await _store.deleteTask(id);
+    _runtimes.remove(id);
+  }
+
+  /// Retries a failed or canceled task from scratch (reuses done segments).
+  Future<void> retryTask(String id) async {    final record = await _store.loadTask(id);
     if (record == null) return;
     if (record.state != TaskState.failed &&
         record.state != TaskState.canceled) {

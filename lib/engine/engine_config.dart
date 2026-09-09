@@ -34,15 +34,41 @@ class DownloadRequest {
   /// When the source is a master playlist, the selected variant URL.
   final String? variantUrl;
 
+  /// Generic playlist file names that carry no identifying information.
+  /// When the last path segment is one of these, the parent directory name
+  /// is used instead (e.g. `.../my-show/index.m3u8` -> `my-show`).
+  static const Set<String> _genericNames = {
+    'index',
+    'master',
+    'media',
+    'playlist',
+    'main',
+    'stream',
+    'video',
+    'hls',
+    'manifest',
+    'play',
+    'player',
+  };
+
   String get effectiveTitle {
     if (title != null && title!.trim().isNotEmpty) return title!.trim();
     final uri = Uri.tryParse(url);
-    final last = uri?.pathSegments.isNotEmpty == true
-        ? uri!.pathSegments.last
-        : null;
-    if (last != null && last.isNotEmpty) {
-      return last.replaceAll(RegExp(r'\.m3u8.*$'), '');
+    final segments = uri?.pathSegments ?? const [];
+    // Walk from the last segment upwards, skipping generic playlist names,
+    // so `.../my-show/index.m3u8` yields `my-show` instead of `index`.
+    for (var i = segments.length - 1; i >= 0; i--) {
+      var name = segments[i];
+      if (name.isEmpty) continue;
+      name = name.replaceAll(RegExp(r'\.m3u8.*$'), '');
+      if (name.isEmpty || _genericNames.contains(name.toLowerCase())) {
+        continue;
+      }
+      return name;
     }
+    // No meaningful path segment: fall back to the host, then the raw URL.
+    final host = uri?.host;
+    if (host != null && host.isNotEmpty) return host;
     return url;
   }
 }
