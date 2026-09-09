@@ -86,5 +86,22 @@
   "storagePermissionGranted": "Storage permission granted",
   "playerNoOutput": "This task has no playable output file",
   "playerFileMissing": "The output file does not exist; it may have been deleted",
-  "playerOpenFailed": "Cannot play this file (unsupported format or corrupted)"
+  "playerOpenFailed": "Cannot play this file (unsupported format or corrupted)",
+  "navMerge": "Merge",
+  "mergeFolderSection": "Segment folder",
+  "mergeChooseFolder": "Choose folder",
+  "mergePreview": "Scan result",
+  "mergeSegmentsFound": "Found {count} segments",
+  "mergeTotalSize": "Total size: {size}",
+  "mergeStart": "Start merge",
+  "mergeInProgress": "Merging…",
+  "mergeRemuxing": "Converting to MP4…",
+  "mergeSuccess": "Merge complete: {path}",
+  "mergeFailed": "Merge failed: {message}",
+  "mergeNoTsFiles": "No .ts segment files found in this folder",
+  "mergeFolderUnreadable": "Cannot read this folder",
+  "mergeSegmentMissing": "Segment file missing: {path}",
+  "mergeMobileTsHint": "MP4 conversion is not supported on mobile; a TS file was output",
+  "mergeRemuxFailedHint": "ffmpeg not found or conversion failed; the TS file was kept",
+  "mergeOpenOutput": "Open file"
 }

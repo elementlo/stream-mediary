@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/downloads/downloads_page.dart';
 import '../../features/history/history_page.dart';
+import '../../features/merge/merge_page.dart';
 import '../../features/new_download/new_download_page.dart';
 import '../../features/player/player_page.dart';
 import '../../features/settings/settings_page.dart';
@@ -25,6 +26,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/history',
             name: 'history',
             builder: (context, state) => const HistoryPage(),
+          ),
+          GoRoute(
+            path: '/merge',
+            name: 'merge',
+            builder: (context, state) => const MergePage(),
           ),
           GoRoute(
             path: '/settings',

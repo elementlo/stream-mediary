@@ -248,4 +248,67 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get playerOpenFailed =>
       'Cannot play this file (unsupported format or corrupted)';
+
+  @override
+  String get navMerge => 'Merge';
+
+  @override
+  String get mergeFolderSection => 'Segment folder';
+
+  @override
+  String get mergeChooseFolder => 'Choose folder';
+
+  @override
+  String get mergePreview => 'Scan result';
+
+  @override
+  String mergeSegmentsFound(Object count) {
+    return 'Found $count segments';
+  }
+
+  @override
+  String mergeTotalSize(Object size) {
+    return 'Total size: $size';
+  }
+
+  @override
+  String get mergeStart => 'Start merge';
+
+  @override
+  String get mergeInProgress => 'Merging…';
+
+  @override
+  String get mergeRemuxing => 'Converting to MP4…';
+
+  @override
+  String mergeSuccess(Object path) {
+    return 'Merge complete: $path';
+  }
+
+  @override
+  String mergeFailed(Object message) {
+    return 'Merge failed: $message';
+  }
+
+  @override
+  String get mergeNoTsFiles => 'No .ts segment files found in this folder';
+
+  @override
+  String get mergeFolderUnreadable => 'Cannot read this folder';
+
+  @override
+  String mergeSegmentMissing(Object path) {
+    return 'Segment file missing: $path';
+  }
+
+  @override
+  String get mergeMobileTsHint =>
+      'MP4 conversion is not supported on mobile; a TS file was output';
+
+  @override
+  String get mergeRemuxFailedHint =>
+      'ffmpeg not found or conversion failed; the TS file was kept';
+
+  @override
+  String get mergeOpenOutput => 'Open file';
 }

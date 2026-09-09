@@ -86,5 +86,47 @@
   "storagePermissionGranted": "已获取存储权限",
   "playerNoOutput": "该任务没有可播放的输出文件",
   "playerFileMissing": "输出文件不存在，可能已被删除",
-  "playerOpenFailed": "无法播放该文件（格式不受支持或已损坏）"
+  "playerOpenFailed": "无法播放该文件（格式不受支持或已损坏）",
+  "navMerge": "合并",
+  "mergeFolderSection": "切片文件夹",
+  "mergeChooseFolder": "选择文件夹",
+  "mergePreview": "扫描结果",
+  "mergeSegmentsFound": "发现 {count} 个切片",
+  "@mergeSegmentsFound": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "mergeTotalSize": "总大小：{size}",
+  "@mergeTotalSize": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "mergeStart": "开始合并",
+  "mergeInProgress": "合并中…",
+  "mergeRemuxing": "正在转换为 MP4…",
+  "mergeSuccess": "合并成功：{path}",
+  "@mergeSuccess": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "mergeFailed": "合并失败：{message}",
+  "@mergeFailed": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "mergeNoTsFiles": "该文件夹下没有找到 .ts 切片文件",
+  "mergeFolderUnreadable": "无法读取该文件夹",
+  "mergeSegmentMissing": "切片文件缺失：{path}",
+  "@mergeSegmentMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "mergeMobileTsHint": "移动端暂不支持转 MP4，已输出 TS 文件",
+  "mergeRemuxFailedHint": "未检测到 ffmpeg 或转换失败，已保留 TS 文件",
+  "mergeOpenOutput": "打开文件"
 }
