@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.element" "\0"
-            VALUE "FileDescription", "stream_mediary" "\0"
+            VALUE "FileDescription", "Mediary" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "stream_mediary" "\0"
+            VALUE "InternalName", "Mediary" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.element. All rights reserved." "\0"
-            VALUE "OriginalFilename", "stream_mediary.exe" "\0"
-            VALUE "ProductName", "stream_mediary" "\0"
+            VALUE "OriginalFilename", "Mediary.exe" "\0"
+            VALUE "ProductName", "Mediary" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

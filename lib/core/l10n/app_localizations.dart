@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In zh, this message translates to:
-  /// **'Stream Mediary'**
+  /// **'Mediary'**
   String get appTitle;
 
   /// No description provided for @navDownloads.

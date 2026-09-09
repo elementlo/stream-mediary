@@ -41,10 +41,10 @@ jobs:
         shell: pwsh
         run: |
           $src = "build\windows\x64\runner\Release"
-          Compress-Archive -Path "$src\*" -DestinationPath "stream_mediary-windows-x64.zip" -Force
+          Compress-Archive -Path "$src\*" -DestinationPath "Mediary-windows-x64.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stream_mediary-windows-x64
-          path: stream_mediary-windows-x64.zip
+          name: Mediary-windows-x64
+          path: Mediary-windows-x64.zip

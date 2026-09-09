@@ -1,4 +1,4 @@
-# stream_mediary
+# Mediary
 
 Cross-platform M3U8 media downloader
 
