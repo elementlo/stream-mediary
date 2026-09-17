@@ -53,10 +53,8 @@ jobs:
           echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Build APKs (split per ABI) and App Bundle
-        run: |
-          flutter build apk --release --split-per-abi
-          flutter build appbundle --release
+      - name: Build APKs (arm64-v8a + armeabi-v7a only)
+        run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
 
       - name: Stage artifacts
         run: |
@@ -64,8 +62,6 @@ jobs:
           APK_DIR=build/app/outputs/flutter-apk
           cp "$APK_DIR/app-arm64-v8a-release.apk"   release/Mediary-android-arm64-v8a.apk
           cp "$APK_DIR/app-armeabi-v7a-release.apk" release/Mediary-android-armeabi-v7a.apk
-          cp "$APK_DIR/app-x86_64-release.apk"      release/Mediary-android-x86_64.apk
-          cp build/app/outputs/bundle/release/app-release.aab release/Mediary-android.aab
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
