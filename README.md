@@ -157,26 +157,6 @@ flutter test --coverage   # 生成覆盖率报告
 
 核心引擎单元测试覆盖率目标 **≥70%**。
 
-## 📸 截图自动化
-
-README 中的产品截图由脚本自动产出，保证与真实界面一致：
-
-```bash
-# 移动端：启动 app 后用系统工具抓屏
-flutter run -d <android-device-id> --debug
-adb -s <android-device-id> shell screencap -p /sdcard/s.png && \
-  adb -s <android-device-id> pull /sdcard/s.png docs/screenshots/android-home.png
-
-flutter run -d <ios-simulator-id> --debug
-xcrun simctl io <ios-simulator-id> screenshot docs/screenshots/ios-home.png
-
-# 桌面端：启动 app 后用 OS 级窗口/屏幕捕获
-./tool/screenshot_desktop.sh macos      # macOS：screencapture 窗口区域
-./tool/screenshot_desktop.sh windows    # Windows：PowerShell 全屏捕获
-```
-
-> 说明：`integration_test` 的 `takeScreenshot()` 与 `flutter screenshot` 均不支持桌面端，故桌面端采用 OS 级捕获；仓库内 [`integration_test/screenshot_test.dart`](integration_test/screenshot_test.dart) 仍可用于支持的平台。
-
 ## 🤝 参与贡献
 
 欢迎贡献代码！请随时提交 issue 或 pull request。
