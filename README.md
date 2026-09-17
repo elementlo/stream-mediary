@@ -21,8 +21,8 @@
   <a href="https://github.com/elementlo/stream-mediary/releases">
     <img src="https://img.shields.io/github/v/release/elementlo/stream-mediary?label=release" alt="Release" />
   </a>
-  <a href="https://github.com/elementlo/stream-mediary/actions/workflows/build-windows.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/elementlo/stream-mediary/build-windows.yml?label=build" alt="Build" />
+  <a href="https://github.com/elementlo/stream-mediary/actions/workflows/release.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/elementlo/stream-mediary/release.yml?label=build" alt="Build" />
   </a>
   <a href="https://flutter.dev">
     <img src="https://img.shields.io/badge/Flutter-3.47+-02569B?logo=flutter&logoColor=white" alt="Flutter" />
