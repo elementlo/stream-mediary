@@ -1,0 +1,114 @@
+name: Windows Screenshot
+
+# Manual workflow: builds the Windows app on a GitHub-hosted runner, launches
+# it, captures the home page window and commits the PNG back to the repo.
+# No local Windows machine needed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.2'
+
+jobs:
+  capture-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Launch app and capture window screenshot
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+
+          $exe = "build\windows\x64\runner\Release\Mediary.exe"
+          Start-Process -FilePath $exe
+          Write-Host "Waiting for Mediary window..."
+
+          # Wait up to 60s for the main window to appear.
+          $proc = $null
+          for ($i = 0; $i -lt 60; $i++) {
+            $proc = Get-Process -Name "Mediary" -ErrorAction SilentlyContinue |
+              Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+            if ($proc) { break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $proc) { throw "Mediary window did not appear within 60s" }
+
+          # Let the first frame fully render.
+          Start-Sleep -Seconds 8
+
+          # Bring to front and move/resize to a known position.
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class Win32 {
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+            [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+          }
+          "@
+          $hwnd = $proc.MainWindowHandle
+          [Win32]::ShowWindow($hwnd, 9) | Out-Null        # SW_RESTORE
+          [Win32]::SetForegroundWindow($hwnd) | Out-Null
+          [Win32]::MoveWindow($hwnd, 0, 0, 1280, 800, $true) | Out-Null
+          Start-Sleep -Seconds 3
+
+          # Capture the window region (client + frame) from the screen.
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public struct RECT { public int Left, Top, Right, Bottom; }
+          public class Win32Rect {
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+          }
+          "@
+          $rect = New-Object RECT
+          [Win32Rect]::GetWindowRect($hwnd, [ref]$rect) | Out-Null
+          $w = $rect.Right - $rect.Left
+          $h = $rect.Bottom - $rect.Top
+          Write-Host "Window rect: $($rect.Left),$($rect.Top) ${w}x${h}"
+
+          $bmp = New-Object System.Drawing.Bitmap $w, $h
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bmp.Size)
+          $g.Dispose()
+
+          New-Item -ItemType Directory -Force -Path docs\screenshots | Out-Null
+          $bmp.Save("$PWD\docs\screenshots\windows-home.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $bmp.Dispose()
+          Write-Host "Saved docs\screenshots\windows-home.png"
+
+          Stop-Process -Name "Mediary" -Force -ErrorAction SilentlyContinue
+
+      - name: Commit screenshot back to repo
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/windows-home.png
+          if (git diff --cached --quiet) {
+            Write-Host "No screenshot change to commit."
+          } else {
+            git commit -m "docs: update Windows home screenshot [skip ci]"
+            git push
+          }
