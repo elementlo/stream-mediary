@@ -566,11 +566,197 @@ abstract class AppLocalizations {
   /// **'合并'**
   String get navMerge;
 
+  /// No description provided for @navActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get navActive;
+
+  /// No description provided for @newDownloadShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建'**
+  String get newDownloadShort;
+
+  /// No description provided for @downloadsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{active} 个进行中 · {paused} 个已暂停'**
+  String downloadsSummary(Object active, Object paused);
+
+  /// No description provided for @downloadsSummaryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有任务都已完成'**
+  String get downloadsSummaryEmpty;
+
+  /// No description provided for @historySummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条记录'**
+  String historySummary(Object count);
+
+  /// No description provided for @remaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {time}'**
+  String remaining(Object time);
+
+  /// No description provided for @segmentsProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'{done}/{total} 分片'**
+  String segmentsProgress(Object done, Object total);
+
+  /// No description provided for @segmentsProgressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度 {percent}%，已下载 {done}/{total} 个分片'**
+  String segmentsProgressLabel(Object percent, Object done, Object total);
+
+  /// No description provided for @pauseAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部暂停'**
+  String get pauseAll;
+
+  /// No description provided for @resumeAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部恢复'**
+  String get resumeAll;
+
+  /// No description provided for @mergeReadyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'分片已全部下载，正在合并为单个文件'**
+  String get mergeReadyHint;
+
+  /// No description provided for @estimatedSizeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'按所选清晰度估算'**
+  String get estimatedSizeHint;
+
+  /// No description provided for @noSaveDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置保存目录'**
+  String get noSaveDir;
+
+  /// No description provided for @urlSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放列表地址'**
+  String get urlSection;
+
+  /// No description provided for @previewSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'解析结果'**
+  String get previewSection;
+
+  /// No description provided for @advancedSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'高级选项'**
+  String get advancedSection;
+
+  /// No description provided for @advancedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义请求头与解密密钥'**
+  String get advancedHint;
+
+  /// No description provided for @headerSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义请求头'**
+  String get headerSection;
+
+  /// No description provided for @decryptSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'解密密钥覆盖'**
+  String get decryptSection;
+
+  /// No description provided for @decryptHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'留空则使用播放列表中的密钥'**
+  String get decryptHint;
+
+  /// No description provided for @startDownloadHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认后将加入下载队列'**
+  String get startDownloadHint;
+
+  /// No description provided for @emptyDownloadsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无下载任务'**
+  String get emptyDownloadsTitle;
+
+  /// No description provided for @emptyHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无历史记录'**
+  String get emptyHistoryTitle;
+
+  /// No description provided for @emptyHistoryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成的下载会出现在这里'**
+  String get emptyHistoryHint;
+
+  /// No description provided for @emptyDownloadsAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建下载'**
+  String get emptyDownloadsAction;
+
+  /// No description provided for @liveBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'直播流'**
+  String get liveBadge;
+
+  /// No description provided for @encryptedBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'加密'**
+  String get encryptedBadge;
+
+  /// No description provided for @notEncryptedBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'未加密'**
+  String get notEncryptedBadge;
+
   /// No description provided for @mergeFolderSection.
   ///
   /// In zh, this message translates to:
   /// **'切片文件夹'**
   String get mergeFolderSection;
+
+  /// No description provided for @segmentsCountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'切片数量'**
+  String get segmentsCountLabel;
+
+  /// No description provided for @totalSizeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'总大小'**
+  String get totalSizeLabel;
+
+  /// No description provided for @fileRangeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件范围'**
+  String get fileRangeLabel;
 
   /// No description provided for @mergeChooseFolder.
   ///

@@ -88,7 +88,67 @@
   "playerFileMissing": "The output file does not exist; it may have been deleted",
   "playerOpenFailed": "Cannot play this file (unsupported format or corrupted)",
   "navMerge": "Merge",
+  "navActive": "In progress",
+  "newDownloadShort": "New",
+  "downloadsSummary": "{active} active · {paused} paused",
+  "@downloadsSummary": {
+    "placeholders": {
+      "active": {},
+      "paused": {}
+    }
+  },
+  "downloadsSummaryEmpty": "Everything is finished",
+  "historySummary": "{count} records",
+  "@historySummary": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "remaining": "{time} left",
+  "@remaining": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "segmentsProgress": "{done}/{total} segments",
+  "@segmentsProgress": {
+    "placeholders": {
+      "done": {},
+      "total": {}
+    }
+  },
+  "segmentsProgressLabel": "Progress {percent}%, {done} of {total} segments downloaded",
+  "@segmentsProgressLabel": {
+    "placeholders": {
+      "percent": {},
+      "done": {},
+      "total": {}
+    }
+  },
+  "pauseAll": "Pause all",
+  "resumeAll": "Resume all",
+  "mergeReadyHint": "All segments downloaded, merging into a single file",
+  "estimatedSizeHint": "Estimated for the selected quality",
+  "noSaveDir": "No save directory set",
+  "urlSection": "Playlist URL",
+  "previewSection": "Parse result",
+  "advancedSection": "Advanced options",
+  "advancedHint": "Custom headers and decryption keys",
+  "headerSection": "Custom headers",
+  "decryptSection": "Decryption key override",
+  "decryptHint": "Leave empty to use the keys from the playlist",
+  "startDownloadHint": "Confirming adds this to the download queue",
+  "emptyDownloadsTitle": "No downloads yet",
+  "emptyHistoryTitle": "No history yet",
+  "emptyHistoryHint": "Completed downloads appear here",
+  "emptyDownloadsAction": "New download",
+  "liveBadge": "Live stream",
+  "encryptedBadge": "Encrypted",
+  "notEncryptedBadge": "Not encrypted",
   "mergeFolderSection": "Segment folder",
+  "segmentsCountLabel": "Segments",
+  "totalSizeLabel": "Total size",
+  "fileRangeLabel": "File range",
   "mergeChooseFolder": "Choose folder",
   "mergePreview": "Scan result",
   "mergeSegmentsFound": "Found {count} segments",

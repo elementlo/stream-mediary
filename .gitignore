@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/release
 
 # Generated l10n files are kept in source control for this project.
+
+# Agent tooling
+.workbuddy/

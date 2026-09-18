@@ -248,7 +248,110 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navMerge => '合并';
 
   @override
+  String get navActive => '进行中';
+
+  @override
+  String get newDownloadShort => '新建';
+
+  @override
+  String downloadsSummary(Object active, Object paused) {
+    return '$active 个进行中 · $paused 个已暂停';
+  }
+
+  @override
+  String get downloadsSummaryEmpty => '所有任务都已完成';
+
+  @override
+  String historySummary(Object count) {
+    return '$count 条记录';
+  }
+
+  @override
+  String remaining(Object time) {
+    return '剩余 $time';
+  }
+
+  @override
+  String segmentsProgress(Object done, Object total) {
+    return '$done/$total 分片';
+  }
+
+  @override
+  String segmentsProgressLabel(Object percent, Object done, Object total) {
+    return '进度 $percent%，已下载 $done/$total 个分片';
+  }
+
+  @override
+  String get pauseAll => '全部暂停';
+
+  @override
+  String get resumeAll => '全部恢复';
+
+  @override
+  String get mergeReadyHint => '分片已全部下载，正在合并为单个文件';
+
+  @override
+  String get estimatedSizeHint => '按所选清晰度估算';
+
+  @override
+  String get noSaveDir => '未设置保存目录';
+
+  @override
+  String get urlSection => '播放列表地址';
+
+  @override
+  String get previewSection => '解析结果';
+
+  @override
+  String get advancedSection => '高级选项';
+
+  @override
+  String get advancedHint => '自定义请求头与解密密钥';
+
+  @override
+  String get headerSection => '自定义请求头';
+
+  @override
+  String get decryptSection => '解密密钥覆盖';
+
+  @override
+  String get decryptHint => '留空则使用播放列表中的密钥';
+
+  @override
+  String get startDownloadHint => '确认后将加入下载队列';
+
+  @override
+  String get emptyDownloadsTitle => '暂无下载任务';
+
+  @override
+  String get emptyHistoryTitle => '暂无历史记录';
+
+  @override
+  String get emptyHistoryHint => '完成的下载会出现在这里';
+
+  @override
+  String get emptyDownloadsAction => '新建下载';
+
+  @override
+  String get liveBadge => '直播流';
+
+  @override
+  String get encryptedBadge => '加密';
+
+  @override
+  String get notEncryptedBadge => '未加密';
+
+  @override
   String get mergeFolderSection => '切片文件夹';
+
+  @override
+  String get segmentsCountLabel => '切片数量';
+
+  @override
+  String get totalSizeLabel => '总大小';
+
+  @override
+  String get fileRangeLabel => '文件范围';
 
   @override
   String get mergeChooseFolder => '选择文件夹';
