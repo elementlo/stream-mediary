@@ -5,8 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/theme/design_tokens.dart';
+import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/storage_access.dart';
+import '../../core/widgets/mediary_card.dart';
+import '../../core/widgets/mediary_scaffold.dart';
+import '../../core/widgets/stat_tile.dart';
+import '../../core/widgets/status_badge.dart';
 import '../../engine/engine_config.dart';
 import '../../engine/m3u8/m3u8_parser.dart';
 import '../../engine/m3u8/playlist.dart';
@@ -31,12 +37,16 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   String _parsedUrl = '';
   int _selectedVariant = 0;
   String? _saveDir;
+  bool _advancedOpen = false;
 
   @override
   void dispose() {
     _urlController.dispose();
     _keyController.dispose();
     _ivController.dispose();
+    for (final h in _headers) {
+      h.dispose();
+    }
     super.dispose();
   }
 
@@ -73,11 +83,11 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
         _selectedVariant = 0;
       });
     } on M3u8ParseException catch (e) {
-      setState(() => _error = AppLocalizations.of(context)
-          .errorParseFailed(e.message));
+      setState(() =>
+          _error = AppLocalizations.of(context).errorParseFailed(e.message));
     } catch (e) {
-      setState(() => _error =
-          AppLocalizations.of(context).errorParseFailed('$e'));
+      setState(
+          () => _error = AppLocalizations.of(context).errorParseFailed('$e'));
     } finally {
       if (mounted) setState(() => _parsing = false);
     }
@@ -103,8 +113,7 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
             headers: _headerMap,
           );
           if (content is! MediaParseResult) {
-            setState(() =>
-                _error = l10n.errorParseFailed('variant not media'));
+            setState(() => _error = l10n.errorParseFailed('variant not media'));
             return;
           }
           media = content.media;
@@ -116,12 +125,10 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       final request = DownloadRequest(
         url: effectiveUrl,
         headers: _headerMap,
-        customKeyHex: _keyController.text.trim().isEmpty
-            ? null
-            : _keyController.text.trim(),
-        customIvHex: _ivController.text.trim().isEmpty
-            ? null
-            : _ivController.text.trim(),
+        customKeyHex:
+            _keyController.text.trim().isEmpty ? null : _keyController.text.trim(),
+        customIvHex:
+            _ivController.text.trim().isEmpty ? null : _ivController.text.trim(),
         saveDir: _saveDir,
       );
 
@@ -132,102 +139,6 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
     } catch (e) {
       if (mounted) setState(() => _error = l10n.errorParseFailed('$e'));
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.newDownload),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/downloads'),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _urlController,
-            decoration: InputDecoration(
-              labelText: l10n.m3u8UrlLabel,
-              hintText: l10n.m3u8UrlHint,
-              prefixIcon: const Icon(Icons.link_rounded),
-            ),
-            keyboardType: TextInputType.url,
-          ),
-          const SizedBox(height: 16),
-          ExpansionTile(
-            title: Text(l10n.advancedOptions),
-            leading: const Icon(Icons.tune_rounded),
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.customHeaders,
-                        style: Theme.of(context).textTheme.titleSmall),
-                    const SizedBox(height: 8),
-                    for (final h in _headers) _HeaderRowWidget(row: h),
-                    TextButton.icon(
-                      onPressed: () => setState(
-                          () => _headers.add(_HeaderRow())),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: Text(l10n.addHeader),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _keyController,
-                      decoration:
-                          InputDecoration(labelText: l10n.customKey),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _ivController,
-                      decoration:
-                          InputDecoration(labelText: l10n.customIv),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _parsing ? null : _parse,
-            icon: _parsing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.search_rounded),
-            label: Text(_parsing ? l10n.parsing : l10n.parse),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            _ErrorBanner(message: _error!),
-          ],
-          if (_result != null) ...[
-            const SizedBox(height: 16),
-            _PreviewCard(
-              result: _result!,
-              selectedVariant: _selectedVariant,
-              onVariantChanged: (i) =>
-                  setState(() => _selectedVariant = i),
-              saveDir: _saveDir,
-              onChooseDir: _chooseDir,
-              onStart: _startDownload,
-            ),
-          ],
-        ],
-      ),
-    );
   }
 
   Future<void> _chooseDir() async {
@@ -253,42 +164,322 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       // Platform without directory picker; keep default.
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return MediaryScaffold(
+      title: l10n.newDownload,
+      maxWidth: Breakpoints.contentForm,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () =>
+            context.canPop() ? context.pop() : context.go('/downloads'),
+      ),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          _UrlField(
+            controller: _urlController,
+            label: l10n.m3u8UrlLabel,
+            hint: l10n.m3u8UrlHint,
+            onChanged: () => setState(() {}),
+          ),
+          const SizedBox(height: Spacing.md),
+          _AdvancedSection(
+            open: _advancedOpen,
+            onToggle: () => setState(() => _advancedOpen = !_advancedOpen),
+            headers: _headers,
+            onAddHeader: () => setState(() => _headers.add(_HeaderRow())),
+            onRemoveHeader: (row) => setState(() => _headers.remove(row)),
+            keyController: _keyController,
+            ivController: _ivController,
+          ),
+          const SizedBox(height: Spacing.lg),
+          FilledButton.icon(
+            onPressed: _parsing || !_urlLooksValid ? null : _parse,
+            icon: _parsing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.search_rounded, size: 18),
+            label: Text(_parsing ? l10n.parsing : l10n.parse),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: Spacing.md),
+            _ErrorBanner(message: _error!),
+          ],
+          if (_result != null) ...[
+            const SizedBox(height: Spacing.xl),
+            _PreviewCard(
+              result: _result!,
+              selectedVariant: _selectedVariant,
+              onVariantChanged: (i) => setState(() => _selectedVariant = i),
+              saveDir: _saveDir,
+              onChooseDir: _chooseDir,
+              onStart: _startDownload,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _UrlField extends StatelessWidget {
+  const _UrlField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: Spacing.xs, bottom: Spacing.sm - 2),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+        TextField(
+          controller: controller,
+          onChanged: (_) => onChanged(),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: const Icon(Icons.link_rounded, size: 19),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44),
+          ),
+          keyboardType: TextInputType.url,
+          autofillHints: const [AutofillHints.url],
+        ),
+      ],
+    );
+  }
+}
+
+/// Collapsible advanced options: request headers and key/IV overrides.
+class _AdvancedSection extends StatelessWidget {
+  const _AdvancedSection({
+    required this.open,
+    required this.onToggle,
+    required this.headers,
+    required this.onAddHeader,
+    required this.onRemoveHeader,
+    required this.keyController,
+    required this.ivController,
+  });
+
+  final bool open;
+  final VoidCallback onToggle;
+  final List<_HeaderRow> headers;
+  final VoidCallback onAddHeader;
+  final ValueChanged<_HeaderRow> onRemoveHeader;
+  final TextEditingController keyController;
+  final TextEditingController ivController;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return MediaryCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: Radii.lgAll,
+            child: Padding(
+              padding: const EdgeInsets.all(Spacing.lg),
+              child: Row(
+                children: [
+                  Icon(Icons.tune_rounded,
+                      size: 18, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.advancedSection, style: text.titleMedium),
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n.advancedHint,
+                          style: text.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: open ? 0.5 : 0,
+                    duration: Motion.standard,
+                    curve: Motion.enter,
+                    child: Icon(Icons.expand_more_rounded,
+                        color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: Motion.emphasized,
+            sizeCurve: Motion.emphasizedCurve,
+            crossFadeState:
+                open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.lg,
+                0,
+                Spacing.lg,
+                Spacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Divider(color: context.mediaryHairline, height: 1),
+                  const SizedBox(height: Spacing.lg),
+                  Text(
+                    l10n.headerSection,
+                    style: text.titleSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: Spacing.sm),
+                  for (final row in headers)
+                    _HeaderRowWidget(
+                      row: row,
+                      onRemove: () => onRemoveHeader(row),
+                    ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: onAddHeader,
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: Text(l10n.addHeader),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(0, 34),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: Spacing.sm),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.lg),
+                  Text(
+                    l10n.decryptSection,
+                    style: text.titleSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: Spacing.sm),
+                  Text(
+                    l10n.decryptHint,
+                    style: text.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: Spacing.sm + 2),
+                  _KeyField(
+                    controller: keyController,
+                    label: l10n.customKey,
+                  ),
+                  const SizedBox(height: Spacing.sm + 2),
+                  _KeyField(
+                    controller: ivController,
+                    label: l10n.customIv,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KeyField extends StatelessWidget {
+  const _KeyField({required this.controller, required this.label});
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+      decoration: InputDecoration(labelText: label, isDense: true),
+    );
+  }
 }
 
 class _HeaderRow {
   final keyController = TextEditingController();
   final valueController = TextEditingController();
+
+  void dispose() {
+    keyController.dispose();
+    valueController.dispose();
+  }
 }
 
 class _HeaderRowWidget extends StatelessWidget {
-  const _HeaderRowWidget({required this.row});
+  const _HeaderRowWidget({required this.row, required this.onRemove});
 
   final _HeaderRow row;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: Spacing.sm),
       child: Row(
         children: [
           Expanded(
+            flex: 4,
             child: TextField(
               controller: row.keyController,
               decoration: InputDecoration(
-                labelText: l10n.headerKey,
+                hintText: l10n.headerKey,
                 isDense: true,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: Spacing.sm),
           Expanded(
+            flex: 5,
             child: TextField(
               controller: row.valueController,
               decoration: InputDecoration(
-                labelText: l10n.headerValue,
+                hintText: l10n.headerValue,
                 isDense: true,
               ),
+            ),
+          ),
+          const SizedBox(width: Spacing.xs),
+          IconButton(
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, size: 17),
+            tooltip: l10n.delete,
+            style: IconButton.styleFrom(
+              minimumSize: const Size.square(36),
+              foregroundColor:
+                  Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -304,21 +495,25 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
+    final text = Theme.of(context).textTheme;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(Spacing.md),
       decoration: BoxDecoration(
-        color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
+        color: colors.dangerContainer.withValues(alpha: 0.6),
+        borderRadius: Radii.mdAll,
+        border: Border.all(color: colors.danger.withValues(alpha: 0.3)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline_rounded, color: scheme.error),
-          const SizedBox(width: 8),
+          Icon(Icons.error_outline_rounded, size: 17, color: colors.danger),
+          const SizedBox(width: Spacing.sm),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: scheme.onErrorContainer),
+              style: text.bodyMedium?.copyWith(color: colors.danger),
             ),
           ),
         ],
@@ -327,6 +522,7 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
+/// Parse result: metrics grid, quality picker, destination and confirm action.
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard({
     required this.result,
@@ -347,66 +543,213 @@ class _PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.preview_rounded, color: scheme.primary),
-                const SizedBox(width: 8),
-                Text(l10n.preview,
-                    style: Theme.of(context).textTheme.titleMedium),
-              ],
+    return MediaryCard(
+      padding: const EdgeInsets.all(Spacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.preview_rounded, size: 18, color: scheme.primary),
+              const SizedBox(width: Spacing.sm),
+              Text(l10n.previewSection, style: text.titleMedium),
+              const Spacer(),
+              switch (result) {
+                MediaParseResult(:final media) => PillBadge(
+                    label: media.encrypted
+                        ? l10n.encryptedBadge
+                        : l10n.notEncryptedBadge,
+                    color: media.encrypted
+                        ? context.mediaryColors.warning
+                        : context.mediaryColors.success,
+                  ),
+                MasterParseResult() => const SizedBox.shrink(),
+              },
+            ],
+          ),
+          const SizedBox(height: Spacing.lg),
+          switch (result) {
+            MasterParseResult(:final master) => _VariantPicker(
+                master: master,
+                selected: selectedVariant,
+                onChanged: onVariantChanged,
+              ),
+            MediaParseResult(:final media) => _MediaSummary(media: media),
+          },
+          const SizedBox(height: Spacing.lg),
+          _DestinationRow(saveDir: saveDir, onChooseDir: onChooseDir),
+          const SizedBox(height: Spacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.startDownloadHint,
+                  style: text.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onStart,
+              icon: const Icon(Icons.download_rounded, size: 18),
+              label: Text(l10n.startDownload),
             ),
-            const Divider(height: 24),
-            switch (result) {
-              MasterParseResult(:final master) => Column(
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VariantPicker extends StatelessWidget {
+  const _VariantPicker({
+    required this.master,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final MasterPlaylist master;
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: Spacing.xs, bottom: Spacing.sm - 2),
+          child: Text(
+            l10n.selectVariant,
+            style: text.titleSmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ),
+        for (var i = 0; i < master.variants.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Spacing.sm - 2),
+            child: _VariantTile(
+              variant: master.variants[i],
+              selected: i == selected,
+              onTap: () => onChanged(i),
+              accent: scheme.primary,
+              hairline: colors.hairline,
+              surface: scheme.surfaceContainer,
+              container: scheme.primaryContainer,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _VariantTile extends StatelessWidget {
+  const _VariantTile({
+    required this.variant,
+    required this.selected,
+    required this.onTap,
+    required this.accent,
+    required this.hairline,
+    required this.surface,
+    required this.container,
+  });
+
+  final Variant variant;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color accent;
+  final Color hairline;
+  final Color surface;
+  final Color container;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final detail = [
+      if (variant.codecs != null) variant.codecs,
+      if (variant.bandwidth != null) '${(variant.bandwidth! / 1000).round()} kbps',
+    ].whereType<String>().join(' · ');
+
+    return Material(
+      color: selected ? container : surface,
+      borderRadius: Radii.mdAll,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: Radii.mdAll,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.md - 2,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: Radii.mdAll,
+            border: Border.all(
+              color: selected ? accent : hairline,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              _RadioDot(selected: selected, color: accent, hairline: hairline),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n.selectVariant,
-                        style: Theme.of(context).textTheme.titleSmall),
-                    const SizedBox(height: 8),
-                    RadioGroup<int>(
-                      groupValue: selectedVariant,
-                      onChanged: (v) =>
-                          v != null ? onVariantChanged(v) : null,
-                      child: Column(
-                        children: [
-                          for (var i = 0; i < master.variants.length; i++)
-                            RadioListTile<int>(
-                              value: i,
-                              title: Text(master.variants[i].displayName),
-                              subtitle: Text(master.variants[i].codecs ?? ''),
-                              dense: true,
-                            ),
-                        ],
+                    Text(variant.displayName, style: text.titleMedium),
+                    if (detail.isNotEmpty) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        detail,
+                        style: text.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
-              MediaParseResult(:final media) => _MediaSummary(media: media),
-            },
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: onChooseDir,
-              icon: const Icon(Icons.folder_open_rounded, size: 18),
-              label: Text(saveDir ?? l10n.chooseDirectory),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onStart,
-                icon: const Icon(Icons.download_rounded),
-                label: Text(l10n.startDownload),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RadioDot extends StatelessWidget {
+  const _RadioDot({
+    required this.selected,
+    required this.color,
+    required this.hairline,
+  });
+
+  final bool selected;
+  final Color color;
+  final Color hairline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? color : hairline,
+          width: selected ? 5 : 1.5,
         ),
       ),
     );
@@ -421,77 +764,108 @@ class _MediaSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
+
+    final keyMethod = media.encrypted
+        ? media.segments
+            .firstWhere((s) => s.keyInfo != null)
+            .keyInfo!
+            .method
+            .label
+        : null;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _InfoRow(
-          icon: Icons.video_file_rounded,
-          label: l10n.segmentCount,
-          value: '${media.segmentCount}',
-        ),
-        _InfoRow(
-          icon: Icons.schedule_rounded,
-          label: l10n.totalDuration,
-          value: formatDuration(media.totalDuration),
-        ),
-        _InfoRow(
-          icon: media.encrypted
-              ? Icons.lock_rounded
-              : Icons.lock_open_rounded,
-          label: media.encrypted ? l10n.encrypted : l10n.notEncrypted,
-          value: media.encrypted
-              ? (media.segments
-                      .firstWhere((s) => s.keyInfo != null)
-                      .keyInfo!
-                      .method
-                      .label)
-              : '',
-        ),
-        if (media.isLive)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: [
-                Icon(Icons.live_tv_rounded,
-                    size: 16, color: scheme.error),
-                const SizedBox(width: 4),
-                Text('LIVE',
-                    style: TextStyle(color: scheme.error, fontSize: 12)),
-              ],
+        StatGrid(
+          children: [
+            StatTile(
+              label: l10n.segmentCount,
+              value: '${media.segmentCount}',
+              icon: Icons.view_module_rounded,
             ),
+            StatTile(
+              label: l10n.totalDuration,
+              value: formatDuration(media.totalDuration),
+              icon: Icons.schedule_rounded,
+            ),
+            StatTile(
+              label: l10n.encrypted,
+              value: keyMethod ?? l10n.notEncrypted,
+              icon: media.encrypted
+                  ? Icons.lock_rounded
+                  : Icons.lock_open_rounded,
+              valueColor: media.encrypted ? colors.warning : colors.success,
+            ),
+          ],
+        ),
+        if (media.isLive) ...[
+          const SizedBox(height: Spacing.md),
+          Row(
+            children: [
+              Icon(Icons.live_tv_rounded, size: 15, color: colors.danger),
+              const SizedBox(width: Spacing.xs + 2),
+              Text(
+                l10n.liveBadge,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: colors.danger),
+              ),
+            ],
           ),
+        ],
       ],
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+class _DestinationRow extends StatelessWidget {
+  const _DestinationRow({required this.saveDir, required this.onChooseDir});
 
-  final IconData icon;
-  final String label;
-  final String value;
+  final String? saveDir;
+  final VoidCallback onChooseDir;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 18,
-              color: Theme.of(context).colorScheme.outline),
-          const SizedBox(width: 8),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const Spacer(),
-          Text(value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600)),
-        ],
+    final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
+
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: Radii.mdAll,
+      child: InkWell(
+        onTap: onChooseDir,
+        borderRadius: Radii.mdAll,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.md - 2,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: Radii.mdAll,
+            border: Border.all(color: colors.hairline),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.folder_rounded,
+                  size: 17, color: scheme.onSurfaceVariant),
+              const SizedBox(width: Spacing.sm + 1),
+              Expanded(
+                child: Text(
+                  saveDir ?? l10n.chooseDirectory,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyMedium,
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: scheme.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }

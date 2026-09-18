@@ -253,7 +253,111 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMerge => 'Merge';
 
   @override
+  String get navActive => 'In progress';
+
+  @override
+  String get newDownloadShort => 'New';
+
+  @override
+  String downloadsSummary(Object active, Object paused) {
+    return '$active active · $paused paused';
+  }
+
+  @override
+  String get downloadsSummaryEmpty => 'Everything is finished';
+
+  @override
+  String historySummary(Object count) {
+    return '$count records';
+  }
+
+  @override
+  String remaining(Object time) {
+    return '$time left';
+  }
+
+  @override
+  String segmentsProgress(Object done, Object total) {
+    return '$done/$total segments';
+  }
+
+  @override
+  String segmentsProgressLabel(Object percent, Object done, Object total) {
+    return 'Progress $percent%, $done of $total segments downloaded';
+  }
+
+  @override
+  String get pauseAll => 'Pause all';
+
+  @override
+  String get resumeAll => 'Resume all';
+
+  @override
+  String get mergeReadyHint =>
+      'All segments downloaded, merging into a single file';
+
+  @override
+  String get estimatedSizeHint => 'Estimated for the selected quality';
+
+  @override
+  String get noSaveDir => 'No save directory set';
+
+  @override
+  String get urlSection => 'Playlist URL';
+
+  @override
+  String get previewSection => 'Parse result';
+
+  @override
+  String get advancedSection => 'Advanced options';
+
+  @override
+  String get advancedHint => 'Custom headers and decryption keys';
+
+  @override
+  String get headerSection => 'Custom headers';
+
+  @override
+  String get decryptSection => 'Decryption key override';
+
+  @override
+  String get decryptHint => 'Leave empty to use the keys from the playlist';
+
+  @override
+  String get startDownloadHint => 'Confirming adds this to the download queue';
+
+  @override
+  String get emptyDownloadsTitle => 'No downloads yet';
+
+  @override
+  String get emptyHistoryTitle => 'No history yet';
+
+  @override
+  String get emptyHistoryHint => 'Completed downloads appear here';
+
+  @override
+  String get emptyDownloadsAction => 'New download';
+
+  @override
+  String get liveBadge => 'Live stream';
+
+  @override
+  String get encryptedBadge => 'Encrypted';
+
+  @override
+  String get notEncryptedBadge => 'Not encrypted';
+
+  @override
   String get mergeFolderSection => 'Segment folder';
+
+  @override
+  String get segmentsCountLabel => 'Segments';
+
+  @override
+  String get totalSizeLabel => 'Total size';
+
+  @override
+  String get fileRangeLabel => 'File range';
 
   @override
   String get mergeChooseFolder => 'Choose folder';

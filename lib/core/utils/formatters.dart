@@ -33,3 +33,18 @@ String formatEta(double bytesPerSecond, int remainingBytes) {
   final seconds = remainingBytes / bytesPerSecond;
   return formatDuration(seconds);
 }
+
+/// Compact absolute timestamp for history rows, e.g. `09-17 16:45`.
+///
+/// Omits the year for the current year and seconds entirely — history rows are
+/// scanned, not read, and a full ISO timestamp is pure noise at 12px.
+String formatTimestamp(int millisecondsSinceEpoch) {
+  final dt = DateTime.fromMillisecondsSinceEpoch(millisecondsSinceEpoch);
+  final now = DateTime.now();
+  final mm = dt.month.toString().padLeft(2, '0');
+  final dd = dt.day.toString().padLeft(2, '0');
+  final hh = dt.hour.toString().padLeft(2, '0');
+  final mi = dt.minute.toString().padLeft(2, '0');
+  final stamp = '$mm-$dd $hh:$mi';
+  return dt.year == now.year ? stamp : '${dt.year}-$stamp';
+}

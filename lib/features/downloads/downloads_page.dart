@@ -3,7 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/platform/platform_profile.dart';
+import '../../core/theme/design_tokens.dart';
+import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/mediary_card.dart';
+import '../../core/widgets/mediary_scaffold.dart';
+import '../../core/widgets/segment_progress_bar.dart';
+import '../../core/widgets/status_badge.dart';
 import '../../engine/download_engine.dart';
 import '../../engine/task/task_state.dart';
 import '../../providers/app_providers.dart';
@@ -21,232 +29,225 @@ class DownloadsPage extends ConsumerWidget {
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.downloads)),
-      body: active.isEmpty
-          ? _EmptyState(onAdd: () => context.push('/new'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
+    final downloading =
+        active.where((t) => t.state == TaskState.downloading).length;
+    final paused = active.where((t) => t.state == TaskState.paused).length;
+
+    return MediaryScaffold(
+      title: l10n.downloads,
+      subtitle: active.isEmpty
+          ? l10n.downloadsSummaryEmpty
+          : l10n.downloadsSummary(downloading, paused),
+      maxWidth: Breakpoints.contentList,
+      actions: [
+        if (downloading > 0)
+          _PauseAllButton(count: downloading),
+      ],
+      child: active.isEmpty
+          ? EmptyState(
+              icon: Icons.download_done_rounded,
+              title: l10n.emptyDownloadsTitle,
+              message: l10n.emptyDownloadsHint,
+              action: FilledButton.icon(
+                onPressed: () => context.push('/new'),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(l10n.emptyDownloadsAction),
+              ),
+            )
+          : ListView.separated(
+              padding: EdgeInsets.zero,
               itemCount: active.length,
-              itemBuilder: (context, i) =>
-                  TaskCard(task: active[i]),
+              separatorBuilder: (_, _) => const SizedBox(height: Spacing.md),
+              itemBuilder: (context, i) => TaskCard(task: active[i]),
             ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
+class _PauseAllButton extends ConsumerWidget {
+  const _PauseAllButton({required this.count});
 
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.download_done_rounded,
-                size: 72, color: scheme.outline),
-            const SizedBox(height: 16),
-            Text(l10n.emptyDownloads,
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              l10n.emptyDownloadsHint,
-              textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: scheme.outline),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: Text(l10n.newDownload),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class TaskCard extends ConsumerWidget {
-  const TaskCard({super.key, required this.task});
-
-  final TaskViewModel task;
-
-  String _statusLabel(BuildContext context, TaskState state) {
-    final l10n = AppLocalizations.of(context);
-    return switch (state) {
-      TaskState.created => l10n.statusCreated,
-      TaskState.parsing => l10n.statusParsing,
-      TaskState.previewReady => l10n.statusPreviewReady,
-      TaskState.queued => l10n.statusQueued,
-      TaskState.downloading => l10n.statusDownloading,
-      TaskState.paused => l10n.statusPaused,
-      TaskState.merging => l10n.statusMerging,
-      TaskState.completed => l10n.statusCompleted,
-      TaskState.failed => l10n.statusFailed,
-      TaskState.canceled => l10n.statusCanceled,
-    };
-  }
-
-  Color _statusColor(BuildContext context, TaskState state) {
-    final scheme = Theme.of(context).colorScheme;
-    return switch (state) {
-      TaskState.downloading || TaskState.merging => scheme.primary,
-      TaskState.completed => Colors.green,
-      TaskState.failed => scheme.error,
-      TaskState.paused || TaskState.queued => scheme.outline,
-      _ => scheme.outline,
-    };
-  }
+  final int count;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final engine = ref.read(downloadEngineProvider);
-    final scheme = Theme.of(context).colorScheme;
+    final profile = context.platformProfile;
 
-    final isMerging = task.state == TaskState.merging;
-    final progress = isMerging ? task.mergeFraction : task.downloadFraction;
+    if (!profile.isDesktop) {
+      return IconButton(
+        tooltip: l10n.pauseAll,
+        onPressed: () => _pauseAll(ref, engine),
+        icon: const Icon(Icons.pause_circle_outline_rounded),
+      );
+    }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                Chip(
-                  label: Text(_statusLabel(context, task.state)),
-                  labelStyle: TextStyle(
-                    color: _statusColor(context, task.state),
-                    fontSize: 12,
-                  ),
-                  side: BorderSide.none,
-                  backgroundColor: _statusColor(context, task.state)
-                      .withValues(alpha: 0.12),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress.clamp(0.0, 1.0),
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text(
-                  '${task.doneSegments}/${task.totalSegments}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  formatBytes(task.downloadedBytes),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const Spacer(),
-                if (task.state == TaskState.downloading) ...[
-                  Text(
-                    l10n.speed(formatSpeed(task.bytesPerSecond)),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: scheme.primary),
-                  ),
-                ],
-              ],
-            ),
-            if (task.errorMsg != null && task.state == TaskState.failed) ...[
-              const SizedBox(height: 8),
-              Text(
-                task.errorMsg!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: scheme.error),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: _buildActions(context, ref, engine),
-            ),
-          ],
-        ),
+    return OutlinedButton.icon(
+      onPressed: () => _pauseAll(ref, engine),
+      icon: const Icon(Icons.pause_rounded, size: 15),
+      label: Text(l10n.pauseAll),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 32),
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+        textStyle: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }
 
-  List<Widget> _buildActions(
-      BuildContext context, WidgetRef ref, DownloadEngine engine) {
-    final l10n = AppLocalizations.of(context);
-    final actions = <Widget>[];
-
-    switch (task.state) {
-      case TaskState.downloading:
-        actions.add(TextButton.icon(
-          onPressed: () => engine.pauseTask(task.id),
-          icon: const Icon(Icons.pause_rounded, size: 18),
-          label: Text(l10n.pause),
-        ));
-        actions.add(TextButton.icon(
-          onPressed: () => _confirmCancel(context, ref, engine),
-          icon: const Icon(Icons.close_rounded, size: 18),
-          label: Text(l10n.cancel),
-        ));
-      case TaskState.paused:
-        actions.add(TextButton.icon(
-          onPressed: () => engine.resumeTask(task.id),
-          icon: const Icon(Icons.play_arrow_rounded, size: 18),
-          label: Text(l10n.resume),
-        ));
-        actions.add(TextButton.icon(
-          onPressed: () => _confirmCancel(context, ref, engine),
-          icon: const Icon(Icons.close_rounded, size: 18),
-          label: Text(l10n.cancel),
-        ));
-      case TaskState.failed:
-      case TaskState.canceled:
-        actions.add(TextButton.icon(
-          onPressed: () => engine.retryTask(task.id),
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: Text(l10n.retry),
-        ));
-      default:
-        break;
+  void _pauseAll(WidgetRef ref, DownloadEngine engine) {
+    final tasks = ref.read(taskListProvider);
+    for (final task in tasks.values) {
+      if (task.state == TaskState.downloading) {
+        engine.pauseTask(task.id);
+      }
     }
-    return actions;
+  }
+}
+
+/// A single download task.
+///
+/// Layout: title + status badge, the segment progress bar, then a metrics row.
+/// Metrics use tabular figures so the speed and size columns do not jitter as
+/// values tick.
+class TaskCard extends ConsumerWidget {
+  const TaskCard({super.key, required this.task});
+
+  final TaskViewModel task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final engine = ref.read(downloadEngineProvider);
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
+
+    final style = TaskStateStyle.of(context, task.state);
+    final isMerging = task.state == TaskState.merging;
+    final isDownloading = task.state == TaskState.downloading;
+    final isLive = TaskStateStyle.isLive(task.state);
+
+    final percent = isMerging
+        ? task.mergeFraction
+        : task.downloadFraction.clamp(0.0, 1.0);
+
+    return MediaryCard(
+      accent: isLive ? style.color : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  task.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleMedium,
+                ),
+              ),
+              const SizedBox(width: Spacing.sm),
+              StatusBadge(
+                state: task.state,
+                label: _statusLabel(l10n, task.state),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.md),
+          SegmentProgressBar(
+            totalSegments: task.totalSegments,
+            doneSegments: task.doneSegments,
+            active: isDownloading,
+            merging: isMerging,
+            mergeFraction: task.mergeFraction,
+            semanticLabel: task.totalSegments > 0
+                ? l10n.segmentsProgressLabel(
+                    (percent * 100).round(),
+                    task.doneSegments,
+                    task.totalSegments,
+                  )
+                : null,
+          ),
+          const SizedBox(height: Spacing.sm + 2),
+          _MetricsRow(
+            task: task,
+            isMerging: isMerging,
+            isDownloading: isDownloading,
+            percent: percent,
+            hintColor: scheme.onSurfaceVariant,
+            accentColor: style.color,
+          ),
+          if (task.errorMsg != null && task.state == TaskState.failed) ...[
+            const SizedBox(height: Spacing.md),
+            Container(
+              padding: const EdgeInsets.all(Spacing.md - 2),
+              decoration: BoxDecoration(
+                color: colors.dangerContainer.withValues(alpha: 0.5),
+                borderRadius: Radii.smAll,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.error_outline_rounded,
+                      size: 15, color: colors.danger),
+                  const SizedBox(width: Spacing.sm - 2),
+                  Expanded(
+                    child: Text(
+                      task.errorMsg!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodySmall?.copyWith(color: colors.danger),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (_hasActions(task.state)) ...[
+            const SizedBox(height: Spacing.md),
+            _ActionRow(
+              state: task.state,
+              onPause: () => engine.pauseTask(task.id),
+              onResume: () => engine.resumeTask(task.id),
+              onCancel: () => _confirmCancel(context, ref, engine, task),
+              onRetry: () => engine.retryTask(task.id),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
+  bool _hasActions(TaskState state) => switch (state) {
+        TaskState.downloading ||
+        TaskState.paused ||
+        TaskState.failed ||
+        TaskState.canceled =>
+          true,
+        _ => false,
+      };
+
+  String _statusLabel(AppLocalizations l10n, TaskState state) =>
+      switch (state) {
+        TaskState.created => l10n.statusCreated,
+        TaskState.parsing => l10n.statusParsing,
+        TaskState.previewReady => l10n.statusPreviewReady,
+        TaskState.queued => l10n.statusQueued,
+        TaskState.downloading => l10n.statusDownloading,
+        TaskState.paused => l10n.statusPaused,
+        TaskState.merging => l10n.statusMerging,
+        TaskState.completed => l10n.statusCompleted,
+        TaskState.failed => l10n.statusFailed,
+        TaskState.canceled => l10n.statusCanceled,
+      };
+
   Future<void> _confirmCancel(
-      BuildContext context, WidgetRef ref, DownloadEngine engine) async {
+    BuildContext context,
+    WidgetRef ref,
+    DownloadEngine engine,
+    TaskViewModel task,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -268,5 +269,161 @@ class TaskCard extends ConsumerWidget {
     if (confirmed == true) {
       await engine.cancelTask(task.id);
     }
+  }
+}
+
+/// Metrics line: segment count, size, ETA on the left; speed and percent right.
+class _MetricsRow extends StatelessWidget {
+  const _MetricsRow({
+    required this.task,
+    required this.isMerging,
+    required this.isDownloading,
+    required this.percent,
+    required this.hintColor,
+    required this.accentColor,
+  });
+
+  final TaskViewModel task;
+  final bool isMerging;
+  final bool isDownloading;
+  final double percent;
+  final Color hintColor;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: hintColor,
+        );
+
+    if (isMerging) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.mergeReadyHint,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          ),
+          const SizedBox(width: Spacing.sm),
+          Text(
+            '${(percent * 100).round()}%',
+            style: style?.copyWith(
+              color: accentColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      );
+    }
+
+    final remainingBytes = task.totalBytes - task.downloadedBytes;
+    final showEta =
+        isDownloading && task.bytesPerSecond > 0 && remainingBytes > 0;
+
+    return Row(
+      children: [
+        if (task.totalSegments > 0)
+          Text(
+            l10n.segmentsProgress(task.doneSegments, task.totalSegments),
+            style: style,
+          ),
+        if (task.totalSegments > 0) const SizedBox(width: Spacing.md),
+        Text(formatBytes(task.downloadedBytes), style: style),
+        if (showEta) ...[
+          const SizedBox(width: Spacing.md),
+          Flexible(
+            child: Text(
+              l10n.remaining(formatEta(task.bytesPerSecond, remainingBytes)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          ),
+        ],
+        const Spacer(),
+        if (isDownloading)
+          Text(
+            l10n.speed(formatSpeed(task.bytesPerSecond)),
+            style: style?.copyWith(
+              color: accentColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Contextual actions for the task's current state.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.state,
+    required this.onPause,
+    required this.onResume,
+    required this.onCancel,
+    required this.onRetry,
+  });
+
+  final TaskState state;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final VoidCallback onCancel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: switch (state) {
+        TaskState.downloading => [
+            _Action(l10n.pause, Icons.pause_rounded, onPause),
+            _Action(l10n.cancel, Icons.close_rounded, onCancel, muted: true),
+          ],
+        TaskState.paused => [
+            _Action(l10n.resume, Icons.play_arrow_rounded, onResume),
+            _Action(l10n.cancel, Icons.close_rounded, onCancel, muted: true),
+          ],
+        TaskState.failed || TaskState.canceled => [
+            _Action(l10n.retry, Icons.refresh_rounded, onRetry),
+          ],
+        _ => const <Widget>[],
+      }.map((w) => Padding(
+            padding: const EdgeInsets.only(left: Spacing.sm),
+            child: DefaultTextStyle.merge(style: text.bodyMedium!, child: w),
+          )).toList(),
+    );
+  }
+}
+
+class _Action extends StatelessWidget {
+  const _Action(this.label, this.icon, this.onPressed, {this.muted = false});
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final color = muted ? scheme.onSurfaceVariant : scheme.primary;
+
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16, color: color),
+      label: Text(label, style: text.bodyMedium?.copyWith(color: color)),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, 34),
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.md - 2),
+      ),
+    );
   }
 }

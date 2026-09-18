@@ -7,8 +7,15 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/platform/platform_profile.dart';
+import '../../core/theme/design_tokens.dart';
+import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/storage_access.dart';
+import '../../core/widgets/mediary_card.dart';
+import '../../core/widgets/mediary_scaffold.dart';
+import '../../core/widgets/section_header.dart';
+import '../../core/widgets/stat_tile.dart';
 import '../../engine/merge/folder_merger.dart';
 import '../../providers/app_providers.dart';
 
@@ -178,99 +185,117 @@ class _MergePageState extends ConsumerState<MergePage> {
         scan.error == null &&
         !_merging;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.navMerge)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return MediaryScaffold(
+      title: l10n.navMerge,
+      maxWidth: Breakpoints.contentForm,
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
-          _SectionTitle(l10n.mergeFolderSection),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.folder_rounded),
-              title: Text(
-                _folderPath ?? l10n.mergeChooseFolder,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: _merging ? null : _chooseFolder,
+          SectionHeader(l10n.mergeFolderSection),
+          MediaryCard(
+            padding: EdgeInsets.zero,
+            onTap: _merging ? null : _chooseFolder,
+            child: _FolderRow(
+              path: _folderPath,
+              label: l10n.mergeChooseFolder,
             ),
           ),
           if (_scanning) ...[
-            const SizedBox(height: 16),
-            const LinearProgressIndicator(),
+            const SizedBox(height: Spacing.md),
+            const ClipRRect(
+              borderRadius: Radii.smAll,
+              child: LinearProgressIndicator(),
+            ),
           ],
           if (scan != null && !_scanning && scan.error == null) ...[
-            const SizedBox(height: 16),
-            _SectionTitle(l10n.mergePreview),
-            Card(child: _ScanSummary(scan: scan)),
+            SectionHeader(l10n.mergePreview),
+            MediaryCard(child: _ScanSummary(scan: scan)),
           ],
-          const SizedBox(height: 16),
-          _SectionTitle(l10n.mergePreference),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment(
-                    value: false,
-                    label: Text(l10n.mergeTsOnly),
-                  ),
-                  ButtonSegment(
-                    value: true,
-                    label: Text(l10n.mergePreferMp4),
-                  ),
-                ],
-                selected: {_preferMp4},
-                onSelectionChanged: _merging
-                    ? null
-                    : (sel) => setState(() => _preferMp4 = sel.first),
-              ),
+          SectionHeader(l10n.mergePreference),
+          MediaryCard(
+            child: SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n.mergeTsOnly),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(l10n.mergePreferMp4),
+                ),
+              ],
+              selected: {_preferMp4},
+              showSelectedIcon: false,
+              onSelectionChanged: _merging
+                  ? null
+                  : (sel) => setState(() => _preferMp4 = sel.first),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: Spacing.xl),
           FilledButton.icon(
             onPressed: canMerge ? _startMerge : null,
             icon: _merging
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.call_merge_rounded),
+                : const Icon(Icons.call_merge_rounded, size: 18),
             label: Text(_merging ? l10n.mergeInProgress : l10n.mergeStart),
           ),
           if (_merging) ...[
-            const SizedBox(height: 16),
-            _phase == FolderMergePhase.concatenating
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LinearProgressIndicator(value: _progress),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${(_progress * 100).toStringAsFixed(0)}%  ·  '
-                        '${formatBytes(_written)} / ${formatBytes(_total)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const LinearProgressIndicator(),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.mergeRemuxing,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: Spacing.lg),
+            _MergeProgress(
+              phase: _phase,
+              progress: _progress,
+              written: _written,
+              total: _total,
+              label: l10n.mergeRemuxing,
+            ),
           ],
           if (_result != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: Spacing.lg),
             _ResultCard(result: _result!),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FolderRow extends StatelessWidget {
+  const _FolderRow({required this.path, required this.label});
+
+  final String? path;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final profile = context.platformProfile;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: profile.isDesktop ? Spacing.xl : Spacing.lg,
+        vertical: Spacing.md + 2,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.folder_rounded, size: 19, color: scheme.onSurfaceVariant),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Text(
+              path ?? label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: path == null
+                  ? text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant)
+                  : text.bodyLarge,
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded,
+              size: 18, color: scheme.onSurfaceVariant),
         ],
       ),
     );
@@ -286,53 +311,121 @@ class _ScanSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     final first = p.basename(scan.segments.first.path);
     final last = p.basename(scan.segments.last.path);
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _InfoRow(
-            icon: Icons.movie_filter_rounded,
-            label: l10n.mergeSegmentsFound(scan.segments.length),
-          ),
-          _InfoRow(
-            icon: Icons.data_usage_rounded,
-            label: l10n.mergeTotalSize(formatBytes(scan.totalBytes)),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            scan.segments.length > 1 ? '$first … $last' : first,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: scheme.outline),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        StatGrid(
+          maxColumns: 2,
+          children: [
+            StatTile(
+              label: l10n.segmentsCountLabel,
+              value: '${scan.segments.length}',
+              icon: Icons.view_module_rounded,
+            ),
+            StatTile(
+              label: l10n.totalSizeLabel,
+              value: formatBytes(scan.totalBytes),
+              icon: Icons.data_usage_rounded,
+            ),
+          ],
+        ),
+        const SizedBox(height: Spacing.md),
+        Row(
+          children: [
+            Icon(Icons.playlist_play_rounded,
+                size: 14, color: scheme.onSurfaceVariant),
+            const SizedBox(width: Spacing.xs + 2),
+            Expanded(
+              child: Text(
+                scan.segments.length > 1 ? '$first … $last' : first,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label});
+/// Merge progress. Concatenation reports byte progress; the remux phase is
+/// indeterminate because ffmpeg does not emit parseable progress here.
+class _MergeProgress extends StatelessWidget {
+  const _MergeProgress({
+    required this.phase,
+    required this.progress,
+    required this.written,
+    required this.total,
+    required this.label,
+  });
 
-  final IconData icon;
+  final FolderMergePhase phase;
+  final double progress;
+  final int written;
+  final int total;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
+
+    if (phase != FolderMergePhase.concatenating) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Theme.of(context).colorScheme.outline),
-          const SizedBox(width: 8),
-          Expanded(child: Text(label)),
+          const ClipRRect(
+            borderRadius: Radii.smAll,
+            child: LinearProgressIndicator(),
+          ),
+          const SizedBox(height: Spacing.sm),
+          Text(
+            label,
+            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
         ],
-      ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: Radii.smAll,
+          child: LinearProgressIndicator(
+            value: progress,
+            color: colors.doneSegment,
+          ),
+        ),
+        const SizedBox(height: Spacing.sm),
+        Row(
+          children: [
+            Text(
+              '${(progress * 100).toStringAsFixed(0)}%',
+              style: text.bodySmall?.copyWith(
+                color: colors.doneSegment,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: Spacing.md),
+            Text(
+              '${formatBytes(written)} / ${formatBytes(total)}',
+              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -345,78 +438,113 @@ class _ResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
 
     if (!result.success) {
-      return Card(
-        color: scheme.errorContainer,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.error_outline_rounded, color: scheme.error),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _errorText(result, l10n),
-                  style: TextStyle(color: scheme.onErrorContainer),
-                ),
+      return MediaryCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: colors.danger.withValues(alpha: 0.12),
+                borderRadius: Radii.smAll,
               ),
-            ],
-          ),
+              child: Icon(Icons.error_outline_rounded,
+                  size: 17, color: colors.danger),
+            ),
+            const SizedBox(width: Spacing.md),
+            Expanded(
+              child: Text(
+                _errorText(result, l10n),
+                style: text.bodyMedium?.copyWith(color: colors.danger),
+              ),
+            ),
+          ],
         ),
       );
     }
 
     final output = result.outputFile!;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return MediaryCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: colors.success.withValues(alpha: 0.12),
+                  borderRadius: Radii.smAll,
+                ),
+                child: Icon(Icons.check_rounded,
+                    size: 17, color: colors.success),
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      output.uri.pathSegments.last,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      output.path,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (result.downgradedToTs) ...[
+            const SizedBox(height: Spacing.md),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.green),
-                const SizedBox(width: 12),
+                Icon(Icons.info_outline_rounded,
+                    size: 15, color: colors.warning),
+                const SizedBox(width: Spacing.sm - 2),
                 Expanded(
                   child: Text(
-                    output.path,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    l10n.mergeMobileTsHint,
+                    style: text.bodySmall?.copyWith(color: colors.warning),
                   ),
                 ),
               ],
             ),
-            if (result.downgradedToTs) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.info_outline_rounded,
-                      size: 18, color: scheme.tertiary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.mergeMobileTsHint,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: scheme.tertiary),
-                    ),
-                  ),
-                ],
+          ],
+          const SizedBox(height: Spacing.md),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => OpenFilex.open(output.path),
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: Text(l10n.mergeOpenOutput),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 36),
+                ),
               ),
             ],
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => OpenFilex.open(output.path),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(l10n.mergeOpenOutput),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -430,23 +558,4 @@ class _ResultCard extends StatelessWidget {
         FolderMergeError.writeFailed || null =>
           l10n.mergeFailed(result.errorMessage ?? ''),
       };
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
-      ),
-    );
-  }
 }

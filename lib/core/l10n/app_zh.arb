@@ -88,7 +88,67 @@
   "playerFileMissing": "输出文件不存在，可能已被删除",
   "playerOpenFailed": "无法播放该文件（格式不受支持或已损坏）",
   "navMerge": "合并",
+  "navActive": "进行中",
+  "newDownloadShort": "新建",
+  "downloadsSummary": "{active} 个进行中 · {paused} 个已暂停",
+  "@downloadsSummary": {
+    "placeholders": {
+      "active": {},
+      "paused": {}
+    }
+  },
+  "downloadsSummaryEmpty": "所有任务都已完成",
+  "historySummary": "{count} 条记录",
+  "@historySummary": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "remaining": "剩余 {time}",
+  "@remaining": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "segmentsProgress": "{done}/{total} 分片",
+  "@segmentsProgress": {
+    "placeholders": {
+      "done": {},
+      "total": {}
+    }
+  },
+  "segmentsProgressLabel": "进度 {percent}%，已下载 {done}/{total} 个分片",
+  "@segmentsProgressLabel": {
+    "placeholders": {
+      "percent": {},
+      "done": {},
+      "total": {}
+    }
+  },
+  "pauseAll": "全部暂停",
+  "resumeAll": "全部恢复",
+  "mergeReadyHint": "分片已全部下载，正在合并为单个文件",
+  "estimatedSizeHint": "按所选清晰度估算",
+  "noSaveDir": "未设置保存目录",
+  "urlSection": "播放列表地址",
+  "previewSection": "解析结果",
+  "advancedSection": "高级选项",
+  "advancedHint": "自定义请求头与解密密钥",
+  "headerSection": "自定义请求头",
+  "decryptSection": "解密密钥覆盖",
+  "decryptHint": "留空则使用播放列表中的密钥",
+  "startDownloadHint": "确认后将加入下载队列",
+  "emptyDownloadsTitle": "暂无下载任务",
+  "emptyHistoryTitle": "暂无历史记录",
+  "emptyHistoryHint": "完成的下载会出现在这里",
+  "emptyDownloadsAction": "新建下载",
+  "liveBadge": "直播流",
+  "encryptedBadge": "加密",
+  "notEncryptedBadge": "未加密",
   "mergeFolderSection": "切片文件夹",
+  "segmentsCountLabel": "切片数量",
+  "totalSizeLabel": "总大小",
+  "fileRangeLabel": "文件范围",
   "mergeChooseFolder": "选择文件夹",
   "mergePreview": "扫描结果",
   "mergeSegmentsFound": "发现 {count} 个切片",
