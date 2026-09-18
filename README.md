@@ -61,14 +61,13 @@
 <p align="center">
   <table>
     <tr>
-      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home.png" alt="Android 首页" width="220" /></td>
-      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home.png" alt="iOS 首页" width="220" /></td>
-      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home.png" alt="macOS 首页" width="360" /></td>
+      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home.png" alt="Android 首页" width="200" /></td>
+      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home.png" alt="iOS 首页" width="200" /></td>
+      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home.png" alt="macOS 首页" width="300" /></td>
+      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home.png" alt="Windows 首页" width="300" /></td>
     </tr>
   </table>
 </p>
-
-> 截图由脚本自动生成，保证与真实界面一致（详见下文「截图自动化」）。Windows 截图请在 Windows 机器上运行 `./tool/screenshot_desktop.sh windows` 生成。
 
 ## ⬇️ 下载安装
 

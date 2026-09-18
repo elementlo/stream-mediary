@@ -57,7 +57,8 @@ jobs:
           # Let the first frame fully render.
           Start-Sleep -Seconds 8
 
-          # Bring to front and move/resize to a known position.
+          # Bring to front and size the window to the screen WORK AREA so the
+          # taskbar never overlaps it.
           Add-Type @"
           using System;
           using System.Runtime.InteropServices;
@@ -65,33 +66,48 @@ jobs:
             [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
             [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
             [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+            [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
+            [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
           }
           "@
           $hwnd = $proc.MainWindowHandle
           [Win32]::ShowWindow($hwnd, 9) | Out-Null        # SW_RESTORE
           [Win32]::SetForegroundWindow($hwnd) | Out-Null
-          [Win32]::MoveWindow($hwnd, 0, 0, 1280, 800, $true) | Out-Null
+          $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+          $winW = [Math]::Min(1280, $wa.Width)
+          $winH = [Math]::Min(800, $wa.Height)
+          [Win32]::MoveWindow($hwnd, 0, 0, $winW, $winH, $true) | Out-Null
           Start-Sleep -Seconds 3
 
-          # Capture the window region (client + frame) from the screen.
-          Add-Type @"
-          using System;
-          using System.Runtime.InteropServices;
-          public struct RECT { public int Left, Top, Right, Bottom; }
-          public class Win32Rect {
-            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-          }
-          "@
-          $rect = New-Object RECT
-          [Win32Rect]::GetWindowRect($hwnd, [ref]$rect) | Out-Null
+          # Preferred: PrintWindow captures exactly the window bitmap
+          # (frame included), independent of taskbar/occlusion.
+          $rect = New-Object Win32+RECT
+          [Win32]::GetWindowRect($hwnd, [ref]$rect) | Out-Null
           $w = $rect.Right - $rect.Left
           $h = $rect.Bottom - $rect.Top
           Write-Host "Window rect: $($rect.Left),$($rect.Top) ${w}x${h}"
 
           $bmp = New-Object System.Drawing.Bitmap $w, $h
           $g = [System.Drawing.Graphics]::FromImage($bmp)
-          $g.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bmp.Size)
+          $hdc = $g.GetHdc()
+          [Win32]::PrintWindow($hwnd, $hdc, 2) | Out-Null   # PW_RENDERFULLCONTENT
+          $g.ReleaseHdc($hdc)
           $g.Dispose()
+
+          # Fallback: if PrintWindow produced a pure-black frame (some GPU
+          # paths), capture the screen region instead (window now fits the
+          # work area). Note: the dark theme background is ~(19,21,24), so
+          # only near-zero pixels count as a failed capture.
+          $center = $bmp.GetPixel([int]($w / 2), [int]($h / 2))
+          if ($center.R -lt 5 -and $center.G -lt 5 -and $center.B -lt 5) {
+            Write-Host "PrintWindow returned a black frame; falling back to CopyFromScreen."
+            $bmp.Dispose()
+            $bmp = New-Object System.Drawing.Bitmap $w, $h
+            $g2 = [System.Drawing.Graphics]::FromImage($bmp)
+            $g2.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bmp.Size)
+            $g2.Dispose()
+          }
 
           New-Item -ItemType Directory -Force -Path docs\screenshots | Out-Null
           $bmp.Save("$PWD\docs\screenshots\windows-home.png", [System.Drawing.Imaging.ImageFormat]::Png)
