@@ -433,4 +433,82 @@ class AppLocalizationsEn extends AppLocalizations {
   String clearedCompleted(Object count) {
     return 'Cleared $count completed records';
   }
+
+  @override
+  String get navCommunity => 'Board';
+
+  @override
+  String get community => 'Message Board';
+
+  @override
+  String get communitySubtitle => 'Messages, feedback and discussion';
+
+  @override
+  String get communityNotConfigured => 'Message board server not configured';
+
+  @override
+  String get communityNotConfiguredHint =>
+      'Set a Waline server URL in Settings to enable the board';
+
+  @override
+  String get communityNickHint => 'Nickname';
+
+  @override
+  String get communityContentHint => 'Say something…';
+
+  @override
+  String communityReplyTo(Object nick) {
+    return 'Reply to @$nick';
+  }
+
+  @override
+  String get communityPost => 'Post';
+
+  @override
+  String get communityReply => 'Reply';
+
+  @override
+  String get communityReplyAction => 'Reply';
+
+  @override
+  String communityExpandReplies(Object count) {
+    return 'Show $count replies';
+  }
+
+  @override
+  String communityCollapseReplies(Object count) {
+    return 'Collapse replies ($count)';
+  }
+
+  @override
+  String get communityLoadMore => 'Load more';
+
+  @override
+  String communityPageInfo(Object page, Object total) {
+    return 'Page $page of $total';
+  }
+
+  @override
+  String get communityEmpty => 'No messages yet';
+
+  @override
+  String get communityEmptyHint => 'Be the first to post';
+
+  @override
+  String get timeJustNow => 'just now';
+
+  @override
+  String timeMinutesAgo(Object count) {
+    return '$count min ago';
+  }
+
+  @override
+  String timeHoursAgo(Object count) {
+    return '$count h ago';
+  }
+
+  @override
+  String timeDaysAgo(Object count) {
+    return '$count d ago';
+  }
 }

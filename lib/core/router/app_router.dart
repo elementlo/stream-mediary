@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/community/community_page.dart';
 import '../../features/downloads/downloads_page.dart';
 import '../../features/history/history_page.dart';
 import '../../features/merge/merge_page.dart';
@@ -31,6 +32,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/merge',
             name: 'merge',
             builder: (context, state) => const MergePage(),
+          ),
+          GoRoute(
+            path: '/community',
+            name: 'community',
+            builder: (context, state) => const CommunityPage(),
           ),
           GoRoute(
             path: '/settings',

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../data/db/app_database.dart';
+import '../data/remote/waline_client.dart';
 import '../data/repositories/drift_engine_task_store.dart';
 import '../data/repositories/settings_repository.dart';
 import '../engine/download_engine.dart';
@@ -232,6 +233,18 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
 final taskListProvider =
     NotifierProvider<TaskListNotifier, Map<String, TaskViewModel>>(
         TaskListNotifier.new);
+
+/// Waline client for the community board. The server URL is hardcoded in
+/// [WalineClient.defaultServerUrl]; there is nothing for users to configure.
+final walineClientProvider = Provider<WalineClient>(
+  (ref) => WalineClient(serverUrl: WalineClient.defaultServerUrl),
+);
+
+/// Nickname remembered between board posts.
+final boardNickProvider = FutureProvider<String>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  return await settings.boardNick() ?? '';
+});
 
 /// Theme mode backed by settings.
 final themeModeProvider =

@@ -44,6 +44,11 @@ class AdaptiveShell extends ConsumerWidget {
       selectedIcon: Icons.call_merge_rounded,
     ),
     _Destination(
+      path: '/community',
+      icon: Icons.forum_rounded,
+      selectedIcon: Icons.forum_rounded,
+    ),
+    _Destination(
       path: '/settings',
       icon: Icons.settings_rounded,
       selectedIcon: Icons.settings_rounded,
@@ -68,6 +73,7 @@ class AdaptiveShell extends ConsumerWidget {
       l10n.navDownloads,
       l10n.navHistory,
       l10n.navMerge,
+      l10n.navCommunity,
       l10n.navSettings,
     ];
 

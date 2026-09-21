@@ -877,6 +877,132 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已清除 {count} 条已完成记录'**
   String clearedCompleted(Object count);
+
+  /// No description provided for @navCommunity.
+  ///
+  /// In zh, this message translates to:
+  /// **'留言板'**
+  String get navCommunity;
+
+  /// No description provided for @community.
+  ///
+  /// In zh, this message translates to:
+  /// **'留言板'**
+  String get community;
+
+  /// No description provided for @communitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'留言、反馈与使用交流'**
+  String get communitySubtitle;
+
+  /// No description provided for @communityNotConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置留言板服务'**
+  String get communityNotConfigured;
+
+  /// No description provided for @communityNotConfiguredHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在设置中填写 Waline 服务地址后即可使用'**
+  String get communityNotConfiguredHint;
+
+  /// No description provided for @communityNickHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'昵称'**
+  String get communityNickHint;
+
+  /// No description provided for @communityContentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'说点什么…'**
+  String get communityContentHint;
+
+  /// No description provided for @communityReplyTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复 @{nick}'**
+  String communityReplyTo(Object nick);
+
+  /// No description provided for @communityPost.
+  ///
+  /// In zh, this message translates to:
+  /// **'发布'**
+  String get communityPost;
+
+  /// No description provided for @communityReply.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复'**
+  String get communityReply;
+
+  /// No description provided for @communityReplyAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复'**
+  String get communityReplyAction;
+
+  /// No description provided for @communityExpandReplies.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开 {count} 条回复'**
+  String communityExpandReplies(Object count);
+
+  /// No description provided for @communityCollapseReplies.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起回复 ({count})'**
+  String communityCollapseReplies(Object count);
+
+  /// No description provided for @communityLoadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多'**
+  String get communityLoadMore;
+
+  /// No description provided for @communityPageInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {page} / {total} 页'**
+  String communityPageInfo(Object page, Object total);
+
+  /// No description provided for @communityEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有留言'**
+  String get communityEmpty;
+
+  /// No description provided for @communityEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'来发布第一条留言吧'**
+  String get communityEmptyHint;
+
+  /// No description provided for @timeJustNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚刚'**
+  String get timeJustNow;
+
+  /// No description provided for @timeMinutesAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分钟前'**
+  String timeMinutesAgo(Object count);
+
+  /// No description provided for @timeHoursAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小时前'**
+  String timeHoursAgo(Object count);
+
+  /// No description provided for @timeDaysAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天前'**
+  String timeDaysAgo(Object count);
 }
 
 class _AppLocalizationsDelegate

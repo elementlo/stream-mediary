@@ -198,5 +198,62 @@
     "placeholders": {
       "count": {}
     }
+  },
+  "navCommunity": "留言板",
+  "community": "留言板",
+  "communitySubtitle": "留言、反馈与使用交流",
+  "communityNotConfigured": "未配置留言板服务",
+  "communityNotConfiguredHint": "在设置中填写 Waline 服务地址后即可使用",
+  "communityNickHint": "昵称",
+  "communityContentHint": "说点什么…",
+  "communityReplyTo": "回复 @{nick}",
+  "@communityReplyTo": {
+    "placeholders": {
+      "nick": {}
+    }
+  },
+  "communityPost": "发布",
+  "communityReply": "回复",
+  "communityReplyAction": "回复",
+  "communityExpandReplies": "展开 {count} 条回复",
+  "@communityExpandReplies": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "communityCollapseReplies": "收起回复 ({count})",
+  "@communityCollapseReplies": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "communityLoadMore": "加载更多",
+  "communityPageInfo": "第 {page} / {total} 页",
+  "@communityPageInfo": {
+    "placeholders": {
+      "page": {},
+      "total": {}
+    }
+  },
+  "communityEmpty": "还没有留言",
+  "communityEmptyHint": "来发布第一条留言吧",
+  "timeJustNow": "刚刚",
+  "timeMinutesAgo": "{count} 分钟前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "timeHoursAgo": "{count} 小时前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "timeDaysAgo": "{count} 天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {}
+    }
   }
 }

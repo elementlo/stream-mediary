@@ -14,6 +14,7 @@ class SettingsRepository {
   static const String keyThemeMode = 'theme_mode';
   static const String keyMergePreference = 'merge_preference';
   static const String keyFfmpegPath = 'ffmpeg_path';
+  static const String keyBoardNick = 'board_nick';
 
   static const int defaultTaskConcurrency = 3;
   static const int defaultSegmentConcurrency = 8;
@@ -57,4 +58,10 @@ class SettingsRepository {
 
   Future<void> setFfmpegPath(String path) =>
       _db.setSetting(keyFfmpegPath, path);
+
+  /// Nickname remembered between posts so guests do not retype it.
+  Future<String?> boardNick() => _db.settingValue(keyBoardNick);
+
+  Future<void> setBoardNick(String nick) =>
+      _db.setSetting(keyBoardNick, nick);
 }

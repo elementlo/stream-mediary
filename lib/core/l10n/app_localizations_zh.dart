@@ -424,4 +424,81 @@ class AppLocalizationsZh extends AppLocalizations {
   String clearedCompleted(Object count) {
     return '已清除 $count 条已完成记录';
   }
+
+  @override
+  String get navCommunity => '留言板';
+
+  @override
+  String get community => '留言板';
+
+  @override
+  String get communitySubtitle => '留言、反馈与使用交流';
+
+  @override
+  String get communityNotConfigured => '未配置留言板服务';
+
+  @override
+  String get communityNotConfiguredHint => '在设置中填写 Waline 服务地址后即可使用';
+
+  @override
+  String get communityNickHint => '昵称';
+
+  @override
+  String get communityContentHint => '说点什么…';
+
+  @override
+  String communityReplyTo(Object nick) {
+    return '回复 @$nick';
+  }
+
+  @override
+  String get communityPost => '发布';
+
+  @override
+  String get communityReply => '回复';
+
+  @override
+  String get communityReplyAction => '回复';
+
+  @override
+  String communityExpandReplies(Object count) {
+    return '展开 $count 条回复';
+  }
+
+  @override
+  String communityCollapseReplies(Object count) {
+    return '收起回复 ($count)';
+  }
+
+  @override
+  String get communityLoadMore => '加载更多';
+
+  @override
+  String communityPageInfo(Object page, Object total) {
+    return '第 $page / $total 页';
+  }
+
+  @override
+  String get communityEmpty => '还没有留言';
+
+  @override
+  String get communityEmptyHint => '来发布第一条留言吧';
+
+  @override
+  String get timeJustNow => '刚刚';
+
+  @override
+  String timeMinutesAgo(Object count) {
+    return '$count 分钟前';
+  }
+
+  @override
+  String timeHoursAgo(Object count) {
+    return '$count 小时前';
+  }
+
+  @override
+  String timeDaysAgo(Object count) {
+    return '$count 天前';
+  }
 }
