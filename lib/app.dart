@@ -11,12 +11,26 @@ import 'providers/app_providers.dart';
 class StreamMediaryApp extends ConsumerWidget {
   const StreamMediaryApp({super.key});
 
+  /// One-shot guard: the board prefetch must fire exactly once per process,
+  /// not on every rebuild of the app widget.
+  static bool _boardPrefetchStarted = false;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     // Resolved once: the platform cannot change while the app is running.
     final profile = PlatformProfile.resolve();
+
+    // Warm the board cache right after the first frame so opening the board
+    // later renders instantly even on a cold install. Errors are swallowed
+    // here; the board page surfaces them when the user actually visits.
+    if (!_boardPrefetchStarted) {
+      _boardPrefetchStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(boardPrefetchProvider.future).ignore();
+      });
+    }
 
     return PlatformScope(
       profile: profile,

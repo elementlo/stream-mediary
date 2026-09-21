@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../data/db/app_database.dart';
 import '../data/remote/waline_client.dart';
+import '../data/repositories/board_cache.dart';
 import '../data/repositories/drift_engine_task_store.dart';
 import '../data/repositories/settings_repository.dart';
 import '../engine/download_engine.dart';
@@ -240,6 +241,20 @@ final taskListProvider =
 final walineClientProvider = Provider<WalineClient>(
   (ref) => WalineClient(serverUrl: WalineClient.defaultServerUrl),
 );
+
+/// First page of board comments, fetched once at app startup and written
+/// through to the drift cache.
+///
+/// Shared between the startup prefetch and the board page: opening the page
+/// awaits this same future instead of issuing a second request, so the two
+/// never duplicate each other. Manual refreshes invalidate it first.
+final boardPrefetchProvider = FutureProvider<WalineCommentPage>((ref) async {
+  final client = ref.read(walineClientProvider);
+  final db = ref.read(appDatabaseProvider);
+  final page = await client.fetchComments(page: 1);
+  await cacheComments(db, page.comments);
+  return page;
+});
 
 /// Nickname remembered between board posts.
 final boardNickProvider = FutureProvider<String>((ref) async {

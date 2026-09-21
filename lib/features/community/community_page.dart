@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,8 +7,8 @@ import '../../core/theme/mediary_colors.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
-import '../../data/db/app_database.dart';
 import '../../data/remote/waline_client.dart';
+import '../../data/repositories/board_cache.dart';
 import '../../providers/app_providers.dart';
 
 /// Message board backed by the project's Waline deployment.
@@ -53,8 +52,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
     super.dispose();
   }
 
-  /// Loads the cached list (instant, offline-friendly), then silently
-  /// fetches the first page from the server and swaps it in on success.
+  /// Loads the cached list (instant, offline-friendly), then awaits the
+  /// app-startup prefetch — the same shared future, so opening the board
+  /// never issues a duplicate first-page request.
   Future<void> _bootstrap() async {
     final nick = await ref.read(boardNickProvider.future);
     if (!mounted) return;
@@ -63,72 +63,43 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
     }
 
     final db = ref.read(appDatabaseProvider);
-    final cached = await db.cachedBoardComments();
+    final cached = await readCachedComments(db);
     if (!mounted) return;
     if (cached.isNotEmpty) {
-      setState(() {
-        _comments = cached.map(_fromCacheRow).toList();
-      });
+      setState(() => _comments = cached);
+    } else {
+      setState(() => _loading = true);
     }
 
-    // Silent refresh: no spinner when we already have something to show.
-    await _load(refresh: true, silent: cached.isNotEmpty);
+    // If the startup prefetch already failed (e.g. offline at launch), drop
+    // the cached error and retry now instead of showing a stale failure.
+    if (ref.read(boardPrefetchProvider) is AsyncError) {
+      ref.invalidate(boardPrefetchProvider);
+    }
+
+    // Reuse the startup prefetch (already running or completed). Silent
+    // when the cache gave us something to show.
+    await _applyPrefetch(silent: cached.isNotEmpty);
   }
 
-  WalineComment _fromCacheRow(BoardComment row) => WalineComment(
-        objectId: row.objectId,
-        comment: row.comment,
-        nick: row.nick,
-        insertedAt:
-            DateTime.fromMillisecondsSinceEpoch(row.insertedAt).toUtc(),
-        rid: row.rid,
-        link: row.link,
-        avatar: row.avatar,
-      );
-
-  Future<void> _cacheCurrent() async {
-    final db = ref.read(appDatabaseProvider);
-    await db.replaceBoardComments([
-      for (var i = 0; i < _comments.length; i++)
-        BoardCommentsCompanion.insert(
-          objectId: _comments[i].objectId,
-          comment: _comments[i].comment,
-          nick: _comments[i].nick,
-          insertedAt: _comments[i].insertedAt.millisecondsSinceEpoch,
-          sortIndex: Value(i),
-          rid: Value(_comments[i].rid),
-          link: Value(_comments[i].link),
-          avatar: Value(_comments[i].avatar),
-        ),
-    ]);
-  }
-
-  Future<void> _load({
-    int page = 1,
-    bool refresh = false,
-    bool silent = false,
-  }) async {
-    final client = ref.read(walineClientProvider);
+  /// Awaits the shared first-page prefetch and applies its result.
+  Future<void> _applyPrefetch({bool silent = false}) async {
     if (!silent) {
       setState(() {
         _loading = true;
-        if (refresh) _error = null;
+        _error = null;
       });
     }
     try {
-      final result = await client.fetchComments(page: page);
+      final result = await ref.read(boardPrefetchProvider.future);
       if (!mounted) return;
       setState(() {
-        _comments = page == 1
-            ? result.comments
-            : [..._comments, ...result.comments];
+        _comments = result.comments;
         _page = result.page;
         _totalPages = result.totalPages;
         _loading = false;
         _error = null;
       });
-      // Only cache the first page set; appended pages are session-only.
-      if (page == 1) await _cacheCurrent();
     } on WalineException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -137,8 +108,41 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
         _error = e.message;
       });
     } catch (e) {
-      // Any unexpected failure (parse error, etc.) must still release the
-      // loading state so the page never spins forever.
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '$e';
+      });
+    }
+  }
+
+  /// Manual refresh: drop the shared prefetch so a genuinely new request
+  /// is made, then apply it.
+  Future<void> _manualRefresh() async {
+    ref.invalidate(boardPrefetchProvider);
+    await _applyPrefetch();
+  }
+
+  Future<void> _loadMore() async {
+    final client = ref.read(walineClientProvider);
+    setState(() => _loading = true);
+    try {
+      final result = await client.fetchComments(page: _page + 1);
+      if (!mounted) return;
+      setState(() {
+        _comments = [..._comments, ...result.comments];
+        _page = result.page;
+        _totalPages = result.totalPages;
+        _loading = false;
+        _error = null;
+      });
+    } on WalineException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -162,7 +166,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       if (!mounted) return true;
       _contentController.clear();
       setState(() => _replyTo = null);
-      await _load(refresh: true);
+      // The new comment must appear: drop the shared prefetch and refetch.
+      ref.invalidate(boardPrefetchProvider);
+      await _applyPrefetch(silent: true);
       return true;
     } on WalineException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -228,7 +234,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       maxWidth: Breakpoints.contentForm,
       actions: [
         IconButton(
-          onPressed: _loading ? null : () => _load(refresh: true),
+          onPressed: _loading ? null : _manualRefresh,
           icon: const Icon(Icons.refresh_rounded),
           tooltip: l10n.communityRefresh,
         ),
@@ -251,12 +257,12 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
             padding: const EdgeInsets.only(bottom: Spacing.md),
             child: _ErrorRetry(
               message: _error!,
-              onRetry: () => _load(refresh: true),
+              onRetry: _manualRefresh,
             ),
           ),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () => _load(refresh: true),
+            onRefresh: _manualRefresh,
             child: ListView(
               controller: _scrollController,
               // Extra bottom room so the FAB never covers the last card.
@@ -310,8 +316,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                           ),
                           const SizedBox(height: Spacing.xs),
                           OutlinedButton.icon(
-                            onPressed:
-                                _loading ? null : () => _load(page: _page + 1),
+                            onPressed: _loading ? null : _loadMore,
                             icon: const Icon(Icons.expand_more_rounded,
                                 size: 16),
                             label: Text(l10n.communityLoadMore),
