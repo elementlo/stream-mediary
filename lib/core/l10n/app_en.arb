@@ -184,6 +184,8 @@
   "communityExpandReplies": "{count} replies",
   "communityCollapseReplies": "Collapse",
   "communityLoadMore": "Load more",
+  "communityRefresh": "Refresh",
+  "communityWarning": "Please follow the law. Posting illegal or rule-breaking content is prohibited; violators bear full responsibility.",
   "communityPageInfo": "Page {page} of {total}",
   "communityEmpty": "No messages yet",
   "communityEmptyHint": "Be the first to post",

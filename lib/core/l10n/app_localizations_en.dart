@@ -485,6 +485,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityLoadMore => 'Load more';
 
   @override
+  String get communityRefresh => 'Refresh';
+
+  @override
+  String get communityWarning =>
+      'Please follow the law. Posting illegal or rule-breaking content is prohibited; violators bear full responsibility.';
+
+  @override
   String communityPageInfo(Object page, Object total) {
     return 'Page $page of $total';
   }

@@ -1622,12 +1622,523 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   }
 }
 
+class $BoardCommentsTable extends BoardComments
+    with TableInfo<$BoardCommentsTable, BoardComment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BoardCommentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _objectIdMeta = const VerificationMeta(
+    'objectId',
+  );
+  @override
+  late final GeneratedColumn<String> objectId = GeneratedColumn<String>(
+    'object_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _commentMeta = const VerificationMeta(
+    'comment',
+  );
+  @override
+  late final GeneratedColumn<String> comment = GeneratedColumn<String>(
+    'comment',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nickMeta = const VerificationMeta('nick');
+  @override
+  late final GeneratedColumn<String> nick = GeneratedColumn<String>(
+    'nick',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _insertedAtMeta = const VerificationMeta(
+    'insertedAt',
+  );
+  @override
+  late final GeneratedColumn<int> insertedAt = GeneratedColumn<int>(
+    'inserted_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ridMeta = const VerificationMeta('rid');
+  @override
+  late final GeneratedColumn<String> rid = GeneratedColumn<String>(
+    'rid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _linkMeta = const VerificationMeta('link');
+  @override
+  late final GeneratedColumn<String> link = GeneratedColumn<String>(
+    'link',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _avatarMeta = const VerificationMeta('avatar');
+  @override
+  late final GeneratedColumn<String> avatar = GeneratedColumn<String>(
+    'avatar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortIndexMeta = const VerificationMeta(
+    'sortIndex',
+  );
+  @override
+  late final GeneratedColumn<int> sortIndex = GeneratedColumn<int>(
+    'sort_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    objectId,
+    comment,
+    nick,
+    insertedAt,
+    rid,
+    link,
+    avatar,
+    sortIndex,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'board_comments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BoardComment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('object_id')) {
+      context.handle(
+        _objectIdMeta,
+        objectId.isAcceptableOrUnknown(data['object_id']!, _objectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_objectIdMeta);
+    }
+    if (data.containsKey('comment')) {
+      context.handle(
+        _commentMeta,
+        comment.isAcceptableOrUnknown(data['comment']!, _commentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_commentMeta);
+    }
+    if (data.containsKey('nick')) {
+      context.handle(
+        _nickMeta,
+        nick.isAcceptableOrUnknown(data['nick']!, _nickMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nickMeta);
+    }
+    if (data.containsKey('inserted_at')) {
+      context.handle(
+        _insertedAtMeta,
+        insertedAt.isAcceptableOrUnknown(data['inserted_at']!, _insertedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_insertedAtMeta);
+    }
+    if (data.containsKey('rid')) {
+      context.handle(
+        _ridMeta,
+        rid.isAcceptableOrUnknown(data['rid']!, _ridMeta),
+      );
+    }
+    if (data.containsKey('link')) {
+      context.handle(
+        _linkMeta,
+        link.isAcceptableOrUnknown(data['link']!, _linkMeta),
+      );
+    }
+    if (data.containsKey('avatar')) {
+      context.handle(
+        _avatarMeta,
+        avatar.isAcceptableOrUnknown(data['avatar']!, _avatarMeta),
+      );
+    }
+    if (data.containsKey('sort_index')) {
+      context.handle(
+        _sortIndexMeta,
+        sortIndex.isAcceptableOrUnknown(data['sort_index']!, _sortIndexMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {objectId};
+  @override
+  BoardComment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BoardComment(
+      objectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}object_id'],
+      )!,
+      comment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}comment'],
+      )!,
+      nick: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nick'],
+      )!,
+      insertedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}inserted_at'],
+      )!,
+      rid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rid'],
+      ),
+      link: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}link'],
+      ),
+      avatar: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar'],
+      ),
+      sortIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_index'],
+      )!,
+    );
+  }
+
+  @override
+  $BoardCommentsTable createAlias(String alias) {
+    return $BoardCommentsTable(attachedDatabase, alias);
+  }
+}
+
+class BoardComment extends DataClass implements Insertable<BoardComment> {
+  final String objectId;
+  final String comment;
+  final String nick;
+  final int insertedAt;
+  final String? rid;
+  final String? link;
+  final String? avatar;
+
+  /// Sort order within the cached page set (server order, newest first).
+  final int sortIndex;
+  const BoardComment({
+    required this.objectId,
+    required this.comment,
+    required this.nick,
+    required this.insertedAt,
+    this.rid,
+    this.link,
+    this.avatar,
+    required this.sortIndex,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['object_id'] = Variable<String>(objectId);
+    map['comment'] = Variable<String>(comment);
+    map['nick'] = Variable<String>(nick);
+    map['inserted_at'] = Variable<int>(insertedAt);
+    if (!nullToAbsent || rid != null) {
+      map['rid'] = Variable<String>(rid);
+    }
+    if (!nullToAbsent || link != null) {
+      map['link'] = Variable<String>(link);
+    }
+    if (!nullToAbsent || avatar != null) {
+      map['avatar'] = Variable<String>(avatar);
+    }
+    map['sort_index'] = Variable<int>(sortIndex);
+    return map;
+  }
+
+  BoardCommentsCompanion toCompanion(bool nullToAbsent) {
+    return BoardCommentsCompanion(
+      objectId: Value(objectId),
+      comment: Value(comment),
+      nick: Value(nick),
+      insertedAt: Value(insertedAt),
+      rid: rid == null && nullToAbsent ? const Value.absent() : Value(rid),
+      link: link == null && nullToAbsent ? const Value.absent() : Value(link),
+      avatar: avatar == null && nullToAbsent
+          ? const Value.absent()
+          : Value(avatar),
+      sortIndex: Value(sortIndex),
+    );
+  }
+
+  factory BoardComment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BoardComment(
+      objectId: serializer.fromJson<String>(json['objectId']),
+      comment: serializer.fromJson<String>(json['comment']),
+      nick: serializer.fromJson<String>(json['nick']),
+      insertedAt: serializer.fromJson<int>(json['insertedAt']),
+      rid: serializer.fromJson<String?>(json['rid']),
+      link: serializer.fromJson<String?>(json['link']),
+      avatar: serializer.fromJson<String?>(json['avatar']),
+      sortIndex: serializer.fromJson<int>(json['sortIndex']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'objectId': serializer.toJson<String>(objectId),
+      'comment': serializer.toJson<String>(comment),
+      'nick': serializer.toJson<String>(nick),
+      'insertedAt': serializer.toJson<int>(insertedAt),
+      'rid': serializer.toJson<String?>(rid),
+      'link': serializer.toJson<String?>(link),
+      'avatar': serializer.toJson<String?>(avatar),
+      'sortIndex': serializer.toJson<int>(sortIndex),
+    };
+  }
+
+  BoardComment copyWith({
+    String? objectId,
+    String? comment,
+    String? nick,
+    int? insertedAt,
+    Value<String?> rid = const Value.absent(),
+    Value<String?> link = const Value.absent(),
+    Value<String?> avatar = const Value.absent(),
+    int? sortIndex,
+  }) => BoardComment(
+    objectId: objectId ?? this.objectId,
+    comment: comment ?? this.comment,
+    nick: nick ?? this.nick,
+    insertedAt: insertedAt ?? this.insertedAt,
+    rid: rid.present ? rid.value : this.rid,
+    link: link.present ? link.value : this.link,
+    avatar: avatar.present ? avatar.value : this.avatar,
+    sortIndex: sortIndex ?? this.sortIndex,
+  );
+  BoardComment copyWithCompanion(BoardCommentsCompanion data) {
+    return BoardComment(
+      objectId: data.objectId.present ? data.objectId.value : this.objectId,
+      comment: data.comment.present ? data.comment.value : this.comment,
+      nick: data.nick.present ? data.nick.value : this.nick,
+      insertedAt: data.insertedAt.present
+          ? data.insertedAt.value
+          : this.insertedAt,
+      rid: data.rid.present ? data.rid.value : this.rid,
+      link: data.link.present ? data.link.value : this.link,
+      avatar: data.avatar.present ? data.avatar.value : this.avatar,
+      sortIndex: data.sortIndex.present ? data.sortIndex.value : this.sortIndex,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BoardComment(')
+          ..write('objectId: $objectId, ')
+          ..write('comment: $comment, ')
+          ..write('nick: $nick, ')
+          ..write('insertedAt: $insertedAt, ')
+          ..write('rid: $rid, ')
+          ..write('link: $link, ')
+          ..write('avatar: $avatar, ')
+          ..write('sortIndex: $sortIndex')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    objectId,
+    comment,
+    nick,
+    insertedAt,
+    rid,
+    link,
+    avatar,
+    sortIndex,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BoardComment &&
+          other.objectId == this.objectId &&
+          other.comment == this.comment &&
+          other.nick == this.nick &&
+          other.insertedAt == this.insertedAt &&
+          other.rid == this.rid &&
+          other.link == this.link &&
+          other.avatar == this.avatar &&
+          other.sortIndex == this.sortIndex);
+}
+
+class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
+  final Value<String> objectId;
+  final Value<String> comment;
+  final Value<String> nick;
+  final Value<int> insertedAt;
+  final Value<String?> rid;
+  final Value<String?> link;
+  final Value<String?> avatar;
+  final Value<int> sortIndex;
+  final Value<int> rowid;
+  const BoardCommentsCompanion({
+    this.objectId = const Value.absent(),
+    this.comment = const Value.absent(),
+    this.nick = const Value.absent(),
+    this.insertedAt = const Value.absent(),
+    this.rid = const Value.absent(),
+    this.link = const Value.absent(),
+    this.avatar = const Value.absent(),
+    this.sortIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BoardCommentsCompanion.insert({
+    required String objectId,
+    required String comment,
+    required String nick,
+    required int insertedAt,
+    this.rid = const Value.absent(),
+    this.link = const Value.absent(),
+    this.avatar = const Value.absent(),
+    this.sortIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : objectId = Value(objectId),
+       comment = Value(comment),
+       nick = Value(nick),
+       insertedAt = Value(insertedAt);
+  static Insertable<BoardComment> custom({
+    Expression<String>? objectId,
+    Expression<String>? comment,
+    Expression<String>? nick,
+    Expression<int>? insertedAt,
+    Expression<String>? rid,
+    Expression<String>? link,
+    Expression<String>? avatar,
+    Expression<int>? sortIndex,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (objectId != null) 'object_id': objectId,
+      if (comment != null) 'comment': comment,
+      if (nick != null) 'nick': nick,
+      if (insertedAt != null) 'inserted_at': insertedAt,
+      if (rid != null) 'rid': rid,
+      if (link != null) 'link': link,
+      if (avatar != null) 'avatar': avatar,
+      if (sortIndex != null) 'sort_index': sortIndex,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BoardCommentsCompanion copyWith({
+    Value<String>? objectId,
+    Value<String>? comment,
+    Value<String>? nick,
+    Value<int>? insertedAt,
+    Value<String?>? rid,
+    Value<String?>? link,
+    Value<String?>? avatar,
+    Value<int>? sortIndex,
+    Value<int>? rowid,
+  }) {
+    return BoardCommentsCompanion(
+      objectId: objectId ?? this.objectId,
+      comment: comment ?? this.comment,
+      nick: nick ?? this.nick,
+      insertedAt: insertedAt ?? this.insertedAt,
+      rid: rid ?? this.rid,
+      link: link ?? this.link,
+      avatar: avatar ?? this.avatar,
+      sortIndex: sortIndex ?? this.sortIndex,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (objectId.present) {
+      map['object_id'] = Variable<String>(objectId.value);
+    }
+    if (comment.present) {
+      map['comment'] = Variable<String>(comment.value);
+    }
+    if (nick.present) {
+      map['nick'] = Variable<String>(nick.value);
+    }
+    if (insertedAt.present) {
+      map['inserted_at'] = Variable<int>(insertedAt.value);
+    }
+    if (rid.present) {
+      map['rid'] = Variable<String>(rid.value);
+    }
+    if (link.present) {
+      map['link'] = Variable<String>(link.value);
+    }
+    if (avatar.present) {
+      map['avatar'] = Variable<String>(avatar.value);
+    }
+    if (sortIndex.present) {
+      map['sort_index'] = Variable<int>(sortIndex.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BoardCommentsCompanion(')
+          ..write('objectId: $objectId, ')
+          ..write('comment: $comment, ')
+          ..write('nick: $nick, ')
+          ..write('insertedAt: $insertedAt, ')
+          ..write('rid: $rid, ')
+          ..write('link: $link, ')
+          ..write('avatar: $avatar, ')
+          ..write('sortIndex: $sortIndex, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TasksTable tasks = $TasksTable(this);
   late final $SegmentsTable segments = $SegmentsTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $BoardCommentsTable boardComments = $BoardCommentsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1636,6 +2147,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tasks,
     segments,
     settings,
+    boardComments,
   ];
 }
 
@@ -2441,6 +2953,265 @@ typedef $$SettingsTableProcessedTableManager =
       Setting,
       PrefetchHooks Function()
     >;
+typedef $$BoardCommentsTableCreateCompanionBuilder =
+    BoardCommentsCompanion Function({
+      required String objectId,
+      required String comment,
+      required String nick,
+      required int insertedAt,
+      Value<String?> rid,
+      Value<String?> link,
+      Value<String?> avatar,
+      Value<int> sortIndex,
+      Value<int> rowid,
+    });
+typedef $$BoardCommentsTableUpdateCompanionBuilder =
+    BoardCommentsCompanion Function({
+      Value<String> objectId,
+      Value<String> comment,
+      Value<String> nick,
+      Value<int> insertedAt,
+      Value<String?> rid,
+      Value<String?> link,
+      Value<String?> avatar,
+      Value<int> sortIndex,
+      Value<int> rowid,
+    });
+
+class $$BoardCommentsTableFilterComposer
+    extends Composer<_$AppDatabase, $BoardCommentsTable> {
+  $$BoardCommentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get objectId => $composableBuilder(
+    column: $table.objectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get comment => $composableBuilder(
+    column: $table.comment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nick => $composableBuilder(
+    column: $table.nick,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get insertedAt => $composableBuilder(
+    column: $table.insertedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rid => $composableBuilder(
+    column: $table.rid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get link => $composableBuilder(
+    column: $table.link,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatar => $composableBuilder(
+    column: $table.avatar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortIndex => $composableBuilder(
+    column: $table.sortIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BoardCommentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BoardCommentsTable> {
+  $$BoardCommentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get objectId => $composableBuilder(
+    column: $table.objectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get comment => $composableBuilder(
+    column: $table.comment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nick => $composableBuilder(
+    column: $table.nick,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get insertedAt => $composableBuilder(
+    column: $table.insertedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rid => $composableBuilder(
+    column: $table.rid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get link => $composableBuilder(
+    column: $table.link,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get avatar => $composableBuilder(
+    column: $table.avatar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortIndex => $composableBuilder(
+    column: $table.sortIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BoardCommentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BoardCommentsTable> {
+  $$BoardCommentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get objectId =>
+      $composableBuilder(column: $table.objectId, builder: (column) => column);
+
+  GeneratedColumn<String> get comment =>
+      $composableBuilder(column: $table.comment, builder: (column) => column);
+
+  GeneratedColumn<String> get nick =>
+      $composableBuilder(column: $table.nick, builder: (column) => column);
+
+  GeneratedColumn<int> get insertedAt => $composableBuilder(
+    column: $table.insertedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rid =>
+      $composableBuilder(column: $table.rid, builder: (column) => column);
+
+  GeneratedColumn<String> get link =>
+      $composableBuilder(column: $table.link, builder: (column) => column);
+
+  GeneratedColumn<String> get avatar =>
+      $composableBuilder(column: $table.avatar, builder: (column) => column);
+
+  GeneratedColumn<int> get sortIndex =>
+      $composableBuilder(column: $table.sortIndex, builder: (column) => column);
+}
+
+class $$BoardCommentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BoardCommentsTable,
+          BoardComment,
+          $$BoardCommentsTableFilterComposer,
+          $$BoardCommentsTableOrderingComposer,
+          $$BoardCommentsTableAnnotationComposer,
+          $$BoardCommentsTableCreateCompanionBuilder,
+          $$BoardCommentsTableUpdateCompanionBuilder,
+          (
+            BoardComment,
+            BaseReferences<_$AppDatabase, $BoardCommentsTable, BoardComment>,
+          ),
+          BoardComment,
+          PrefetchHooks Function()
+        > {
+  $$BoardCommentsTableTableManager(_$AppDatabase db, $BoardCommentsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BoardCommentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BoardCommentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BoardCommentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> objectId = const Value.absent(),
+                Value<String> comment = const Value.absent(),
+                Value<String> nick = const Value.absent(),
+                Value<int> insertedAt = const Value.absent(),
+                Value<String?> rid = const Value.absent(),
+                Value<String?> link = const Value.absent(),
+                Value<String?> avatar = const Value.absent(),
+                Value<int> sortIndex = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BoardCommentsCompanion(
+                objectId: objectId,
+                comment: comment,
+                nick: nick,
+                insertedAt: insertedAt,
+                rid: rid,
+                link: link,
+                avatar: avatar,
+                sortIndex: sortIndex,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String objectId,
+                required String comment,
+                required String nick,
+                required int insertedAt,
+                Value<String?> rid = const Value.absent(),
+                Value<String?> link = const Value.absent(),
+                Value<String?> avatar = const Value.absent(),
+                Value<int> sortIndex = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BoardCommentsCompanion.insert(
+                objectId: objectId,
+                comment: comment,
+                nick: nick,
+                insertedAt: insertedAt,
+                rid: rid,
+                link: link,
+                avatar: avatar,
+                sortIndex: sortIndex,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BoardCommentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BoardCommentsTable,
+      BoardComment,
+      $$BoardCommentsTableFilterComposer,
+      $$BoardCommentsTableOrderingComposer,
+      $$BoardCommentsTableAnnotationComposer,
+      $$BoardCommentsTableCreateCompanionBuilder,
+      $$BoardCommentsTableUpdateCompanionBuilder,
+      (
+        BoardComment,
+        BaseReferences<_$AppDatabase, $BoardCommentsTable, BoardComment>,
+      ),
+      BoardComment,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2451,4 +3222,6 @@ class $AppDatabaseManager {
       $$SegmentsTableTableManager(_db, _db.segments);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$BoardCommentsTableTableManager get boardComments =>
+      $$BoardCommentsTableTableManager(_db, _db.boardComments);
 }

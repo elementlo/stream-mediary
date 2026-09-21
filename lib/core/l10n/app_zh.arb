@@ -224,6 +224,8 @@
   },
   "communityCollapseReplies": "收起",
   "communityLoadMore": "加载更多",
+  "communityRefresh": "刷新",
+  "communityWarning": "请遵守法律法规，严禁发布违规违法内容，违者需自行承担相应责任。",
   "communityPageInfo": "第 {page} / {total} 页",
   "@communityPageInfo": {
     "placeholders": {

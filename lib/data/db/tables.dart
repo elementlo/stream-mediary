@@ -47,3 +47,21 @@ class Settings extends Table {
   @override
   Set<Column> get primaryKey => {key};
 }
+
+/// Cached message-board comments so the board renders instantly from disk
+/// while a silent refresh runs in the background.
+class BoardComments extends Table {
+  TextColumn get objectId => text()();
+  TextColumn get comment => text()();
+  TextColumn get nick => text()();
+  IntColumn get insertedAt => integer()();
+  TextColumn get rid => text().nullable()();
+  TextColumn get link => text().nullable()();
+  TextColumn get avatar => text().nullable()();
+
+  /// Sort order within the cached page set (server order, newest first).
+  IntColumn get sortIndex => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {objectId};
+}

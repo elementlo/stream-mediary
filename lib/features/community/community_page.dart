@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +8,7 @@ import '../../core/theme/mediary_colors.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
+import '../../data/db/app_database.dart';
 import '../../data/remote/waline_client.dart';
 import '../../providers/app_providers.dart';
 
@@ -38,9 +40,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
   /// top-level post.
   String? _replyTo;
 
-  /// Guards the one-time bootstrap (seed nickname + first page load), which
-  /// must run after the first frame — mutating controllers or calling
-  /// setState during build trips framework assertions.
+  /// Guards the one-time bootstrap (seed nickname + cache load + silent
+  /// refresh), which must run after the first frame — mutating controllers
+  /// or calling setState during build trips framework assertions.
   bool _bootstrapped = false;
 
   @override
@@ -51,12 +53,68 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
     super.dispose();
   }
 
-  Future<void> _load({int page = 1, bool refresh = false}) async {
+  /// Loads the cached list (instant, offline-friendly), then silently
+  /// fetches the first page from the server and swaps it in on success.
+  Future<void> _bootstrap() async {
+    final nick = await ref.read(boardNickProvider.future);
+    if (!mounted) return;
+    if (nick.isNotEmpty && _nickController.text.isEmpty) {
+      _nickController.text = nick;
+    }
+
+    final db = ref.read(appDatabaseProvider);
+    final cached = await db.cachedBoardComments();
+    if (!mounted) return;
+    if (cached.isNotEmpty) {
+      setState(() {
+        _comments = cached.map(_fromCacheRow).toList();
+      });
+    }
+
+    // Silent refresh: no spinner when we already have something to show.
+    await _load(refresh: true, silent: cached.isNotEmpty);
+  }
+
+  WalineComment _fromCacheRow(BoardComment row) => WalineComment(
+        objectId: row.objectId,
+        comment: row.comment,
+        nick: row.nick,
+        insertedAt:
+            DateTime.fromMillisecondsSinceEpoch(row.insertedAt).toUtc(),
+        rid: row.rid,
+        link: row.link,
+        avatar: row.avatar,
+      );
+
+  Future<void> _cacheCurrent() async {
+    final db = ref.read(appDatabaseProvider);
+    await db.replaceBoardComments([
+      for (var i = 0; i < _comments.length; i++)
+        BoardCommentsCompanion.insert(
+          objectId: _comments[i].objectId,
+          comment: _comments[i].comment,
+          nick: _comments[i].nick,
+          insertedAt: _comments[i].insertedAt.millisecondsSinceEpoch,
+          sortIndex: Value(i),
+          rid: Value(_comments[i].rid),
+          link: Value(_comments[i].link),
+          avatar: Value(_comments[i].avatar),
+        ),
+    ]);
+  }
+
+  Future<void> _load({
+    int page = 1,
+    bool refresh = false,
+    bool silent = false,
+  }) async {
     final client = ref.read(walineClientProvider);
-    setState(() {
-      _loading = true;
-      if (refresh) _error = null;
-    });
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        if (refresh) _error = null;
+      });
+    }
     try {
       final result = await client.fetchComments(page: page);
       if (!mounted) return;
@@ -69,10 +127,13 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
         _loading = false;
         _error = null;
       });
+      // Only cache the first page set; appended pages are session-only.
+      if (page == 1) await _cacheCurrent();
     } on WalineException catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
+        // Keep showing the cache; surface the failure quietly.
         _error = e.message;
       });
     } catch (e) {
@@ -156,13 +217,8 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
 
     if (!_bootstrapped) {
       _bootstrapped = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted) return;
-        final nick = await ref.read(boardNickProvider.future);
-        if (mounted && nick.isNotEmpty && _nickController.text.isEmpty) {
-          _nickController.text = nick;
-        }
-        await _load();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _bootstrap();
       });
     }
 
@@ -170,6 +226,13 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       title: l10n.community,
       subtitle: l10n.communitySubtitle,
       maxWidth: Breakpoints.contentForm,
+      actions: [
+        IconButton(
+          onPressed: _loading ? null : () => _load(refresh: true),
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: l10n.communityRefresh,
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openComposer,
         icon: const Icon(Icons.edit_rounded, size: 18),
@@ -200,6 +263,8 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
               padding: const EdgeInsets.only(
                   top: Spacing.lg, bottom: Spacing.xxl * 2.5),
               children: [
+                const _BoardWarning(),
+                const SizedBox(height: Spacing.md),
                 if (_comments.isEmpty && _loading)
                   const Padding(
                     padding: EdgeInsets.only(top: Spacing.xxl),
@@ -653,6 +718,44 @@ class _ReplyTile extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           SelectableText(comment.comment, style: text.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compliance notice pinned at the top of the board: posting illegal or
+/// rule-breaking content is prohibited and carries personal liability.
+class _BoardWarning extends StatelessWidget {
+  const _BoardWarning();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = context.mediaryColors;
+    final text = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.md, vertical: Spacing.sm + 2),
+      decoration: BoxDecoration(
+        color: colors.warning.withValues(alpha: 0.10),
+        borderRadius: Radii.mdAll,
+        border: Border.all(color: colors.warning.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.gavel_rounded, size: 16, color: colors.warning),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Text(
+              l10n.communityWarning,
+              style: text.labelSmall?.copyWith(
+                color: colors.warning,
+                height: 1.4,
+              ),
+            ),
+          ),
         ],
       ),
     );

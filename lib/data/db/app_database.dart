@@ -10,7 +10,7 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Tasks, Segments, Settings])
+@DriftDatabase(tables: [Tasks, Segments, Settings, BoardComments])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -18,12 +18,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(boardComments);
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -72,6 +77,22 @@ class AppDatabase extends _$AppDatabase {
       into(settings).insertOnConflictUpdate(
         SettingsCompanion.insert(key: key, value: value),
       );
+
+  // ---- Board comment cache ----
+
+  Future<List<BoardComment>> cachedBoardComments() =>
+      (select(boardComments)
+            ..orderBy([(t) => OrderingTerm.asc(t.sortIndex)]))
+          .get();
+
+  /// Replaces the whole cache with the freshly fetched page set.
+  Future<void> replaceBoardComments(
+      List<BoardCommentsCompanion> rows) async {
+    await batch((b) {
+      b.deleteAll(boardComments);
+      b.insertAll(boardComments, rows);
+    });
+  }
 }
 
 LazyDatabase _openConnection() {
