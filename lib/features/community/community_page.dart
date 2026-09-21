@@ -10,11 +10,12 @@ import '../../core/widgets/mediary_scaffold.dart';
 import '../../data/remote/waline_client.dart';
 import '../../providers/app_providers.dart';
 
-/// Community message board backed by a self-hosted Waline instance.
+/// Message board backed by the project's Waline deployment.
 ///
-/// Guests post with just a nickname (remembered between posts); replies are
-/// threaded one level deep, matching Waline's own model. When no server is
-/// configured the page explains how to set one up instead of failing.
+/// The list owns the full page; composing happens in a modal bottom sheet
+/// opened from the FAB (or from a comment's reply action), so the form never
+/// covers the content. Guests post with just a nickname, remembered between
+/// posts. Reply threads are collapsed by default behind a compact toggle.
 class CommunityPage extends ConsumerStatefulWidget {
   const CommunityPage({super.key});
 
@@ -31,12 +32,11 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
   int _page = 1;
   int _totalPages = 1;
   bool _loading = false;
-  bool _posting = false;
   String? _error;
 
-  /// objectId of the comment being replied to; null closes the reply box.
+  /// Reply target while the composer sheet is open; null means a new
+  /// top-level post.
   String? _replyTo;
-  String? _replyToNick;
 
   /// Guards the one-time bootstrap (seed nickname + first page load), which
   /// must run after the first frame — mutating controllers or calling
@@ -86,38 +86,67 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
     }
   }
 
-  Future<void> _submit() async {
+  /// Posts the current composer content. Returns true on success so the
+  /// sheet can close itself.
+  Future<bool> _submit() async {
     final content = _contentController.text.trim();
     final nick = _nickController.text.trim();
-    if (content.isEmpty || nick.isEmpty || _posting) return;
+    if (content.isEmpty || nick.isEmpty) return false;
 
     final client = ref.read(walineClientProvider);
-
-    setState(() => _posting = true);
     try {
       await client.postComment(content: content, nick: nick, rid: _replyTo);
       await ref.read(settingsRepositoryProvider).setBoardNick(nick);
       ref.invalidate(boardNickProvider);
-      if (!mounted) return;
+      if (!mounted) return true;
       _contentController.clear();
-      setState(() {
-        _posting = false;
-        _replyTo = null;
-        _replyToNick = null;
-      });
+      setState(() => _replyTo = null);
       await _load(refresh: true);
+      return true;
     } on WalineException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _posting = false;
-        _error = e.message;
-      });
+      if (mounted) setState(() => _error = e.message);
+      return false;
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _posting = false;
-        _error = '$e';
-      });
+      if (mounted) setState(() => _error = '$e');
+      return false;
+    }
+  }
+
+  Future<void> _openComposer({WalineComment? replyTo}) async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _replyTo = replyTo?.objectId);
+    // Seed the remembered nickname before the sheet opens.
+    if (_nickController.text.isEmpty) {
+      final nick = await ref.read(boardNickProvider.future);
+      if (nick.isNotEmpty) _nickController.text = nick;
+    }
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        // Keep the fields above the soft keyboard on touch platforms.
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+        child: _ComposerSheet(
+          title: replyTo == null
+              ? l10n.communitySheetTitle
+              : l10n.communityReplyTo(replyTo.nick),
+          nickController: _nickController,
+          contentController: _contentController,
+          nickHint: l10n.communityNickHint,
+          contentHint: l10n.communityContentHint,
+          submitLabel:
+              replyTo == null ? l10n.communityPost : l10n.communityReply,
+          onSubmit: _submit,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      setState(() => _replyTo = null);
     }
   }
 
@@ -141,6 +170,11 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       title: l10n.community,
       subtitle: l10n.communitySubtitle,
       maxWidth: Breakpoints.contentForm,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openComposer,
+        icon: const Icon(Icons.edit_rounded, size: 18),
+        label: Text(l10n.communityPost),
+      ),
       child: _buildBoard(l10n),
     );
   }
@@ -149,28 +183,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
     final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
-        _Composer(
-          nickController: _nickController,
-          contentController: _contentController,
-          posting: _posting,
-          replyToNick: _replyToNick,
-          onCancelReply: _replyTo == null
-              ? null
-              : () => setState(() {
-                    _replyTo = null;
-                    _replyToNick = null;
-                  }),
-          onSubmit: _submit,
-          nickHint: l10n.communityNickHint,
-          contentHint: _replyToNick == null
-              ? l10n.communityContentHint
-              : l10n.communityReplyTo(_replyToNick!),
-          submitLabel:
-              _replyTo == null ? l10n.communityPost : l10n.communityReply,
-        ),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.only(top: Spacing.md),
+            padding: const EdgeInsets.only(bottom: Spacing.md),
             child: _ErrorRetry(
               message: _error!,
               onRetry: () => _load(refresh: true),
@@ -181,7 +196,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
             onRefresh: () => _load(refresh: true),
             child: ListView(
               controller: _scrollController,
-              padding: const EdgeInsets.only(top: Spacing.lg),
+              // Extra bottom room so the FAB never covers the last card.
+              padding: const EdgeInsets.only(
+                  top: Spacing.lg, bottom: Spacing.xxl * 2.5),
               children: [
                 if (_comments.isEmpty && _loading)
                   const Padding(
@@ -193,6 +210,11 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                     icon: Icons.chat_bubble_outline_rounded,
                     title: l10n.communityEmpty,
                     message: l10n.communityEmptyHint,
+                    action: FilledButton.icon(
+                      onPressed: _openComposer,
+                      icon: const Icon(Icons.edit_rounded, size: 17),
+                      label: Text(l10n.communityPost),
+                    ),
                   )
                 else ...[
                   for (final c in _topLevel)
@@ -200,10 +222,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                       comment: c,
                       replies: _descendantsOf(c.objectId),
                       nickOf: _nickOf,
-                      onReply: (parent) => setState(() {
-                        _replyTo = parent.objectId;
-                        _replyToNick = parent.nick;
-                      }),
+                      onReply: (parent) => _openComposer(replyTo: parent),
                       replyLabel: l10n.communityReplyAction,
                     ),
                   if (_loading && _comments.isNotEmpty)
@@ -213,8 +232,8 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                     )
                   else if (_page < _totalPages)
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: Spacing.lg),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: Spacing.lg),
                       child: Column(
                         children: [
                           Text(
@@ -222,8 +241,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
-                                ?.copyWith(
-                                    color: scheme.onSurfaceVariant),
+                                ?.copyWith(color: scheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: Spacing.xs),
                           OutlinedButton.icon(
@@ -275,104 +293,109 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
   }
 }
 
-/// Nickname + content input with a submit button.
-class _Composer extends StatelessWidget {
-  const _Composer({
+/// Modal compose form shown in a bottom sheet.
+///
+/// Lives in a sheet rather than pinned above the list so the board keeps the
+/// full page height; the same sheet serves new posts and replies.
+class _ComposerSheet extends StatefulWidget {
+  const _ComposerSheet({
+    required this.title,
     required this.nickController,
     required this.contentController,
-    required this.posting,
-    required this.onSubmit,
     required this.nickHint,
     required this.contentHint,
     required this.submitLabel,
-    this.replyToNick,
-    this.onCancelReply,
+    required this.onSubmit,
   });
 
+  final String title;
   final TextEditingController nickController;
   final TextEditingController contentController;
-  final bool posting;
-  final VoidCallback onSubmit;
   final String nickHint;
   final String contentHint;
   final String submitLabel;
-  final String? replyToNick;
-  final VoidCallback? onCancelReply;
+
+  /// Returns true when the post succeeded and the sheet should close.
+  final Future<bool> Function() onSubmit;
+
+  @override
+  State<_ComposerSheet> createState() => _ComposerSheetState();
+}
+
+class _ComposerSheetState extends State<_ComposerSheet> {
+  bool _posting = false;
+  String? _error;
+
+  Future<void> _submit() async {
+    if (_posting) return;
+    setState(() {
+      _posting = true;
+      _error = null;
+    });
+    final ok = await widget.onSubmit();
+    if (!mounted) return;
+    if (ok) {
+      Navigator.pop(context);
+    } else {
+      setState(() => _posting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
 
-    return MediaryCard(
-      hoverable: false,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (replyToNick != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Spacing.sm),
-              child: Row(
-                children: [
-                  Icon(Icons.reply_rounded,
-                      size: 15, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: Spacing.xs),
-                  Expanded(
-                    child: Text(
-                      replyToNick!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ),
-                  if (onCancelReply != null)
-                    IconButton(
-                      onPressed: onCancelReply,
-                      icon: const Icon(Icons.close_rounded, size: 16),
-                      visualDensity: VisualDensity.compact,
-                      tooltip: AppLocalizations.of(context).cancel,
-                    ),
-                ],
-              ),
-            ),
+          Text(widget.title, style: text.titleMedium),
+          const SizedBox(height: Spacing.md),
           TextField(
-            controller: nickController,
+            controller: widget.nickController,
             maxLength: 24,
             decoration: InputDecoration(
-              hintText: nickHint,
+              hintText: widget.nickHint,
               counterText: '',
               isDense: true,
-              prefixIcon:
-                  const Icon(Icons.person_outline_rounded, size: 18),
+              prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
             ),
           ),
           const SizedBox(height: Spacing.sm),
           TextField(
-            controller: contentController,
+            controller: widget.contentController,
             minLines: 3,
             maxLines: 6,
             maxLength: 1000,
+            autofocus: true,
             decoration: InputDecoration(
-              hintText: contentHint,
+              hintText: widget.contentHint,
               alignLabelWithHint: true,
             ),
           ),
-          const SizedBox(height: Spacing.sm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: posting ? null : onSubmit,
-              icon: posting
-                  ? const SizedBox(
-                      width: 15,
-                      height: 15,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send_rounded, size: 17),
-              label: Text(submitLabel),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.xs),
+              child: Text(
+                _error!,
+                style: text.bodySmall
+                    ?.copyWith(color: context.mediaryColors.danger),
+              ),
             ),
+          const SizedBox(height: Spacing.md),
+          FilledButton.icon(
+            onPressed: _posting ? null : _submit,
+            icon: _posting
+                ? const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.send_rounded, size: 17),
+            label: Text(widget.submitLabel),
           ),
         ],
       ),
@@ -408,8 +431,10 @@ class _CommentThreadState extends State<_CommentThread> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final colors = context.mediaryColors;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _CommentTile(
           comment: widget.comment,
@@ -418,32 +443,25 @@ class _CommentThreadState extends State<_CommentThread> {
         ),
         if (widget.replies.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: Spacing.xxl),
+            padding: const EdgeInsets.only(
+                left: Spacing.xl, top: 2, bottom: Spacing.sm),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Compact inline toggle: a quiet text chip on the thread
+                // line, no card or icon button chrome.
                 InkWell(
                   onTap: () => setState(() => _expanded = !_expanded),
                   borderRadius: Radii.smAll,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: Spacing.sm,
-                      vertical: Spacing.xs + 2,
-                    ),
+                        horizontal: Spacing.sm, vertical: 3),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          _expanded
-                              ? Icons.expand_less_rounded
-                              : Icons.expand_more_rounded,
-                          size: 16,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: Spacing.xs),
                         Text(
                           _expanded
-                              ? l10n.communityCollapseReplies(
-                                  widget.replies.length)
+                              ? l10n.communityCollapseReplies
                               : l10n.communityExpandReplies(
                                   widget.replies.length),
                           style: Theme.of(context)
@@ -451,18 +469,41 @@ class _CommentThreadState extends State<_CommentThread> {
                               .labelSmall
                               ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
+                        Icon(
+                          _expanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          size: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ],
                     ),
                   ),
                 ),
                 if (_expanded)
-                  for (final r in widget.replies)
-                    _CommentTile(
-                      comment: r,
-                      mentionNick: widget.nickOf(r.rid),
-                      onReply: widget.onReply,
-                      replyLabel: widget.replyLabel,
+                  // Hairline thread line ties replies to their parent
+                  // without heavy indentation or extra cards.
+                  Container(
+                    margin: const EdgeInsets.only(
+                        left: Spacing.md, top: 2, bottom: 2),
+                    padding: const EdgeInsets.only(left: Spacing.md),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(color: colors.hairline, width: 2),
+                      ),
                     ),
+                    child: Column(
+                      children: [
+                        for (final r in widget.replies)
+                          _ReplyTile(
+                            comment: r,
+                            mentionNick: widget.nickOf(r.rid),
+                            onReply: widget.onReply,
+                            replyLabel: widget.replyLabel,
+                          ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -476,16 +517,11 @@ class _CommentTile extends StatelessWidget {
     required this.comment,
     required this.onReply,
     required this.replyLabel,
-    this.mentionNick,
   });
 
   final WalineComment comment;
   final ValueChanged<WalineComment> onReply;
   final String replyLabel;
-
-  /// When this tile is a reply, the nickname of the comment it answers;
-  /// rendered as an "@nick" prefix on the body (Valine convention).
-  final String? mentionNick;
 
   @override
   Widget build(BuildContext context) {
@@ -541,14 +577,81 @@ class _CommentTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.sm + 2),
-          if (mentionNick != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                '@$mentionNick',
-                style: text.bodyMedium?.copyWith(color: colors.accent),
+          SelectableText(comment.comment, style: text.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+/// A reply inside an expanded thread: lighter than a top-level card — no
+/// card chrome, just avatar initial, meta line and body.
+class _ReplyTile extends StatelessWidget {
+  const _ReplyTile({
+    required this.comment,
+    required this.onReply,
+    required this.replyLabel,
+    this.mentionNick,
+  });
+
+  final WalineComment comment;
+  final ValueChanged<WalineComment> onReply;
+  final String replyLabel;
+
+  /// Nickname of the comment this reply answers; rendered inline as
+  /// "@nick" before the author (Valine convention).
+  final String? mentionNick;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final colors = context.mediaryColors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                comment.nick,
+                style: text.labelLarge?.copyWith(color: scheme.primary),
               ),
-            ),
+              if (mentionNick != null) ...[
+                const SizedBox(width: Spacing.xs),
+                Flexible(
+                  child: Text(
+                    '@$mentionNick',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelSmall?.copyWith(color: colors.accent),
+                  ),
+                ),
+              ],
+              const SizedBox(width: Spacing.sm),
+              Text(
+                _relativeTime(context, comment.insertedAt),
+                style:
+                    text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const Spacer(),
+              InkWell(
+                onTap: () => onReply(comment),
+                borderRadius: Radii.smAll,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: Spacing.xs, vertical: 2),
+                  child: Text(
+                    replyLabel,
+                    style: text.labelSmall?.copyWith(color: colors.accent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
           SelectableText(comment.comment, style: text.bodyMedium),
         ],
       ),
@@ -578,9 +681,11 @@ class _ErrorRetry extends StatelessWidget {
                 ?.copyWith(color: colors.danger),
           ),
         ),
-        TextButton(onPressed: onRetry, child: Text(
-          AppLocalizations.of(context).retry,
-        )),
+        TextButton(
+            onPressed: onRetry,
+            child: Text(
+              AppLocalizations.of(context).retry,
+            )),
       ],
     );
   }

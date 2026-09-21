@@ -932,6 +932,12 @@ abstract class AppLocalizations {
   /// **'发布'**
   String get communityPost;
 
+  /// No description provided for @communitySheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'发布留言'**
+  String get communitySheetTitle;
+
   /// No description provided for @communityReply.
   ///
   /// In zh, this message translates to:
@@ -947,14 +953,14 @@ abstract class AppLocalizations {
   /// No description provided for @communityExpandReplies.
   ///
   /// In zh, this message translates to:
-  /// **'展开 {count} 条回复'**
+  /// **'{count} 条回复'**
   String communityExpandReplies(Object count);
 
   /// No description provided for @communityCollapseReplies.
   ///
   /// In zh, this message translates to:
-  /// **'收起回复 ({count})'**
-  String communityCollapseReplies(Object count);
+  /// **'收起'**
+  String get communityCollapseReplies;
 
   /// No description provided for @communityLoadMore.
   ///

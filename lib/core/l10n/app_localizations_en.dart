@@ -465,6 +465,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityPost => 'Post';
 
   @override
+  String get communitySheetTitle => 'New message';
+
+  @override
   String get communityReply => 'Reply';
 
   @override
@@ -472,13 +475,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String communityExpandReplies(Object count) {
-    return 'Show $count replies';
+    return '$count replies';
   }
 
   @override
-  String communityCollapseReplies(Object count) {
-    return 'Collapse replies ($count)';
-  }
+  String get communityCollapseReplies => 'Collapse';
 
   @override
   String get communityLoadMore => 'Load more';

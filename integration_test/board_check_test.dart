@@ -33,24 +33,27 @@ void main() {
     await tester.tap(find.text('留言板'));
     await tester.pump();
 
-    // Wait for the network load to resolve (fixed pumps: the composer has no
-    // forever-animating widget once loaded, but the initial spinner does).
-    var loaded = false;
-    for (var i = 0; i < 15 && !loaded; i++) {
-      await tester.pump(const Duration(seconds: 1));
-      loaded = find.text('说点什么…').evaluate().isNotEmpty &&
-          find.text('发布').evaluate().isNotEmpty;
-    }
-    expect(loaded, isTrue, reason: 'composer did not appear');
-
-    // At least one comment from the live server should render.
+    // Wait for the network load to resolve (fixed pumps: the initial
+    // spinner animates forever, so pumpAndSettle cannot be used).
     var hasComment = false;
-    for (var i = 0; i < 10 && !hasComment; i++) {
+    for (var i = 0; i < 15 && !hasComment; i++) {
       await tester.pump(const Duration(seconds: 1));
       hasComment = find.text('probe').evaluate().isNotEmpty ||
           find.text('积极').evaluate().isNotEmpty;
     }
     expect(hasComment, isTrue, reason: 'no comment rendered from server');
+
+    // The compose FAB is present and opens the sheet.
+    expect(find.text('发布'), findsOneWidget);
+    await tester.tap(find.text('发布'));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    expect(find.text('说点什么…'), findsOneWidget,
+        reason: 'composer sheet did not open');
+    // The sheet is modal (no back button); dismiss via its scrim.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    expect(find.text('说点什么…'), findsNothing,
+        reason: 'composer sheet did not dismiss');
 
     // Surface capture is mobile-only; desktop verification stops at the
     // assertions above.

@@ -213,20 +213,16 @@
     }
   },
   "communityPost": "发布",
+  "communitySheetTitle": "发布留言",
   "communityReply": "回复",
   "communityReplyAction": "回复",
-  "communityExpandReplies": "展开 {count} 条回复",
+  "communityExpandReplies": "{count} 条回复",
   "@communityExpandReplies": {
     "placeholders": {
       "count": {}
     }
   },
-  "communityCollapseReplies": "收起回复 ({count})",
-  "@communityCollapseReplies": {
-    "placeholders": {
-      "count": {}
-    }
-  },
+  "communityCollapseReplies": "收起",
   "communityLoadMore": "加载更多",
   "communityPageInfo": "第 {page} / {total} 页",
   "@communityPageInfo": {

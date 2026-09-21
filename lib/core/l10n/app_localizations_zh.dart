@@ -455,6 +455,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityPost => '发布';
 
   @override
+  String get communitySheetTitle => '发布留言';
+
+  @override
   String get communityReply => '回复';
 
   @override
@@ -462,13 +465,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String communityExpandReplies(Object count) {
-    return '展开 $count 条回复';
+    return '$count 条回复';
   }
 
   @override
-  String communityCollapseReplies(Object count) {
-    return '收起回复 ($count)';
-  }
+  String get communityCollapseReplies => '收起';
 
   @override
   String get communityLoadMore => '加载更多';

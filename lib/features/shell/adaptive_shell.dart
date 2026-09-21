@@ -93,6 +93,7 @@ class AdaptiveShell extends ConsumerWidget {
                 ),
             ],
             newDownloadLabel: l10n.newDownload,
+            location: location,
             child: child,
           );
         }
@@ -135,6 +136,7 @@ class _BottomBarLayout extends StatelessWidget {
     required this.destinations,
     required this.newDownloadLabel,
     required this.child,
+    required this.location,
   });
 
   final int selectedIndex;
@@ -142,16 +144,22 @@ class _BottomBarLayout extends StatelessWidget {
   final List<NavigationDestination> destinations;
   final String newDownloadLabel;
   final Widget child;
+  final String location;
 
   @override
   Widget build(BuildContext context) {
+    // The board page carries its own compose FAB; showing the global
+    // "new download" FAB there would stack two buttons in one corner.
+    final showFab = !location.startsWith('/community');
     return Scaffold(
       body: child,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/new'),
-        tooltip: newDownloadLabel,
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton(
+              onPressed: () => context.push('/new'),
+              tooltip: newDownloadLabel,
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
