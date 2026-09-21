@@ -206,7 +206,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: _SettingRow(
               icon: Icons.info_rounded,
               title: l10n.appTitle,
-              subtitle: '${l10n.version} 1.0.0',
+              subtitle: ref.watch(appVersionProvider).maybeWhen(
+                    data: (v) => '${l10n.version} $v',
+                    orElse: () => l10n.version,
+                  ),
             ),
           ),
         ],

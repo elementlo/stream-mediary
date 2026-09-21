@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../data/db/app_database.dart';
@@ -244,6 +245,12 @@ final walineClientProvider = Provider<WalineClient>(
 final boardNickProvider = FutureProvider<String>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);
   return await settings.boardNick() ?? '';
+});
+
+/// App version string from the build metadata (pubspec `version`).
+final appVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return info.version;
 });
 
 /// Theme mode backed by settings.
