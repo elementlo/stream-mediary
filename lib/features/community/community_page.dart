@@ -240,7 +240,15 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
           ? [
               IconButton(
                 onPressed: _loading ? null : _manualRefresh,
-                icon: const Icon(Icons.refresh_rounded),
+                // Desktop has no pull gesture; the button itself shows the
+                // in-flight state.
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
                 tooltip: l10n.communityRefresh,
               ),
             ]
@@ -312,12 +320,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
               onReply: (parent) => _openComposer(replyTo: parent),
               replyLabel: l10n.communityReplyAction,
             ),
-          if (_loading && _comments.isNotEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Spacing.lg),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_page < _totalPages)
+          if (_page < _totalPages)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Spacing.lg),
               child: Column(
@@ -332,7 +335,15 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                   const SizedBox(height: Spacing.xs),
                   OutlinedButton.icon(
                     onPressed: _loading ? null : _loadMore,
-                    icon: const Icon(Icons.expand_more_rounded, size: 16),
+                    // Feedback for appending a page lives in the button
+                    // itself; no separate global spinner.
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more_rounded, size: 16),
                     label: Text(l10n.communityLoadMore),
                   ),
                 ],
