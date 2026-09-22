@@ -968,6 +968,12 @@ abstract class AppLocalizations {
   /// **'加载更多'**
   String get communityLoadMore;
 
+  /// No description provided for @communityRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get communityRefresh;
+
   /// No description provided for @communityWarning.
   ///
   /// In zh, this message translates to:

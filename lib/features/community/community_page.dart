@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
 import '../../core/widgets/empty_state.dart';
@@ -228,10 +229,22 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       });
     }
 
+    final profile = context.platformProfile;
+
     return MediaryScaffold(
       title: l10n.community,
       subtitle: l10n.communitySubtitle,
       maxWidth: Breakpoints.contentForm,
+      // Desktop has no comfortable pull gesture: refresh via a button.
+      actions: profile.isDesktop
+          ? [
+              IconButton(
+                onPressed: _loading ? null : _manualRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: l10n.communityRefresh,
+              ),
+            ]
+          : const [],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openComposer,
         icon: const Icon(Icons.edit_rounded, size: 18),
@@ -242,7 +255,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
   }
 
   Widget _buildBoard(AppLocalizations l10n) {
-    final scheme = Theme.of(context).colorScheme;
+    final profile = context.platformProfile;
     return Column(
       children: [
         if (_error != null)
@@ -254,76 +267,86 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
             ),
           ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _manualRefresh,
-            child: ListView(
-              controller: _scrollController,
-              // Extra bottom room so the FAB never covers the last card.
-              padding: const EdgeInsets.only(
-                  top: Spacing.lg, bottom: Spacing.xxl * 2.5),
-              children: [
-                const _BoardWarning(),
-                const SizedBox(height: Spacing.md),
-                if (_comments.isEmpty && _loading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: Spacing.xxl),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_comments.isEmpty)
-                  EmptyState(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    title: l10n.communityEmpty,
-                    message: l10n.communityEmptyHint,
-                    action: FilledButton.icon(
-                      onPressed: _openComposer,
-                      icon: const Icon(Icons.edit_rounded, size: 17),
-                      label: Text(l10n.communityPost),
-                    ),
-                  )
-                else ...[
-                  for (final c in _topLevel)
-                    _CommentThread(
-                      comment: c,
-                      replies: _descendantsOf(c.objectId),
-                      nickOf: _nickOf,
-                      onReply: (parent) => _openComposer(replyTo: parent),
-                      replyLabel: l10n.communityReplyAction,
-                    ),
-                  if (_loading && _comments.isNotEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: Spacing.lg),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (_page < _totalPages)
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(vertical: Spacing.lg),
-                      child: Column(
-                        children: [
-                          Text(
-                            l10n.communityPageInfo(_page, _totalPages),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: Spacing.xs),
-                          OutlinedButton.icon(
-                            onPressed: _loading ? null : _loadMore,
-                            icon: const Icon(Icons.expand_more_rounded,
-                                size: 16),
-                            label: Text(l10n.communityLoadMore),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ],
-            ),
-          ),
+          child: _buildList(l10n, profile),
         ),
       ],
     );
+  }
+
+  Widget _buildList(AppLocalizations l10n, PlatformProfile profile) {
+    final scheme = Theme.of(context).colorScheme;
+    final list = ListView(
+      controller: _scrollController,
+      // Mobile: allow overscroll even when content is shorter than the
+      // viewport, otherwise RefreshIndicator can never trigger.
+      physics: profile.isDesktop
+          ? null
+          : const AlwaysScrollableScrollPhysics(),
+      // Extra bottom room so the FAB never covers the last card.
+      padding: const EdgeInsets.only(top: Spacing.lg, bottom: Spacing.xxl * 2.5),
+      children: [
+        const _BoardWarning(),
+        const SizedBox(height: Spacing.md),
+        if (_comments.isEmpty && _loading)
+          const Padding(
+            padding: EdgeInsets.only(top: Spacing.xxl),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_comments.isEmpty)
+          EmptyState(
+            icon: Icons.chat_bubble_outline_rounded,
+            title: l10n.communityEmpty,
+            message: l10n.communityEmptyHint,
+            action: FilledButton.icon(
+              onPressed: _openComposer,
+              icon: const Icon(Icons.edit_rounded, size: 17),
+              label: Text(l10n.communityPost),
+            ),
+          )
+        else ...[
+          for (final c in _topLevel)
+            _CommentThread(
+              comment: c,
+              replies: _descendantsOf(c.objectId),
+              nickOf: _nickOf,
+              onReply: (parent) => _openComposer(replyTo: parent),
+              replyLabel: l10n.communityReplyAction,
+            ),
+          if (_loading && _comments.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: Spacing.lg),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_page < _totalPages)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Spacing.lg),
+              child: Column(
+                children: [
+                  Text(
+                    l10n.communityPageInfo(_page, _totalPages),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: Spacing.xs),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _loadMore,
+                    icon: const Icon(Icons.expand_more_rounded, size: 16),
+                    label: Text(l10n.communityLoadMore),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ],
+    );
+
+    // Pull-to-refresh is a touch-platform affordance; desktop refreshes via
+    // the header button instead.
+    return profile.isDesktop
+        ? list
+        : RefreshIndicator(onRefresh: _manualRefresh, child: list);
   }
 
   List<WalineComment> get _topLevel =>

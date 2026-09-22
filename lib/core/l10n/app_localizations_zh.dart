@@ -475,6 +475,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityLoadMore => '加载更多';
 
   @override
+  String get communityRefresh => '刷新';
+
+  @override
   String get communityWarning => '请遵守法律法规，严禁发布违规违法内容，违者需自行承担相应责任。';
 
   @override
