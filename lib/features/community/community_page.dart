@@ -232,13 +232,6 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       title: l10n.community,
       subtitle: l10n.communitySubtitle,
       maxWidth: Breakpoints.contentForm,
-      actions: [
-        IconButton(
-          onPressed: _loading ? null : _manualRefresh,
-          icon: const Icon(Icons.refresh_rounded),
-          tooltip: l10n.communityRefresh,
-        ),
-      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openComposer,
         icon: const Icon(Icons.edit_rounded, size: 18),
