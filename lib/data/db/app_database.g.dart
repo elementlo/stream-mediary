@@ -1706,6 +1706,24 @@ class $BoardCommentsTable extends BoardComments
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sortIndexMeta = const VerificationMeta(
     'sortIndex',
   );
@@ -1728,6 +1746,8 @@ class $BoardCommentsTable extends BoardComments
     link,
     avatar,
     addr,
+    type,
+    label,
     sortIndex,
   ];
   @override
@@ -1798,6 +1818,18 @@ class $BoardCommentsTable extends BoardComments
         addr.isAcceptableOrUnknown(data['addr']!, _addrMeta),
       );
     }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
     if (data.containsKey('sort_index')) {
       context.handle(
         _sortIndexMeta,
@@ -1845,6 +1877,14 @@ class $BoardCommentsTable extends BoardComments
         DriftSqlType.string,
         data['${effectivePrefix}addr'],
       ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      ),
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
       sortIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_index'],
@@ -1870,6 +1910,12 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
   /// Province-level IP region shown next to the timestamp.
   final String? addr;
 
+  /// Registered-user role (e.g. "administrator"); null for anonymous.
+  final String? type;
+
+  /// Admin-set badge text (e.g. "admin"); null for anonymous.
+  final String? label;
+
   /// Sort order within the cached page set (server order, newest first).
   final int sortIndex;
   const BoardComment({
@@ -1881,6 +1927,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     this.link,
     this.avatar,
     this.addr,
+    this.type,
+    this.label,
     required this.sortIndex,
   });
   @override
@@ -1902,6 +1950,12 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     if (!nullToAbsent || addr != null) {
       map['addr'] = Variable<String>(addr);
     }
+    if (!nullToAbsent || type != null) {
+      map['type'] = Variable<String>(type);
+    }
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
     map['sort_index'] = Variable<int>(sortIndex);
     return map;
   }
@@ -1918,6 +1972,10 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
           ? const Value.absent()
           : Value(avatar),
       addr: addr == null && nullToAbsent ? const Value.absent() : Value(addr),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
       sortIndex: Value(sortIndex),
     );
   }
@@ -1936,6 +1994,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       link: serializer.fromJson<String?>(json['link']),
       avatar: serializer.fromJson<String?>(json['avatar']),
       addr: serializer.fromJson<String?>(json['addr']),
+      type: serializer.fromJson<String?>(json['type']),
+      label: serializer.fromJson<String?>(json['label']),
       sortIndex: serializer.fromJson<int>(json['sortIndex']),
     );
   }
@@ -1951,6 +2011,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       'link': serializer.toJson<String?>(link),
       'avatar': serializer.toJson<String?>(avatar),
       'addr': serializer.toJson<String?>(addr),
+      'type': serializer.toJson<String?>(type),
+      'label': serializer.toJson<String?>(label),
       'sortIndex': serializer.toJson<int>(sortIndex),
     };
   }
@@ -1964,6 +2026,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     Value<String?> link = const Value.absent(),
     Value<String?> avatar = const Value.absent(),
     Value<String?> addr = const Value.absent(),
+    Value<String?> type = const Value.absent(),
+    Value<String?> label = const Value.absent(),
     int? sortIndex,
   }) => BoardComment(
     objectId: objectId ?? this.objectId,
@@ -1974,6 +2038,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     link: link.present ? link.value : this.link,
     avatar: avatar.present ? avatar.value : this.avatar,
     addr: addr.present ? addr.value : this.addr,
+    type: type.present ? type.value : this.type,
+    label: label.present ? label.value : this.label,
     sortIndex: sortIndex ?? this.sortIndex,
   );
   BoardComment copyWithCompanion(BoardCommentsCompanion data) {
@@ -1988,6 +2054,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       link: data.link.present ? data.link.value : this.link,
       avatar: data.avatar.present ? data.avatar.value : this.avatar,
       addr: data.addr.present ? data.addr.value : this.addr,
+      type: data.type.present ? data.type.value : this.type,
+      label: data.label.present ? data.label.value : this.label,
       sortIndex: data.sortIndex.present ? data.sortIndex.value : this.sortIndex,
     );
   }
@@ -2003,6 +2071,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
           ..write('link: $link, ')
           ..write('avatar: $avatar, ')
           ..write('addr: $addr, ')
+          ..write('type: $type, ')
+          ..write('label: $label, ')
           ..write('sortIndex: $sortIndex')
           ..write(')'))
         .toString();
@@ -2018,6 +2088,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     link,
     avatar,
     addr,
+    type,
+    label,
     sortIndex,
   );
   @override
@@ -2032,6 +2104,8 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
           other.link == this.link &&
           other.avatar == this.avatar &&
           other.addr == this.addr &&
+          other.type == this.type &&
+          other.label == this.label &&
           other.sortIndex == this.sortIndex);
 }
 
@@ -2044,6 +2118,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
   final Value<String?> link;
   final Value<String?> avatar;
   final Value<String?> addr;
+  final Value<String?> type;
+  final Value<String?> label;
   final Value<int> sortIndex;
   final Value<int> rowid;
   const BoardCommentsCompanion({
@@ -2055,6 +2131,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     this.link = const Value.absent(),
     this.avatar = const Value.absent(),
     this.addr = const Value.absent(),
+    this.type = const Value.absent(),
+    this.label = const Value.absent(),
     this.sortIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2067,6 +2145,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     this.link = const Value.absent(),
     this.avatar = const Value.absent(),
     this.addr = const Value.absent(),
+    this.type = const Value.absent(),
+    this.label = const Value.absent(),
     this.sortIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : objectId = Value(objectId),
@@ -2082,6 +2162,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     Expression<String>? link,
     Expression<String>? avatar,
     Expression<String>? addr,
+    Expression<String>? type,
+    Expression<String>? label,
     Expression<int>? sortIndex,
     Expression<int>? rowid,
   }) {
@@ -2094,6 +2176,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
       if (link != null) 'link': link,
       if (avatar != null) 'avatar': avatar,
       if (addr != null) 'addr': addr,
+      if (type != null) 'type': type,
+      if (label != null) 'label': label,
       if (sortIndex != null) 'sort_index': sortIndex,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2108,6 +2192,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     Value<String?>? link,
     Value<String?>? avatar,
     Value<String?>? addr,
+    Value<String?>? type,
+    Value<String?>? label,
     Value<int>? sortIndex,
     Value<int>? rowid,
   }) {
@@ -2120,6 +2206,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
       link: link ?? this.link,
       avatar: avatar ?? this.avatar,
       addr: addr ?? this.addr,
+      type: type ?? this.type,
+      label: label ?? this.label,
       sortIndex: sortIndex ?? this.sortIndex,
       rowid: rowid ?? this.rowid,
     );
@@ -2152,6 +2240,12 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     if (addr.present) {
       map['addr'] = Variable<String>(addr.value);
     }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
     if (sortIndex.present) {
       map['sort_index'] = Variable<int>(sortIndex.value);
     }
@@ -2172,6 +2266,8 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
           ..write('link: $link, ')
           ..write('avatar: $avatar, ')
           ..write('addr: $addr, ')
+          ..write('type: $type, ')
+          ..write('label: $label, ')
           ..write('sortIndex: $sortIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3010,6 +3106,8 @@ typedef $$BoardCommentsTableCreateCompanionBuilder =
       Value<String?> link,
       Value<String?> avatar,
       Value<String?> addr,
+      Value<String?> type,
+      Value<String?> label,
       Value<int> sortIndex,
       Value<int> rowid,
     });
@@ -3023,6 +3121,8 @@ typedef $$BoardCommentsTableUpdateCompanionBuilder =
       Value<String?> link,
       Value<String?> avatar,
       Value<String?> addr,
+      Value<String?> type,
+      Value<String?> label,
       Value<int> sortIndex,
       Value<int> rowid,
     });
@@ -3073,6 +3173,16 @@ class $$BoardCommentsTableFilterComposer
 
   ColumnFilters<String> get addr => $composableBuilder(
     column: $table.addr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3131,6 +3241,16 @@ class $$BoardCommentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortIndex => $composableBuilder(
     column: $table.sortIndex,
     builder: (column) => ColumnOrderings(column),
@@ -3171,6 +3291,12 @@ class $$BoardCommentsTableAnnotationComposer
 
   GeneratedColumn<String> get addr =>
       $composableBuilder(column: $table.addr, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
 
   GeneratedColumn<int> get sortIndex =>
       $composableBuilder(column: $table.sortIndex, builder: (column) => column);
@@ -3215,6 +3341,8 @@ class $$BoardCommentsTableTableManager
                 Value<String?> link = const Value.absent(),
                 Value<String?> avatar = const Value.absent(),
                 Value<String?> addr = const Value.absent(),
+                Value<String?> type = const Value.absent(),
+                Value<String?> label = const Value.absent(),
                 Value<int> sortIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BoardCommentsCompanion(
@@ -3226,6 +3354,8 @@ class $$BoardCommentsTableTableManager
                 link: link,
                 avatar: avatar,
                 addr: addr,
+                type: type,
+                label: label,
                 sortIndex: sortIndex,
                 rowid: rowid,
               ),
@@ -3239,6 +3369,8 @@ class $$BoardCommentsTableTableManager
                 Value<String?> link = const Value.absent(),
                 Value<String?> avatar = const Value.absent(),
                 Value<String?> addr = const Value.absent(),
+                Value<String?> type = const Value.absent(),
+                Value<String?> label = const Value.absent(),
                 Value<int> sortIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BoardCommentsCompanion.insert(
@@ -3250,6 +3382,8 @@ class $$BoardCommentsTableTableManager
                 link: link,
                 avatar: avatar,
                 addr: addr,
+                type: type,
+                label: label,
                 sortIndex: sortIndex,
                 rowid: rowid,
               ),

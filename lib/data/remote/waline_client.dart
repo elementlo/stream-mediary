@@ -11,6 +11,8 @@ class WalineComment {
     this.link,
     this.avatar,
     this.addr,
+    this.type,
+    this.label,
   });
 
   factory WalineComment.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,14 @@ class WalineComment {
       rid: json['rid'] == null ? null : '${json['rid']}',
       link: json['link'] as String?,
       avatar: json['avatar'] as String?,
+      // Only present for registered users (matched by user_id on the
+      // server); anonymous comments omit both.
+      type: (json['type'] as String?)?.trim().isEmpty == false
+          ? (json['type'] as String).trim()
+          : null,
+      label: (json['label'] as String?)?.trim().isEmpty == false
+          ? (json['label'] as String).trim()
+          : null,
       // IP-derived region. The server returns province-level for regular
       // users (city-level is admin-only by Waline's privacy design).
       addr: (json['addr'] as String?)?.trim().isEmpty == false
@@ -62,6 +72,12 @@ class WalineComment {
 
   /// Province-level IP region (e.g. "浙江省"); null when unavailable.
   final String? addr;
+
+  /// Registered-user role, e.g. "administrator"; null for anonymous.
+  final String? type;
+
+  /// Custom badge text set by the admin (e.g. "admin"); null for anonymous.
+  final String? label;
 
   bool get isReply => rid != null && rid!.isNotEmpty;
 }

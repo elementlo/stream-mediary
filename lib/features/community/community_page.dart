@@ -615,6 +615,34 @@ class _CommentThreadState extends State<_CommentThread> {
   }
 }
 
+/// Small pill badge for a registered user's role/label, shown after the
+/// nickname. Anonymous comments have no label and render nothing.
+class _UserBadge extends StatelessWidget {
+  const _UserBadge({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(left: Spacing.xs + 2),
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.xs + 2, vertical: 1),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.12),
+        borderRadius: Radii.smAll,
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context)
+            .textTheme
+            .labelSmall
+            ?.copyWith(color: scheme.primary, fontSize: 10),
+      ),
+    );
+  }
+}
+
 class _CommentTile extends StatelessWidget {
   const _CommentTile({
     required this.comment,
@@ -659,32 +687,33 @@ class _CommentTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(comment.nick, style: text.titleSmall),
                     Row(
                       children: [
-                        Text(
-                          _relativeTime(context, comment.insertedAt),
-                          style: text.labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        Flexible(
+                          child: Text(
+                            comment.nick,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.titleSmall,
+                          ),
                         ),
-                        if (comment.addr != null) ...[
-                          Text(
-                            ' · ',
-                            style: text.labelSmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
-                          ),
-                          Flexible(
-                            child: Text(
-                              comment.addr!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.labelSmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          ),
-                        ],
+                        if (comment.label != null)
+                          _UserBadge(text: comment.label!),
                       ],
                     ),
+                    Text(
+                      _relativeTime(context, comment.insertedAt),
+                      style: text.labelSmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                    if (comment.addr != null)
+                      Text(
+                        comment.addr!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.labelSmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
                   ],
                 ),
               ),
@@ -737,45 +766,55 @@ class _ReplyTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                comment.nick,
-                style: text.labelLarge?.copyWith(color: scheme.primary),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            comment.nick,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                text.labelLarge?.copyWith(color: scheme.primary),
+                          ),
+                        ),
+                        if (comment.label != null)
+                          _UserBadge(text: comment.label!),
+                        if (mentionNick != null) ...[
+                          const SizedBox(width: Spacing.xs),
+                          Flexible(
+                            child: Text(
+                              '@$mentionNick',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  text.labelSmall?.copyWith(color: colors.accent),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      _relativeTime(context, comment.insertedAt),
+                      style: text.labelSmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                    if (comment.addr != null)
+                      Text(
+                        comment.addr!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.labelSmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                  ],
+                ),
               ),
-              if (mentionNick != null) ...[
-                const SizedBox(width: Spacing.xs),
-                Flexible(
-                  child: Text(
-                    '@$mentionNick',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.labelSmall?.copyWith(color: colors.accent),
-                  ),
-                ),
-              ],
-              const SizedBox(width: Spacing.sm),
-              Text(
-                _relativeTime(context, comment.insertedAt),
-                style:
-                    text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-              if (comment.addr != null) ...[
-                Text(
-                  ' · ',
-                  style:
-                      text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                Flexible(
-                  child: Text(
-                    comment.addr!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.labelSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ),
-              ],
-              const Spacer(),
               InkWell(
                 onTap: () => onReply(comment),
                 borderRadius: Radii.smAll,

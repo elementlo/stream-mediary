@@ -62,6 +62,12 @@ class BoardComments extends Table {
   /// Province-level IP region shown next to the timestamp.
   TextColumn get addr => text().nullable()();
 
+  /// Registered-user role (e.g. "administrator"); null for anonymous.
+  TextColumn get type => text().nullable()();
+
+  /// Admin-set badge text (e.g. "admin"); null for anonymous.
+  TextColumn get label => text().nullable()();
+
   /// Sort order within the cached page set (server order, newest first).
   IntColumn get sortIndex => integer().withDefault(const Constant(0))();
 
