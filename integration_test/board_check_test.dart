@@ -17,7 +17,7 @@ import 'package:stream_mediary/app.dart';
 ///   --target=integration_test/board_check_test.dart -d DEVICE_ID
 /// ```
 void main() {
-  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('message board loads and renders comments', (tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
@@ -60,16 +60,9 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('说点什么…'), findsNothing,
         reason: 'composer sheet did not dismiss');
-
-    // Surface capture is mobile-only; desktop verification stops at the
-    // assertions above.
-    try {
-      await binding.convertFlutterSurfaceToImage();
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      await binding.takeScreenshot('board');
-    } catch (_) {
-      // Not supported on this platform; assertions already passed.
-    }
+    // NOTE: no surface capture here. convertFlutterSurfaceToImage() hangs
+    // forever on some Mali GPUs (it never returns, so try/catch cannot
+    // rescue it) and would time out the whole smoke test. Screenshots are
+    // produced by dedicated tooling (adb screencap / simctl / CI), not here.
   }, timeout: const Timeout(Duration(minutes: 4)));
 }
