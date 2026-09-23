@@ -266,6 +266,12 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
     final profile = context.platformProfile;
     return Column(
       children: [
+        // Desktop has no pull-to-refresh indicator, and the small in-button
+        // spinner is easy to miss — especially on a slow link where the
+        // request takes seconds. Show a slim top progress bar while a manual
+        // refresh / load-more is in flight so the action is visibly working.
+        if (profile.isDesktop && _loading && _comments.isNotEmpty)
+          const LinearProgressIndicator(minHeight: 2),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.md),
