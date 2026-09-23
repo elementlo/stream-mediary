@@ -12,6 +12,7 @@ class EngineTaskRecord {
   EngineTaskRecord({
     required this.id,
     required this.url,
+    this.sourceUrl,
     required this.title,
     required this.state,
     this.headers = const {},
@@ -26,13 +27,17 @@ class EngineTaskRecord {
     this.totalBytes = 0,
     this.downloadedBytes = 0,
     this.errorMsg,
+    this.playbackMs = 0,
+    this.durationMs = 0,
+    this.queueOrder = 0,
     required this.createdAt,
     required this.updatedAt,
   });
 
   final String id;
-  final String url;
-  final String title;
+  String url;
+  String? sourceUrl;
+  String title;
   TaskState state;
   Map<String, String> headers;
   String? customKeyHex;
@@ -46,6 +51,9 @@ class EngineTaskRecord {
   int totalBytes;
   int downloadedBytes;
   String? errorMsg;
+  int playbackMs;
+  int durationMs;
+  int queueOrder;
   final int createdAt;
   int updatedAt;
 }

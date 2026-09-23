@@ -1,5 +1,8 @@
 import 'package:file_selector/file_selector.dart' as file_selector;
+import 'package:disk_usage/disk_usage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -16,6 +19,7 @@ import '../../core/widgets/status_badge.dart';
 import '../../engine/engine_config.dart';
 import '../../engine/m3u8/m3u8_parser.dart';
 import '../../engine/m3u8/playlist.dart';
+import '../../data/repositories/source_repository.dart';
 import '../../providers/app_providers.dart';
 
 class NewDownloadPage extends ConsumerStatefulWidget {
@@ -29,21 +33,52 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   final _urlController = TextEditingController();
   final _keyController = TextEditingController();
   final _ivController = TextEditingController();
+  final _titleController = TextEditingController();
   final List<_HeaderRow> _headers = [];
 
   bool _parsing = false;
   String? _error;
   ParseResult? _result;
   String _parsedUrl = '';
+  Map<String, String> _parsedHeaders = const {};
+  int _preflightEpoch = 0;
   int _selectedVariant = 0;
   String? _saveDir;
   bool _advancedOpen = false;
+  bool _starting = false;
+  bool _checking = false;
+  MediaPlaylist? _selectedMedia;
+  int? _estimatedBytes;
+  int? _availableBytes;
+  List<String> _recent = [];
+  List<SourceTemplate> _templates = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSources();
+  }
+
+  Future<void> _loadSources() async {
+    final repo = ref.read(sourceRepositoryProvider);
+    final (recent, templates) = await (
+      repo.recentUrls(),
+      repo.templates(),
+    ).wait;
+    if (mounted) {
+      setState(() {
+        _recent = recent;
+        _templates = templates;
+      });
+    }
+  }
 
   @override
   void dispose() {
     _urlController.dispose();
     _keyController.dispose();
     _ivController.dispose();
+    _titleController.dispose();
     for (final h in _headers) {
       h.dispose();
     }
@@ -51,10 +86,10 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   }
 
   Map<String, String> get _headerMap => {
-        for (final h in _headers)
-          if (h.keyController.text.trim().isNotEmpty)
-            h.keyController.text.trim(): h.valueController.text.trim(),
-      };
+    for (final h in _headers)
+      if (h.keyController.text.trim().isNotEmpty)
+        h.keyController.text.trim(): h.valueController.text.trim(),
+  };
 
   bool get _urlLooksValid {
     final uri = Uri.tryParse(_urlController.text.trim());
@@ -63,6 +98,7 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
 
   Future<void> _parse() async {
     final url = _urlController.text.trim();
+    final headers = _headerMap;
     if (!_urlLooksValid) {
       setState(() => _error = AppLocalizations.of(context).errorInvalidUrl);
       return;
@@ -72,72 +108,219 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       _parsing = true;
       _error = null;
       _result = null;
+      _selectedMedia = null;
+      _preflightEpoch++;
     });
 
     final engine = ref.read(downloadEngineProvider);
     try {
-      final result = await engine.parseForPreview(url, headers: _headerMap);
+      final result = await engine.parseForPreview(url, headers: headers);
+      if (!mounted || _urlController.text.trim() != url) return;
       setState(() {
         _result = result;
         _parsedUrl = url;
+        _parsedHeaders = headers;
         _selectedVariant = 0;
       });
+      await _refreshPreflight();
     } on M3u8ParseException catch (e) {
-      setState(() =>
-          _error = AppLocalizations.of(context).errorParseFailed(e.message));
+      if (mounted) {
+        setState(
+          () =>
+              _error = AppLocalizations.of(context).errorParseFailed(e.message),
+        );
+      }
     } catch (e) {
-      setState(
-          () => _error = AppLocalizations.of(context).errorParseFailed('$e'));
+      if (mounted) {
+        setState(
+          () => _error = AppLocalizations.of(context).errorParseFailed('$e'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _parsing = false);
     }
   }
 
-  Future<void> _startDownload() async {
+  Future<void> _refreshPreflight() async {
     final result = _result;
     if (result == null) return;
+    final epoch = ++_preflightEpoch;
+    final selected = _selectedVariant;
+    setState(() {
+      _checking = true;
+      _selectedMedia = null;
+      _estimatedBytes = null;
+    });
+    try {
+      final engine = ref.read(downloadEngineProvider);
+      final MediaPlaylist media;
+      if (result is MasterParseResult) {
+        final parsed = await engine.parseForPreview(
+          result.master.variants[selected].url,
+          headers: _parsedHeaders,
+        );
+        if (parsed is! MediaParseResult) {
+          throw const M3u8ParseException('Variant is not media');
+        }
+        media = parsed.media;
+      } else {
+        media = (result as MediaParseResult).media;
+      }
+      final estimate = await engine.estimateMediaBytes(
+        media,
+        headers: _parsedHeaders,
+      );
+      final dir = _saveDir ?? await ref.read(defaultSaveDirProvider.future);
+      int? available;
+      try {
+        available = await DiskUsage.freeSpace(dir);
+      } catch (_) {
+        /* unsupported */
+      }
+      if (!mounted || result != _result || epoch != _preflightEpoch) return;
+      setState(() {
+        _selectedMedia = media;
+        _estimatedBytes =
+            estimate ??
+            (result is MasterParseResult &&
+                    result.master.variants[selected].bandwidth != null
+                ? (result.master.variants[selected].bandwidth! *
+                          media.totalDuration /
+                          8)
+                      .round()
+                : null);
+        _availableBytes = available;
+      });
+    } catch (e) {
+      if (mounted && epoch == _preflightEpoch) {
+        setState(
+          () =>
+              _error = AppLocalizations.of(context).errorParseFailed('$e'),
+        );
+      }
+    } finally {
+      if (mounted && epoch == _preflightEpoch) {
+        setState(() => _checking = false);
+      }
+    }
+  }
+
+  void _applyTemplate(SourceTemplate template) {
+    for (final row in _headers) {
+      row.dispose();
+    }
+    _headers.clear();
+    for (final entry in template.headers.entries) {
+      final row = _HeaderRow();
+      row.keyController.text = entry.key;
+      row.valueController.text = entry.value;
+      _headers.add(row);
+    }
+    setState(() {
+      _advancedOpen = true;
+      _result = null;
+      _selectedMedia = null;
+      _preflightEpoch++;
+    });
+  }
+
+  Future<void> _saveTemplate() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context).saveTemplate),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).templateName,
+              ),
+            ),
+            const SizedBox(height: Spacing.sm),
+            Text(
+              AppLocalizations.of(context).templatePrivacyHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context).cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: Text(AppLocalizations.of(context).confirm),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty) return;
+    await ref
+        .read(sourceRepositoryProvider)
+        .saveTemplate(SourceTemplate(name: name, headers: _headerMap));
+    await _loadSources();
+  }
+
+  Future<void> _startDownload() async {
+    final result = _result;
+    if (result == null || _starting || _selectedMedia == null) return;
+    if (_urlController.text.trim() != _parsedUrl ||
+        !mapEquals(_headerMap, _parsedHeaders)) {
+      setState(() {
+        _result = null;
+        _selectedMedia = null;
+      });
+      return;
+    }
+    setState(() => _starting = true);
 
     final engine = ref.read(downloadEngineProvider);
     final l10n = AppLocalizations.of(context);
 
     try {
-      MediaPlaylist media;
+      final media = _selectedMedia!;
       String effectiveUrl = _parsedUrl;
 
       switch (result) {
         case MasterParseResult(:final master):
           final variant = master.variants[_selectedVariant];
           effectiveUrl = variant.url;
-          final content = await engine.parseForPreview(
-            variant.url,
-            headers: _headerMap,
-          );
-          if (content is! MediaParseResult) {
-            setState(() => _error = l10n.errorParseFailed('variant not media'));
-            return;
-          }
-          media = content.media;
-        case MediaParseResult(media: final parsed):
-          media = parsed;
+        case MediaParseResult():
+          break;
       }
 
       final id = const Uuid().v4();
       final request = DownloadRequest(
         url: effectiveUrl,
-        headers: _headerMap,
-        customKeyHex:
-            _keyController.text.trim().isEmpty ? null : _keyController.text.trim(),
-        customIvHex:
-            _ivController.text.trim().isEmpty ? null : _ivController.text.trim(),
+        sourceUrl: _parsedUrl,
+        title: _titleController.text.trim().isEmpty
+            ? null
+            : _titleController.text.trim(),
+        headers: _parsedHeaders,
+        customKeyHex: _keyController.text.trim().isEmpty
+            ? null
+            : _keyController.text.trim(),
+        customIvHex: _ivController.text.trim().isEmpty
+            ? null
+            : _ivController.text.trim(),
         saveDir: _saveDir,
       );
 
       await engine.startTask(id: id, request: request, playlist: media);
+      await ref.read(sourceRepositoryProvider).remember(_parsedUrl);
       if (mounted) context.go('/downloads');
     } on M3u8ParseException catch (e) {
       if (mounted) setState(() => _error = l10n.errorParseFailed(e.message));
     } catch (e) {
       if (mounted) setState(() => _error = l10n.errorParseFailed('$e'));
+    } finally {
+      if (mounted) setState(() => _starting = false);
     }
   }
 
@@ -159,7 +342,10 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       final dir = await file_selector.getDirectoryPath(
         confirmButtonText: l10n.chooseDirectory,
       );
-      if (dir != null) setState(() => _saveDir = dir);
+      if (dir != null) {
+        setState(() => _saveDir = dir);
+        if (_result != null) await _refreshPreflight();
+      }
     } catch (_) {
       // Platform without directory picker; keep default.
     }
@@ -184,8 +370,93 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
             controller: _urlController,
             label: l10n.m3u8UrlLabel,
             hint: l10n.m3u8UrlHint,
-            onChanged: () => setState(() {}),
+            onChanged: () => setState(() {
+              _result = null;
+              _selectedMedia = null;
+              _preflightEpoch++;
+            }),
           ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                final value = data?.text?.trim();
+                if (value == null || !mounted) return;
+                _urlController.text = value;
+                setState(() {
+                  _result = null;
+                  _selectedMedia = null;
+                });
+              },
+              icon: const Icon(Icons.content_paste_rounded, size: 16),
+              label: Text(l10n.pasteClipboard),
+            ),
+          ),
+          if (_recent.isNotEmpty) ...[
+            const SizedBox(height: Spacing.sm),
+            Text(
+              l10n.recentSources,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const SizedBox(height: Spacing.xs),
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _recent
+                    .take(5)
+                    .map(
+                      (url) => Padding(
+                        padding: const EdgeInsets.only(right: Spacing.sm),
+                        child: ActionChip(
+                          label: Text(
+                            Uri.tryParse(url)?.host ?? url,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onPressed: () {
+                            _urlController.text = url;
+                            setState(() {
+                              _result = null;
+                              _selectedMedia = null;
+                              _preflightEpoch++;
+                            });
+                          },
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+          const SizedBox(height: Spacing.md),
+          TextField(
+            controller: _titleController,
+            decoration: InputDecoration(
+              labelText: l10n.downloadTitle,
+              hintText: l10n.downloadTitleHint,
+            ),
+          ),
+          if (_templates.isNotEmpty) ...[
+            const SizedBox(height: Spacing.md),
+            Wrap(
+              spacing: Spacing.sm,
+              children: _templates
+                  .map(
+                    (template) => InputChip(
+                      label: Text(template.name),
+                      onPressed: () => _applyTemplate(template),
+                      onDeleted: () async {
+                        await ref
+                            .read(sourceRepositoryProvider)
+                            .deleteTemplate(template.name);
+                        await _loadSources();
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
           const SizedBox(height: Spacing.md),
           _AdvancedSection(
             open: _advancedOpen,
@@ -193,6 +464,7 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
             headers: _headers,
             onAddHeader: () => setState(() => _headers.add(_HeaderRow())),
             onRemoveHeader: (row) => setState(() => _headers.remove(row)),
+            onSaveTemplate: _saveTemplate,
             keyController: _keyController,
             ivController: _ivController,
           ),
@@ -217,10 +489,19 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
             _PreviewCard(
               result: _result!,
               selectedVariant: _selectedVariant,
-              onVariantChanged: (i) => setState(() => _selectedVariant = i),
+              onVariantChanged: (i) {
+                setState(() => _selectedVariant = i);
+                _refreshPreflight();
+              },
               saveDir: _saveDir,
               onChooseDir: _chooseDir,
-              onStart: _startDownload,
+              onStart: _starting || _checking || _selectedMedia == null
+                  ? null
+                  : _startDownload,
+              media: _selectedMedia,
+              checking: _checking,
+              estimatedBytes: _estimatedBytes,
+              availableBytes: _availableBytes,
             ),
           ],
         ],
@@ -248,12 +529,15 @@ class _UrlField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: Spacing.xs, bottom: Spacing.sm - 2),
+          padding: const EdgeInsets.only(
+            left: Spacing.xs,
+            bottom: Spacing.sm - 2,
+          ),
           child: Text(
             label,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         TextField(
@@ -280,6 +564,7 @@ class _AdvancedSection extends StatelessWidget {
     required this.headers,
     required this.onAddHeader,
     required this.onRemoveHeader,
+    required this.onSaveTemplate,
     required this.keyController,
     required this.ivController,
   });
@@ -289,6 +574,7 @@ class _AdvancedSection extends StatelessWidget {
   final List<_HeaderRow> headers;
   final VoidCallback onAddHeader;
   final ValueChanged<_HeaderRow> onRemoveHeader;
+  final VoidCallback onSaveTemplate;
   final TextEditingController keyController;
   final TextEditingController ivController;
 
@@ -309,8 +595,11 @@ class _AdvancedSection extends StatelessWidget {
               padding: const EdgeInsets.all(Spacing.lg),
               child: Row(
                 children: [
-                  Icon(Icons.tune_rounded,
-                      size: 18, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: Spacing.md),
                   Expanded(
                     child: Column(
@@ -320,8 +609,9 @@ class _AdvancedSection extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           l10n.advancedHint,
-                          style: text.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: text.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
@@ -330,8 +620,10 @@ class _AdvancedSection extends StatelessWidget {
                     turns: open ? 0.5 : 0,
                     duration: Motion.standard,
                     curve: Motion.enter,
-                    child: Icon(Icons.expand_more_rounded,
-                        color: scheme.onSurfaceVariant),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -340,8 +632,9 @@ class _AdvancedSection extends StatelessWidget {
           AnimatedCrossFade(
             duration: Motion.emphasized,
             sizeCurve: Motion.emphasizedCurve,
-            crossFadeState:
-                open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: open
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             firstChild: const SizedBox(width: double.infinity),
             secondChild: Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -357,8 +650,9 @@ class _AdvancedSection extends StatelessWidget {
                   const SizedBox(height: Spacing.lg),
                   Text(
                     l10n.headerSection,
-                    style: text.titleSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
+                    style: text.titleSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: Spacing.sm),
                   for (final row in headers)
@@ -374,33 +668,38 @@ class _AdvancedSection extends StatelessWidget {
                       label: Text(l10n.addHeader),
                       style: TextButton.styleFrom(
                         minimumSize: const Size(0, 34),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: Spacing.sm),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Spacing.sm,
+                        ),
                       ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: onSaveTemplate,
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                      label: Text(l10n.saveTemplate),
                     ),
                   ),
                   const SizedBox(height: Spacing.lg),
                   Text(
                     l10n.decryptSection,
-                    style: text.titleSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
+                    style: text.titleSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: Spacing.sm),
                   Text(
                     l10n.decryptHint,
-                    style: text.bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
+                    style: text.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: Spacing.sm + 2),
-                  _KeyField(
-                    controller: keyController,
-                    label: l10n.customKey,
-                  ),
+                  _KeyField(controller: keyController, label: l10n.customKey),
                   const SizedBox(height: Spacing.sm + 2),
-                  _KeyField(
-                    controller: ivController,
-                    label: l10n.customIv,
-                  ),
+                  _KeyField(controller: ivController, label: l10n.customIv),
                 ],
               ),
             ),
@@ -478,8 +777,7 @@ class _HeaderRowWidget extends StatelessWidget {
             tooltip: l10n.delete,
             style: IconButton.styleFrom(
               minimumSize: const Size.square(36),
-              foregroundColor:
-                  Theme.of(context).colorScheme.onSurfaceVariant,
+              foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -531,6 +829,10 @@ class _PreviewCard extends StatelessWidget {
     required this.saveDir,
     required this.onChooseDir,
     required this.onStart,
+    required this.media,
+    required this.checking,
+    required this.estimatedBytes,
+    required this.availableBytes,
   });
 
   final ParseResult result;
@@ -538,7 +840,11 @@ class _PreviewCard extends StatelessWidget {
   final ValueChanged<int> onVariantChanged;
   final String? saveDir;
   final VoidCallback onChooseDir;
-  final VoidCallback onStart;
+  final VoidCallback? onStart;
+  final MediaPlaylist? media;
+  final bool checking;
+  final int? estimatedBytes;
+  final int? availableBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -559,13 +865,13 @@ class _PreviewCard extends StatelessWidget {
               const Spacer(),
               switch (result) {
                 MediaParseResult(:final media) => PillBadge(
-                    label: media.encrypted
-                        ? l10n.encryptedBadge
-                        : l10n.notEncryptedBadge,
-                    color: media.encrypted
-                        ? context.mediaryColors.warning
-                        : context.mediaryColors.success,
-                  ),
+                  label: media.encrypted
+                      ? l10n.encryptedBadge
+                      : l10n.notEncryptedBadge,
+                  color: media.encrypted
+                      ? context.mediaryColors.warning
+                      : context.mediaryColors.success,
+                ),
                 MasterParseResult() => const SizedBox.shrink(),
               },
             ],
@@ -573,12 +879,45 @@ class _PreviewCard extends StatelessWidget {
           const SizedBox(height: Spacing.lg),
           switch (result) {
             MasterParseResult(:final master) => _VariantPicker(
-                master: master,
-                selected: selectedVariant,
-                onChanged: onVariantChanged,
-              ),
+              master: master,
+              selected: selectedVariant,
+              onChanged: onVariantChanged,
+            ),
             MediaParseResult(:final media) => _MediaSummary(media: media),
           },
+          if (checking) const LinearProgressIndicator(),
+          if (media != null) ...[
+            const SizedBox(height: Spacing.md),
+            Text(
+              '${l10n.segmentCount}: ${media!.segmentCount} · '
+              '${l10n.totalDuration}: ${formatDuration(media!.totalDuration)}',
+              style: text.bodySmall,
+            ),
+          ],
+          if (estimatedBytes != null) ...[
+            const SizedBox(height: Spacing.sm),
+            Text(
+              '${l10n.estimatedSize}: ${formatBytes(estimatedBytes!)} '
+              '(${l10n.estimatedSizeHint})',
+              style: text.bodySmall,
+            ),
+          ],
+          if (availableBytes != null) ...[
+            const SizedBox(height: Spacing.sm),
+            Text(
+              '${l10n.availableSpace}: ${formatBytes(availableBytes!)}',
+              style: text.bodySmall,
+            ),
+          ],
+          if (estimatedBytes != null &&
+              availableBytes != null &&
+              estimatedBytes! * 1.3 > availableBytes!) ...[
+            const SizedBox(height: Spacing.sm),
+            Text(
+              l10n.lowSpaceWarning,
+              style: text.bodySmall?.copyWith(color: scheme.error),
+            ),
+          ],
           const SizedBox(height: Spacing.lg),
           _DestinationRow(saveDir: saveDir, onChooseDir: onChooseDir),
           const SizedBox(height: Spacing.md),
@@ -587,8 +926,9 @@ class _PreviewCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.startDownloadHint,
-                  style: text.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: text.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -630,7 +970,10 @@ class _VariantPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: Spacing.xs, bottom: Spacing.sm - 2),
+          padding: const EdgeInsets.only(
+            left: Spacing.xs,
+            bottom: Spacing.sm - 2,
+          ),
           child: Text(
             l10n.selectVariant,
             style: text.titleSmall?.copyWith(color: scheme.onSurfaceVariant),
@@ -679,7 +1022,8 @@ class _VariantTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final detail = [
       if (variant.codecs != null) variant.codecs,
-      if (variant.bandwidth != null) '${(variant.bandwidth! / 1000).round()} kbps',
+      if (variant.bandwidth != null)
+        '${(variant.bandwidth! / 1000).round()} kbps',
     ].whereType<String>().join(' · ');
 
     return Material(
@@ -768,10 +1112,10 @@ class _MediaSummary extends StatelessWidget {
 
     final keyMethod = media.encrypted
         ? media.segments
-            .firstWhere((s) => s.keyInfo != null)
-            .keyInfo!
-            .method
-            .label
+              .firstWhere((s) => s.keyInfo != null)
+              .keyInfo!
+              .method
+              .label
         : null;
 
     return Column(
@@ -807,9 +1151,7 @@ class _MediaSummary extends StatelessWidget {
               const SizedBox(width: Spacing.xs + 2),
               Text(
                 l10n.liveBadge,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
+                style: Theme.of(context).textTheme.bodySmall
                     ?.copyWith(color: colors.danger),
               ),
             ],
@@ -850,8 +1192,11 @@ class _DestinationRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.folder_rounded,
-                  size: 17, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.folder_rounded,
+                size: 17,
+                color: scheme.onSurfaceVariant,
+              ),
               const SizedBox(width: Spacing.sm + 1),
               Expanded(
                 child: Text(
@@ -861,8 +1206,11 @@ class _DestinationRow extends StatelessWidget {
                   style: text.bodyMedium,
                 ),
               ),
-              Icon(Icons.chevron_right_rounded,
-                  size: 18, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

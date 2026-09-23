@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:logging/logging.dart';
 
+import '../m3u8/playlist.dart';
+
 final Logger _log = Logger('SegmentDownloader');
 
 /// Result of a segment download attempt.
@@ -47,6 +49,7 @@ class SegmentDownloader {
     required File targetFile,
     Map<String, String> headers = const {},
     CancelToken? cancelToken,
+    ByteRange? byteRange,
   }) async {
     final partFile = File('${targetFile.path}.part');
     await targetFile.parent.create(recursive: true);
@@ -57,12 +60,34 @@ class SegmentDownloader {
           url,
           options: Options(
             responseType: ResponseType.stream,
-            headers: headers,
+            headers: {
+              ...headers,
+              if (byteRange != null)
+                'Range': 'bytes=${byteRange.offset}-${byteRange.end}',
+            },
             followRedirects: true,
             receiveTimeout: const Duration(minutes: 5),
           ),
           cancelToken: cancelToken,
         );
+
+        if (byteRange != null && response.statusCode != 206) {
+          throw StateError('Server ignored the requested byte range');
+        }
+        if (byteRange != null) {
+          final contentRange = response.headers.value(
+            HttpHeaders.contentRangeHeader,
+          );
+          final match = contentRange == null
+              ? null
+              : RegExp(r'^bytes (\d+)-(\d+)/(?:\d+|\*)$')
+                    .firstMatch(contentRange);
+          if (match == null ||
+              int.parse(match.group(1)!) != byteRange.offset ||
+              int.parse(match.group(2)!) != byteRange.end) {
+            throw StateError('Server returned a different byte range');
+          }
+        }
 
         final body = response.data!;
         var received = 0;
@@ -75,6 +100,12 @@ class SegmentDownloader {
           await sink.flush();
         } finally {
           await sink.close();
+        }
+
+        if (byteRange != null && received != byteRange.length) {
+          throw StateError(
+            'Byte range length mismatch: $received of ${byteRange.length}',
+          );
         }
 
         // Atomic rename into place.
@@ -92,7 +123,9 @@ class SegmentDownloader {
         } else {
           return SegmentDownloadResult(
             success: false,
-            error: e.message ?? 'download failed',
+            error: e.response?.statusCode == null
+                ? (e.message ?? 'download failed')
+                : 'HTTP ${e.response!.statusCode}',
           );
         }
       } catch (e) {

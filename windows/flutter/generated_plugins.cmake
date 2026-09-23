@@ -3,17 +3,23 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  battery_plus
+  connectivity_plus
+  disk_usage
   file_selector_windows
   media_kit_libs_windows_video
   media_kit_video
   permission_handler_windows
   screen_retriever_windows
+  share_plus
   sqlite3_flutter_libs
+  url_launcher_windows
   volume_controller
   window_manager
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
+  flutter_local_notifications_windows
   jni
 )
 

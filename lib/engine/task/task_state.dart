@@ -50,7 +50,11 @@ const Map<TaskState, Set<TaskState>> _transitions = {
     TaskState.canceled,
   },
   TaskState.previewReady: {TaskState.queued, TaskState.canceled},
-  TaskState.queued: {TaskState.downloading, TaskState.canceled},
+  TaskState.queued: {
+    TaskState.downloading,
+    TaskState.paused,
+    TaskState.canceled,
+  },
   TaskState.downloading: {
     TaskState.paused,
     TaskState.merging,

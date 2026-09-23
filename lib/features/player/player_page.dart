@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -10,16 +11,6 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../providers/app_providers.dart';
-
-/// Provides a [Player] for a given task's output file.
-final playerProvider = Provider.family<Player, String>((ref, path) {
-  // Load media_kit native libraries on first use so cold start stays fast.
-  MediaKit.ensureInitialized();
-  final player = Player();
-  ref.onDispose(player.dispose);
-  player.open(Media(path), play: true);
-  return player;
-});
 
 class PlayerPage extends ConsumerStatefulWidget {
   const PlayerPage({super.key, required this.taskId});
@@ -38,6 +29,13 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
   StreamSubscription<Playlist>? _playlistSub;
   StreamSubscription<String>? _errorSub;
   Timer? _timeout;
+  Player? _player;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<bool>? _completedSub;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  DateTime _lastSave = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -64,7 +62,42 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
 
     setState(() => _title = task?.title);
 
-    final player = ref.read(playerProvider(path));
+    MediaKit.ensureInitialized();
+    final player = Player();
+    _player = player;
+    var restored = false;
+    _durationSub = player.stream.duration.listen((duration) {
+      _duration = duration;
+      if (!restored &&
+          duration > Duration.zero &&
+          task != null &&
+          task.playbackMs > 0 &&
+          task.playbackMs < duration.inMilliseconds - 15000) {
+        restored = true;
+        unawaited(player.seek(Duration(milliseconds: task.playbackMs)));
+      }
+    });
+    _positionSub = player.stream.position.listen((position) {
+      _position = position;
+      if (DateTime.now().difference(_lastSave) >= const Duration(seconds: 5)) {
+        _lastSave = DateTime.now();
+        unawaited(
+          ref
+              .read(downloadEngineProvider)
+              .savePlayback(widget.taskId, position, _duration),
+        );
+      }
+    });
+    _completedSub = player.stream.completed.listen((completed) {
+      if (completed) {
+        _position = Duration.zero;
+        unawaited(
+          ref
+              .read(downloadEngineProvider)
+              .savePlayback(widget.taskId, Duration.zero, _duration),
+        );
+      }
+    });
     _playlistSub = player.stream.playlist.listen((playlist) {
       if (playlist.medias.isNotEmpty && mounted && !_ready) {
         setState(() => _ready = true);
@@ -85,6 +118,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
     setState(() {
       _controller = VideoController(player);
     });
+    unawaited(player.open(Media(path), play: true));
   }
 
   @override
@@ -92,6 +126,17 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
     _timeout?.cancel();
     _playlistSub?.cancel();
     _errorSub?.cancel();
+    _positionSub?.cancel();
+    _durationSub?.cancel();
+    _completedSub?.cancel();
+    if (_player != null) {
+      unawaited(
+        ref
+            .read(downloadEngineProvider)
+            .savePlayback(widget.taskId, _position, _duration),
+      );
+      unawaited(_player!.dispose());
+    }
     super.dispose();
   }
 
@@ -135,9 +180,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
           _title ?? l10n.play,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-              ),
+          style: Theme.of(context).textTheme.titleMedium
+              ?.copyWith(color: Colors.white),
         ),
       ),
       body: MaterialVideoControlsTheme(
@@ -146,9 +190,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
           // larger targets.
           seekBarHeight: profile.isDesktop ? 3 : 5,
           seekBarContainerHeight: profile.isDesktop ? 44 : 56,
-          seekBarMargin: const EdgeInsets.symmetric(
-            horizontal: Spacing.lg,
-          ),
+          seekBarMargin: const EdgeInsets.symmetric(horizontal: Spacing.lg),
           seekBarThumbSize: profile.isDesktop ? 12 : 14,
           seekBarColor: Colors.white24,
           seekBarPositionColor: Colors.white,
@@ -171,10 +213,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
           buttonBarButtonSize: 24,
           buttonBarButtonColor: Colors.white,
         ),
-        child: Video(
-          controller: controller,
-          controls: MaterialVideoControls,
-        ),
+        child: Video(controller: controller, controls: MaterialVideoControls),
       ),
     );
   }
@@ -193,6 +232,8 @@ class _PlayerBackButton extends StatelessWidget {
         final navigator = Navigator.of(context);
         if (navigator.canPop()) {
           navigator.pop();
+        } else {
+          context.go('/history');
         }
       },
     );
@@ -222,15 +263,14 @@ class _PlayerError extends StatelessWidget {
                 color: scheme.error.withValues(alpha: 0.10),
                 borderRadius: Radii.lgAll,
               ),
-              child: Icon(Icons.error_outline_rounded,
-                  size: 30, color: scheme.error),
+              child: Icon(
+                Icons.error_outline_rounded,
+                size: 30,
+                color: scheme.error,
+              ),
             ),
             const SizedBox(height: Spacing.xl),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: text.bodyMedium,
-            ),
+            Text(message, textAlign: TextAlign.center, style: text.bodyMedium),
           ],
         ),
       ),

@@ -1,4 +1,6 @@
 PODS:
+  - disk_usage (0.0.1):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - media_kit_libs_macos_video (1.0.4):
     - FlutterMacOS
@@ -6,11 +8,14 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - disk_usage (from `Flutter/ephemeral/.symlinks/plugins/disk_usage/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - media_kit_libs_macos_video (from `Flutter/ephemeral/.symlinks/plugins/media_kit_libs_macos_video/macos`)
   - media_kit_video (from `Flutter/ephemeral/.symlinks/plugins/media_kit_video/macos`)
 
 EXTERNAL SOURCES:
+  disk_usage:
+    :path: Flutter/ephemeral/.symlinks/plugins/disk_usage/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   media_kit_libs_macos_video:
@@ -19,6 +24,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/media_kit_video/macos
 
 SPEC CHECKSUMS:
+  disk_usage: be8fa694e03e4ed8f34bbc93d3435135e6d50f0a
   FlutterMacOS: c232990155153907050900a2e175c7773903ba4e
   media_kit_libs_macos_video: 85a23e549b5f480e72cae3e5634b5514bc692f65
   media_kit_video: fa6564e3799a0a28bff39442334817088b7ca758

@@ -14,26 +14,32 @@ class DriftEngineTaskStore implements EngineTaskStore {
 
   @override
   Future<void> saveTask(EngineTaskRecord task) {
-    return _db.upsertTask(TasksCompanion.insert(
-      id: task.id,
-      url: task.url,
-      title: task.title,
-      status: task.state.index,
-      headers: Value(jsonEncode(task.headers)),
-      customKey: Value(task.customKeyHex),
-      customIv: Value(task.customIvHex),
-      variantJson: Value(task.variantJson),
-      playlistSnapshot: Value(task.playlistSnapshot),
-      saveDir: task.saveDir,
-      outputPath: Value(task.outputPath),
-      totalSegments: Value(task.totalSegments),
-      doneSegments: Value(task.doneSegments),
-      totalBytes: Value(task.totalBytes),
-      downloadedBytes: Value(task.downloadedBytes),
-      errorMsg: Value(task.errorMsg),
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-    ));
+    return _db.upsertTask(
+      TasksCompanion.insert(
+        id: task.id,
+        url: task.url,
+        sourceUrl: Value(task.sourceUrl),
+        title: task.title,
+        status: task.state.index,
+        headers: Value(jsonEncode(task.headers)),
+        customKey: Value(task.customKeyHex),
+        customIv: Value(task.customIvHex),
+        variantJson: Value(task.variantJson),
+        playlistSnapshot: Value(task.playlistSnapshot),
+        saveDir: task.saveDir,
+        outputPath: Value(task.outputPath),
+        totalSegments: Value(task.totalSegments),
+        doneSegments: Value(task.doneSegments),
+        totalBytes: Value(task.totalBytes),
+        downloadedBytes: Value(task.downloadedBytes),
+        errorMsg: Value(task.errorMsg),
+        playbackMs: Value(task.playbackMs),
+        durationMs: Value(task.durationMs),
+        queueOrder: Value(task.queueOrder),
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+      ),
+    );
   }
 
   @override
@@ -54,30 +60,36 @@ class DriftEngineTaskStore implements EngineTaskStore {
 
   @override
   Future<void> saveSegments(List<EngineSegmentRecord> segments) {
-    return _db.upsertSegments(segments
-        .map((s) => SegmentsCompanion.insert(
+    return _db.upsertSegments(
+      segments
+          .map(
+            (s) => SegmentsCompanion.insert(
               taskId: s.taskId,
               seq: s.seq,
               url: s.url,
               status: Value(s.status.index),
               byteSize: Value(s.byteSize),
               retryCount: Value(s.retryCount),
-            ))
-        .toList());
+            ),
+          )
+          .toList(),
+    );
   }
 
   @override
   Future<List<EngineSegmentRecord>> loadSegments(String taskId) async {
     final rows = await _db.segmentsForTask(taskId);
     return rows
-        .map((r) => EngineSegmentRecord(
-              taskId: r.taskId,
-              seq: r.seq,
-              url: r.url,
-              status: SegmentStatus.values[r.status],
-              byteSize: r.byteSize,
-              retryCount: r.retryCount,
-            ))
+        .map(
+          (r) => EngineSegmentRecord(
+            taskId: r.taskId,
+            seq: r.seq,
+            url: r.url,
+            status: SegmentStatus.values[r.status],
+            byteSize: r.byteSize,
+            retryCount: r.retryCount,
+          ),
+        )
         .toList();
   }
 
@@ -98,6 +110,7 @@ class DriftEngineTaskStore implements EngineTaskStore {
     return EngineTaskRecord(
       id: row.id,
       url: row.url,
+      sourceUrl: row.sourceUrl,
       title: row.title,
       state: TaskState.values[row.status],
       headers: headers,
@@ -112,6 +125,9 @@ class DriftEngineTaskStore implements EngineTaskStore {
       totalBytes: row.totalBytes,
       downloadedBytes: row.downloadedBytes,
       errorMsg: row.errorMsg,
+      playbackMs: row.playbackMs,
+      durationMs: row.durationMs,
+      queueOrder: row.queueOrder,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );

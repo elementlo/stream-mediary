@@ -128,6 +128,36 @@ abstract class AppLocalizations {
   /// **'新建下载'**
   String get newDownload;
 
+  /// No description provided for @batchImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'批量导入'**
+  String get batchImport;
+
+  /// No description provided for @batchUrls.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放列表地址，每行一个'**
+  String get batchUrls;
+
+  /// No description provided for @batchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴多个 http/https 的 m3u8 地址'**
+  String get batchHint;
+
+  /// No description provided for @batchReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'个可下载'**
+  String get batchReady;
+
+  /// No description provided for @batchAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入下载队列'**
+  String get batchAdd;
+
   /// No description provided for @downloads.
   ///
   /// In zh, this message translates to:
@@ -139,6 +169,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'历史记录'**
   String get history;
+
+  /// No description provided for @searchHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索已下载内容'**
+  String get searchHistory;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get filterAll;
+
+  /// No description provided for @filterIncomplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败/取消'**
+  String get filterIncomplete;
+
+  /// No description provided for @sortNewest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新'**
+  String get sortNewest;
+
+  /// No description provided for @sortOldest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最早'**
+  String get sortOldest;
+
+  /// No description provided for @sortSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'按大小'**
+  String get sortSize;
+
+  /// No description provided for @sortTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'按标题'**
+  String get sortTitle;
+
+  /// No description provided for @fileMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地文件已移走或删除'**
+  String get fileMissing;
+
+  /// No description provided for @rename.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名'**
+  String get rename;
+
+  /// No description provided for @continueAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续播放 · {time}'**
+  String continueAt(Object time);
 
   /// No description provided for @settings.
   ///
@@ -266,6 +356,60 @@ abstract class AppLocalizations {
   /// **'估算大小'**
   String get estimatedSize;
 
+  /// No description provided for @availableSpace.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用空间'**
+  String get availableSpace;
+
+  /// No description provided for @lowSpaceWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用空间可能不足；合并时还需要额外空间。'**
+  String get lowSpaceWarning;
+
+  /// No description provided for @recentSources.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近来源'**
+  String get recentSources;
+
+  /// No description provided for @pasteClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴剪贴板链接'**
+  String get pasteClipboard;
+
+  /// No description provided for @downloadTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'视频标题'**
+  String get downloadTitle;
+
+  /// No description provided for @downloadTitleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选，留空则从地址生成'**
+  String get downloadTitleHint;
+
+  /// No description provided for @saveTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存请求头模板'**
+  String get saveTemplate;
+
+  /// No description provided for @templateName.
+  ///
+  /// In zh, this message translates to:
+  /// **'模板名称'**
+  String get templateName;
+
+  /// No description provided for @templatePrivacyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求头（包括 Cookie）将保存在本机。只保存你愿意保留的值，可随时删除模板。'**
+  String get templatePrivacyHint;
+
   /// No description provided for @selectVariant.
   ///
   /// In zh, this message translates to:
@@ -374,6 +518,30 @@ abstract class AppLocalizations {
   /// **'重试'**
   String get retry;
 
+  /// No description provided for @replaceSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新失效链接'**
+  String get replaceSource;
+
+  /// No description provided for @invalidHeaderLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求头格式应为「名称: 值」，每行一项'**
+  String get invalidHeaderLine;
+
+  /// No description provided for @copyDiagnostic.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制诊断'**
+  String get copyDiagnostic;
+
+  /// No description provided for @diagnosticCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制脱敏诊断信息'**
+  String get diagnosticCopied;
+
   /// No description provided for @delete.
   ///
   /// In zh, this message translates to:
@@ -385,6 +553,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'播放'**
   String get play;
+
+  /// No description provided for @shareFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享文件'**
+  String get shareFile;
 
   /// No description provided for @redownload.
   ///
@@ -433,6 +607,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'任务并发数'**
   String get concurrency;
+
+  /// No description provided for @queuePolicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载策略'**
+  String get queuePolicy;
+
+  /// No description provided for @sequentialQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'逐个下载任务'**
+  String get sequentialQueue;
+
+  /// No description provided for @wifiOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅 Wi-Fi / 有线网络下载'**
+  String get wifiOnly;
+
+  /// No description provided for @chargingOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅充电时下载'**
+  String get chargingOnly;
+
+  /// No description provided for @moveFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先下载'**
+  String get moveFirst;
+
+  /// No description provided for @moveLast.
+  ///
+  /// In zh, this message translates to:
+  /// **'移到末尾'**
+  String get moveLast;
+
+  /// No description provided for @completionNotifications.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成通知'**
+  String get completionNotifications;
+
+  /// No description provided for @completionNotificationsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成时发送系统通知'**
+  String get completionNotificationsHint;
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统未授予通知权限'**
+  String get notificationPermissionDenied;
 
   /// No description provided for @defaultSaveDir.
   ///

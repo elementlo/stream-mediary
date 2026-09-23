@@ -8,35 +8,31 @@ enum EncryptionMethod { none, aes128, aes192, aes256 }
 
 extension EncryptionMethodX on EncryptionMethod {
   int get keyBytes => switch (this) {
-        EncryptionMethod.aes128 => 16,
-        EncryptionMethod.aes192 => 24,
-        EncryptionMethod.aes256 => 32,
-        EncryptionMethod.none => 0,
-      };
+    EncryptionMethod.aes128 => 16,
+    EncryptionMethod.aes192 => 24,
+    EncryptionMethod.aes256 => 32,
+    EncryptionMethod.none => 0,
+  };
 
   String get label => switch (this) {
-        EncryptionMethod.none => 'NONE',
-        EncryptionMethod.aes128 => 'AES-128',
-        EncryptionMethod.aes192 => 'AES-192',
-        EncryptionMethod.aes256 => 'AES-256',
-      };
+    EncryptionMethod.none => 'NONE',
+    EncryptionMethod.aes128 => 'AES-128',
+    EncryptionMethod.aes192 => 'AES-192',
+    EncryptionMethod.aes256 => 'AES-256',
+  };
 }
 
 /// Parses an `EncryptionMethod` from the METHOD attribute value.
 EncryptionMethod parseEncryptionMethod(String? value) => switch (value) {
-      'AES-128' => EncryptionMethod.aes128,
-      'AES-192' => EncryptionMethod.aes192,
-      'AES-256' => EncryptionMethod.aes256,
-      _ => EncryptionMethod.none,
-    };
+  'AES-128' => EncryptionMethod.aes128,
+  'AES-192' => EncryptionMethod.aes192,
+  'AES-256' => EncryptionMethod.aes256,
+  _ => EncryptionMethod.none,
+};
 
 /// Encryption information bound to a range of segments.
 class KeyInfo {
-  const KeyInfo({
-    required this.method,
-    this.uri,
-    this.ivHex,
-  });
+  const KeyInfo({required this.method, this.uri, this.ivHex});
 
   final EncryptionMethod method;
 
@@ -51,19 +47,19 @@ class KeyInfo {
   bool get encrypted => method != EncryptionMethod.none;
 
   Map<String, dynamic> toJson() => {
-        'method': method.name,
-        'uri': uri,
-        'ivHex': ivHex,
-      };
+    'method': method.name,
+    'uri': uri,
+    'ivHex': ivHex,
+  };
 
   factory KeyInfo.fromJson(Map<String, dynamic> json) => KeyInfo(
-        method: EncryptionMethod.values.firstWhere(
-          (m) => m.name == json['method'],
-          orElse: () => EncryptionMethod.none,
-        ),
-        uri: json['uri'] as String?,
-        ivHex: json['ivHex'] as String?,
-      );
+    method: EncryptionMethod.values.firstWhere(
+      (m) => m.name == json['method'],
+      orElse: () => EncryptionMethod.none,
+    ),
+    uri: json['uri'] as String?,
+    ivHex: json['ivHex'] as String?,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -84,6 +80,7 @@ class Segment {
     required this.duration,
     this.keyInfo,
     this.discontinuity = false,
+    this.byteRange,
   });
 
   /// Media sequence number of this segment within the playlist.
@@ -100,23 +97,55 @@ class Segment {
 
   /// Whether an `EXT-X-DISCONTINUITY` tag precedes this segment.
   final bool discontinuity;
+  final ByteRange? byteRange;
 
   Map<String, dynamic> toJson() => {
-        'seq': seq,
-        'url': url,
-        'duration': duration,
-        'keyInfo': keyInfo?.toJson(),
-        'discontinuity': discontinuity,
-      };
+    'seq': seq,
+    'url': url,
+    'duration': duration,
+    'keyInfo': keyInfo?.toJson(),
+    'discontinuity': discontinuity,
+    'byteRange': byteRange?.toJson(),
+  };
 
   factory Segment.fromJson(Map<String, dynamic> json) => Segment(
-        seq: json['seq'] as int,
+    seq: json['seq'] as int,
+    url: json['url'] as String,
+    duration: (json['duration'] as num).toDouble(),
+    keyInfo: json['keyInfo'] == null
+        ? null
+        : KeyInfo.fromJson(json['keyInfo'] as Map<String, dynamic>),
+    discontinuity: json['discontinuity'] as bool? ?? false,
+    byteRange: json['byteRange'] == null
+        ? null
+        : ByteRange.fromJson(json['byteRange'] as Map<String, dynamic>),
+  );
+}
+
+class ByteRange {
+  const ByteRange(this.offset, this.length);
+  final int offset;
+  final int length;
+  int get end => offset + length - 1;
+  Map<String, dynamic> toJson() => {'offset': offset, 'length': length};
+  factory ByteRange.fromJson(Map<String, dynamic> json) =>
+      ByteRange(json['offset'] as int, json['length'] as int);
+}
+
+class InitializationSection {
+  const InitializationSection({required this.url, this.byteRange});
+  final String url;
+  final ByteRange? byteRange;
+  Map<String, dynamic> toJson() => {
+    'url': url,
+    'byteRange': byteRange?.toJson(),
+  };
+  factory InitializationSection.fromJson(Map<String, dynamic> json) =>
+      InitializationSection(
         url: json['url'] as String,
-        duration: (json['duration'] as num).toDouble(),
-        keyInfo: json['keyInfo'] == null
+        byteRange: json['byteRange'] == null
             ? null
-            : KeyInfo.fromJson(json['keyInfo'] as Map<String, dynamic>),
-        discontinuity: json['discontinuity'] as bool? ?? false,
+            : ByteRange.fromJson(json['byteRange'] as Map<String, dynamic>),
       );
 }
 
@@ -129,6 +158,7 @@ class MediaPlaylist {
     this.isLive = false,
     this.targetDuration,
     this.version,
+    this.initializationSection,
   });
 
   final List<Segment> segments;
@@ -145,6 +175,7 @@ class MediaPlaylist {
   final double? targetDuration;
 
   final int? version;
+  final InitializationSection? initializationSection;
 
   int get segmentCount => segments.length;
 
@@ -153,24 +184,30 @@ class MediaPlaylist {
   bool get hasDiscontinuity => segments.any((s) => s.discontinuity);
 
   Map<String, dynamic> toJson() => {
-        'segments': segments.map((s) => s.toJson()).toList(),
-        'totalDuration': totalDuration,
-        'mediaSequence': mediaSequence,
-        'isLive': isLive,
-        'targetDuration': targetDuration,
-        'version': version,
-      };
+    'segments': segments.map((s) => s.toJson()).toList(),
+    'totalDuration': totalDuration,
+    'mediaSequence': mediaSequence,
+    'isLive': isLive,
+    'targetDuration': targetDuration,
+    'version': version,
+    'initializationSection': initializationSection?.toJson(),
+  };
 
   factory MediaPlaylist.fromJson(Map<String, dynamic> json) => MediaPlaylist(
-        segments: (json['segments'] as List)
-            .map((e) => Segment.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        totalDuration: (json['totalDuration'] as num).toDouble(),
-        mediaSequence: json['mediaSequence'] as int,
-        isLive: json['isLive'] as bool? ?? false,
-        targetDuration: (json['targetDuration'] as num?)?.toDouble(),
-        version: json['version'] as int?,
-      );
+    segments: (json['segments'] as List)
+        .map((e) => Segment.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    totalDuration: (json['totalDuration'] as num).toDouble(),
+    mediaSequence: json['mediaSequence'] as int,
+    isLive: json['isLive'] as bool? ?? false,
+    targetDuration: (json['targetDuration'] as num?)?.toDouble(),
+    version: json['version'] as int?,
+    initializationSection: json['initializationSection'] == null
+        ? null
+        : InitializationSection.fromJson(
+            json['initializationSection'] as Map<String, dynamic>,
+          ),
+  );
 }
 
 /// A variant stream entry inside a master playlist.
@@ -205,20 +242,20 @@ class Variant {
   }
 
   Map<String, dynamic> toJson() => {
-        'url': url,
-        'bandwidth': bandwidth,
-        'resolution': resolution,
-        'codecs': codecs,
-        'name': name,
-      };
+    'url': url,
+    'bandwidth': bandwidth,
+    'resolution': resolution,
+    'codecs': codecs,
+    'name': name,
+  };
 
   factory Variant.fromJson(Map<String, dynamic> json) => Variant(
-        url: json['url'] as String,
-        bandwidth: json['bandwidth'] as int?,
-        resolution: json['resolution'] as String?,
-        codecs: json['codecs'] as String?,
-        name: json['name'] as String?,
-      );
+    url: json['url'] as String,
+    bandwidth: json['bandwidth'] as int?,
+    resolution: json['resolution'] as String?,
+    codecs: json['codecs'] as String?,
+    name: json['name'] as String?,
+  );
 }
 
 /// A master playlist (`#EXT-X-STREAM-INF` entries).
@@ -229,15 +266,14 @@ class MasterPlaylist {
   final List<Variant> variants;
 
   Map<String, dynamic> toJson() => {
-        'variants': variants.map((v) => v.toJson()).toList(),
-      };
+    'variants': variants.map((v) => v.toJson()).toList(),
+  };
 
-  factory MasterPlaylist.fromJson(Map<String, dynamic> json) =>
-      MasterPlaylist(
-        variants: (json['variants'] as List)
-            .map((e) => Variant.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+  factory MasterPlaylist.fromJson(Map<String, dynamic> json) => MasterPlaylist(
+    variants: (json['variants'] as List)
+        .map((e) => Variant.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 /// Result of parsing an m3u8 document: either a master or a media playlist.

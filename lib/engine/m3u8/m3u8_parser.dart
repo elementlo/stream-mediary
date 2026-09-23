@@ -56,15 +56,17 @@ class M3u8Parser {
         final attrs = pendingAttrs;
         pendingAttrs = null;
         final resolution = attrs['RESOLUTION'];
-        variants.add(Variant(
-          url: resolveUrl(line, baseUrl),
-          bandwidth: int.tryParse(attrs['BANDWIDTH'] ?? ''),
-          resolution: resolution,
-          codecs: attrs['CODECS'],
-          name: attrs['VIDEO-RANGE'] != null && resolution != null
-              ? '$resolution (${attrs['VIDEO-RANGE']})'
-              : null,
-        ));
+        variants.add(
+          Variant(
+            url: resolveUrl(line, baseUrl),
+            bandwidth: int.tryParse(attrs['BANDWIDTH'] ?? ''),
+            resolution: resolution,
+            codecs: attrs['CODECS'],
+            name: attrs['VIDEO-RANGE'] != null && resolution != null
+                ? '$resolution (${attrs['VIDEO-RANGE']})'
+                : null,
+          ),
+        );
       }
     }
 
@@ -84,6 +86,9 @@ class M3u8Parser {
     KeyInfo? currentKey;
     var pendingDiscontinuity = false;
     double? pendingDuration;
+    String? pendingRange;
+    InitializationSection? initializationSection;
+    final rangeEnds = <String, int>{};
 
     for (final line in lines) {
       if (line.startsWith('#EXT-X-MEDIA-SEQUENCE')) {
@@ -94,6 +99,34 @@ class M3u8Parser {
         version = int.tryParse(_tagValue(line) ?? '');
       } else if (line.startsWith('#EXT-X-ENDLIST')) {
         hasEndList = true;
+      } else if (line.startsWith('#EXT-X-I-FRAMES-ONLY')) {
+        throw const M3u8ParseException(
+          'I-frame-only playlists are not supported',
+        );
+      } else if (line.startsWith('#EXT-X-MAP:')) {
+        if (currentKey?.encrypted == true) {
+          throw const M3u8ParseException(
+            'Encrypted initialization sections are not supported',
+          );
+        }
+        final attrs = parseAttributeList(_tagValue(line));
+        final uri = attrs['URI'];
+        if (uri == null || uri.isEmpty) {
+          throw const M3u8ParseException('EXT-X-MAP missing URI');
+        }
+        if (initializationSection != null) {
+          throw const M3u8ParseException(
+            'Multiple initialization sections are not supported',
+          );
+        }
+        initializationSection = InitializationSection(
+          url: resolveUrl(uri, baseUrl),
+          byteRange: attrs['BYTERANGE'] == null
+              ? null
+              : _parseRange(attrs['BYTERANGE']!, null),
+        );
+      } else if (line.startsWith('#EXT-X-BYTERANGE:')) {
+        pendingRange = _tagValue(line);
       } else if (line.startsWith('#EXT-X-DISCONTINUITY')) {
         pendingDiscontinuity = true;
       } else if (line.startsWith('#EXT-X-KEY')) {
@@ -101,43 +134,94 @@ class M3u8Parser {
       } else if (line.startsWith('#EXTINF')) {
         final value = _tagValue(line);
         final comma = value?.indexOf(',');
-        final durationText =
-            comma == null ? value : value!.substring(0, comma);
+        final durationText = comma == null ? value : value!.substring(0, comma);
         pendingDuration = double.tryParse(durationText ?? '') ?? 0;
       } else if (!line.startsWith('#')) {
         // Segment URI line.
-        segments.add(Segment(
-          seq: mediaSequence + segments.length,
-          url: resolveUrl(line, baseUrl),
-          duration: pendingDuration ?? 0,
-          keyInfo: currentKey?.encrypted == true ? currentKey : null,
-          discontinuity: pendingDiscontinuity,
-        ));
+        final url = resolveUrl(line, baseUrl);
+        final range = pendingRange == null
+            ? null
+            : _parseRange(
+                pendingRange,
+                segments.isNotEmpty &&
+                        segments.last.url == url &&
+                        segments.last.byteRange != null
+                    ? rangeEnds[url]
+                    : null,
+              );
+        if (range != null) rangeEnds[url] = range.end + 1;
+        segments.add(
+          Segment(
+            seq: mediaSequence + segments.length,
+            url: url,
+            duration: pendingDuration ?? 0,
+            keyInfo: currentKey?.encrypted == true ? currentKey : null,
+            discontinuity: pendingDiscontinuity,
+            byteRange: range,
+          ),
+        );
         pendingDuration = null;
         pendingDiscontinuity = false;
+        pendingRange = null;
       }
     }
 
     if (segments.isEmpty) {
       throw const M3u8ParseException('Media playlist has no segments');
     }
+    if (initializationSection == null &&
+        segments.any((segment) {
+          final path = Uri.tryParse(segment.url)?.path.toLowerCase() ?? '';
+          return path.endsWith('.m4s') || path.endsWith('.mp4');
+        })) {
+      throw const M3u8ParseException('Fragmented MP4 requires EXT-X-MAP');
+    }
 
-    final totalDuration =
-        segments.fold<double>(0, (sum, s) => sum + s.duration);
+    final totalDuration = segments.fold<double>(
+      0,
+      (sum, s) => sum + s.duration,
+    );
 
-    return MediaParseResult(MediaPlaylist(
-      segments: segments,
-      totalDuration: totalDuration,
-      mediaSequence: mediaSequence,
-      isLive: !hasEndList,
-      targetDuration: targetDuration,
-      version: version,
-    ));
+    return MediaParseResult(
+      MediaPlaylist(
+        segments: segments,
+        totalDuration: totalDuration,
+        mediaSequence: mediaSequence,
+        isLive: !hasEndList,
+        targetDuration: targetDuration,
+        version: version,
+        initializationSection: initializationSection,
+      ),
+    );
+  }
+
+  ByteRange _parseRange(String value, int? implicitOffset) {
+    final parts = value.split('@');
+    final length = int.tryParse(parts.first);
+    final offset = parts.length == 2
+        ? int.tryParse(parts.last)
+        : implicitOffset;
+    if (parts.length > 2 ||
+        length == null ||
+        length <= 0 ||
+        offset == null ||
+        offset < 0) {
+      throw const M3u8ParseException('Invalid or ambiguous EXT-X-BYTERANGE');
+    }
+    return ByteRange(offset, length);
   }
 
   KeyInfo? _parseKey(String? attrsRaw, String baseUrl) {
     final attrs = parseAttributeList(attrsRaw);
     final method = parseEncryptionMethod(attrs['METHOD']);
+    if (attrs['METHOD'] != 'NONE' && method == EncryptionMethod.none) {
+      throw M3u8ParseException(
+        'Unsupported encryption method: ${attrs['METHOD']}',
+      );
+    }
+    if (attrs['KEYFORMAT'] != null && attrs['KEYFORMAT'] != 'identity') {
+      throw const M3u8ParseException('DRM key formats are not supported');
+    }
     if (method == EncryptionMethod.none) {
       // METHOD=NONE clears encryption for subsequent segments.
       return const KeyInfo(method: EncryptionMethod.none);
@@ -153,11 +237,7 @@ class M3u8Parser {
         ivHex = ivHex.substring(2);
       }
     }
-    return KeyInfo(
-      method: method,
-      uri: resolveUrl(uri, baseUrl),
-      ivHex: ivHex,
-    );
+    return KeyInfo(method: method, uri: resolveUrl(uri, baseUrl), ivHex: ivHex);
   }
 
   /// Returns the value part of a `#TAG:value` line, or null.

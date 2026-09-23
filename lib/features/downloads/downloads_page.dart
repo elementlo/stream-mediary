@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,8 +14,10 @@ import '../../core/widgets/mediary_scaffold.dart';
 import '../../core/widgets/segment_progress_bar.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../engine/download_engine.dart';
+import '../../engine/failure_diagnostics.dart';
 import '../../engine/task/task_state.dart';
 import '../../providers/app_providers.dart';
+import 'recover_source_dialog.dart';
 
 class DownloadsPage extends ConsumerWidget {
   const DownloadsPage({super.key});
@@ -24,13 +27,16 @@ class DownloadsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final tasks = ref.watch(taskListProvider);
 
-    final active = tasks.values
-        .where((t) => !t.state.isTerminal)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final active = tasks.values.where((t) => !t.state.isTerminal).toList()
+      ..sort(
+        (a, b) => a.state == TaskState.queued && b.state == TaskState.queued
+            ? a.queueOrder.compareTo(b.queueOrder)
+            : b.createdAt.compareTo(a.createdAt),
+      );
 
-    final downloading =
-        active.where((t) => t.state == TaskState.downloading).length;
+    final downloading = active
+        .where((t) => t.state == TaskState.downloading)
+        .length;
     final paused = active.where((t) => t.state == TaskState.paused).length;
 
     return MediaryScaffold(
@@ -40,8 +46,12 @@ class DownloadsPage extends ConsumerWidget {
           : l10n.downloadsSummary(downloading, paused),
       maxWidth: Breakpoints.contentList,
       actions: [
-        if (downloading > 0)
-          _PauseAllButton(count: downloading),
+        IconButton(
+          tooltip: l10n.batchImport,
+          onPressed: () => context.push('/batch'),
+          icon: const Icon(Icons.playlist_add_rounded),
+        ),
+        if (downloading > 0) _PauseAllButton(count: downloading),
       ],
       child: active.isEmpty
           ? EmptyState(
@@ -122,6 +132,7 @@ class TaskCard extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final colors = context.mediaryColors;
+    final diagnosis = FailureDiagnosis.fromError(task.errorMsg);
 
     final style = TaskStateStyle.of(context, task.state);
     final isMerging = task.state == TaskState.merging;
@@ -189,19 +200,53 @@ class TaskCard extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.error_outline_rounded,
-                      size: 15, color: colors.danger),
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 15,
+                    color: colors.danger,
+                  ),
                   const SizedBox(width: Spacing.sm - 2),
                   Expanded(
                     child: Text(
-                      task.errorMsg!,
-                      maxLines: 2,
+                      '${diagnosis.reason}。${diagnosis.action}',
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: text.bodySmall?.copyWith(color: colors.danger),
                     ),
                   ),
                 ],
               ),
+            ),
+            Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => showRecoverSourceDialog(
+                    context,
+                    engine,
+                    ref.read(engineTaskStoreProvider),
+                    task.id,
+                  ),
+                  icon: const Icon(Icons.link_rounded, size: 16),
+                  label: Text(l10n.replaceSource),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(
+                        text: diagnosis.report(taskId: task.id, url: task.url),
+                      ),
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.diagnosticCopied)),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  label: Text(l10n.copyDiagnostic),
+                ),
+              ],
             ),
           ],
           if (_hasActions(task.state)) ...[
@@ -214,19 +259,44 @@ class TaskCard extends ConsumerWidget {
               onRetry: () => engine.retryTask(task.id),
             ),
           ],
+          if (task.state == TaskState.queued) ...[
+            const SizedBox(height: Spacing.sm),
+            Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => engine.moveQueuedTask(task.id, first: true),
+                  icon: const Icon(Icons.vertical_align_top_rounded, size: 16),
+                  label: Text(l10n.moveFirst),
+                ),
+                TextButton.icon(
+                  onPressed: () => engine.moveQueuedTask(task.id, first: false),
+                  icon: const Icon(
+                    Icons.vertical_align_bottom_rounded,
+                    size: 16,
+                  ),
+                  label: Text(l10n.moveLast),
+                ),
+                TextButton.icon(
+                  onPressed: () => _confirmCancel(context, ref, engine, task),
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: Text(l10n.cancel),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
   bool _hasActions(TaskState state) => switch (state) {
-        TaskState.downloading ||
-        TaskState.paused ||
-        TaskState.failed ||
-        TaskState.canceled =>
-          true,
-        _ => false,
-      };
+    TaskState.downloading ||
+    TaskState.paused ||
+    TaskState.failed ||
+    TaskState.canceled => true,
+    _ => false,
+  };
 
   String _statusLabel(AppLocalizations l10n, TaskState state) =>
       switch (state) {
@@ -293,9 +363,8 @@ class _MetricsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: hintColor,
-        );
+    final style = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: hintColor);
 
     if (isMerging) {
       return Row(
@@ -381,23 +450,41 @@ class _ActionRow extends StatelessWidget {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
-      children: switch (state) {
-        TaskState.downloading => [
-            _Action(l10n.pause, Icons.pause_rounded, onPause),
-            _Action(l10n.cancel, Icons.close_rounded, onCancel, muted: true),
-          ],
-        TaskState.paused => [
-            _Action(l10n.resume, Icons.play_arrow_rounded, onResume),
-            _Action(l10n.cancel, Icons.close_rounded, onCancel, muted: true),
-          ],
-        TaskState.failed || TaskState.canceled => [
-            _Action(l10n.retry, Icons.refresh_rounded, onRetry),
-          ],
-        _ => const <Widget>[],
-      }.map((w) => Padding(
-            padding: const EdgeInsets.only(left: Spacing.sm),
-            child: DefaultTextStyle.merge(style: text.bodyMedium!, child: w),
-          )).toList(),
+      children:
+          switch (state) {
+                TaskState.downloading => [
+                  _Action(l10n.pause, Icons.pause_rounded, onPause),
+                  _Action(
+                    l10n.cancel,
+                    Icons.close_rounded,
+                    onCancel,
+                    muted: true,
+                  ),
+                ],
+                TaskState.paused => [
+                  _Action(l10n.resume, Icons.play_arrow_rounded, onResume),
+                  _Action(
+                    l10n.cancel,
+                    Icons.close_rounded,
+                    onCancel,
+                    muted: true,
+                  ),
+                ],
+                TaskState.failed || TaskState.canceled => [
+                  _Action(l10n.retry, Icons.refresh_rounded, onRetry),
+                ],
+                _ => const <Widget>[],
+              }
+              .map(
+                (w) => Padding(
+                  padding: const EdgeInsets.only(left: Spacing.sm),
+                  child: DefaultTextStyle.merge(
+                    style: text.bodyMedium!,
+                    child: w,
+                  ),
+                ),
+              )
+              .toList(),
     );
   }
 }

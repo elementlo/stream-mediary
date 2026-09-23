@@ -7,6 +7,55 @@ void main() {
   const baseUrl = 'https://cdn.example.com/video/index.m3u8';
 
   group('media playlist parsing', () {
+    test('parses fMP4 initialization and implicit byte ranges', () {
+      const content = '''
+#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-MAP:URI="movie.mp4",BYTERANGE="64@0"
+#EXTINF:4,
+#EXT-X-BYTERANGE:100@64
+movie.mp4
+#EXTINF:4,
+#EXT-X-BYTERANGE:120
+movie.mp4
+#EXT-X-ENDLIST
+''';
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
+      expect(media.initializationSection!.byteRange!.length, 64);
+      expect(media.segments[0].byteRange!.offset, 64);
+      expect(media.segments[1].byteRange!.offset, 164);
+      expect(media.segments[1].byteRange!.end, 283);
+      expect(
+        MediaPlaylist.fromJson(media.toJson()).segments[1].byteRange!.offset,
+        164,
+      );
+    });
+
+    test('rejects ambiguous byte ranges and unsupported DRM', () {
+      expect(
+        () => parser.parse('''
+#EXTM3U
+#EXT-X-BYTERANGE:10
+#EXTINF:1,
+movie.mp4
+#EXT-X-ENDLIST
+''', playlistUrl: baseUrl),
+        throwsA(isA<M3u8ParseException>()),
+      );
+      expect(
+        () => parser.parse('''
+#EXTM3U
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="key"
+#EXTINF:1,
+seg.ts
+#EXT-X-ENDLIST
+''', playlistUrl: baseUrl),
+        throwsA(isA<M3u8ParseException>()),
+      );
+    });
     test('parses basic VOD playlist with EXTINF and ENDLIST', () {
       const content = '''
 #EXTM3U
@@ -31,8 +80,7 @@ seg2.ts
       expect(media.totalDuration, closeTo(27.75, 0.001));
       expect(media.segments[0].seq, 0);
       expect(media.segments[0].duration, 9.5);
-      expect(media.segments[0].url,
-          'https://cdn.example.com/video/seg0.ts');
+      expect(media.segments[0].url, 'https://cdn.example.com/video/seg0.ts');
     });
 
     test('resolves relative, absolute-path and absolute URLs', () {
@@ -46,12 +94,15 @@ relative/seg0.ts
 https://other.example.com/seg2.ts
 #EXT-X-ENDLIST
 ''';
-      final media =
-          (parser.parse(content, playlistUrl: baseUrl) as MediaParseResult)
-              .media;
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
 
-      expect(media.segments[0].url,
-          'https://cdn.example.com/video/relative/seg0.ts');
+      expect(
+        media.segments[0].url,
+        'https://cdn.example.com/video/relative/seg0.ts',
+      );
       expect(media.segments[1].url, 'https://cdn.example.com/abs/seg1.ts');
       expect(media.segments[2].url, 'https://other.example.com/seg2.ts');
     });
@@ -63,9 +114,10 @@ https://other.example.com/seg2.ts
 #EXTINF:6.0,
 seg0.ts
 ''';
-      final media =
-          (parser.parse(content, playlistUrl: baseUrl) as MediaParseResult)
-              .media;
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
       expect(media.isLive, isTrue);
     });
 
@@ -79,9 +131,10 @@ seg0.ts
 seg1.ts
 #EXT-X-ENDLIST
 ''';
-      final media =
-          (parser.parse(content, playlistUrl: baseUrl) as MediaParseResult)
-              .media;
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
 
       expect(media.encrypted, isTrue);
       final key = media.segments[0].keyInfo!;
@@ -105,16 +158,21 @@ seg1.ts
 seg2.ts
 #EXT-X-ENDLIST
 ''';
-      final media =
-          (parser.parse(content, playlistUrl: baseUrl) as MediaParseResult)
-              .media;
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
 
       expect(media.segments[0].keyInfo!.method, EncryptionMethod.aes128);
-      expect(media.segments[0].keyInfo!.ivHex,
-          '00000000000000000000000000000001');
+      expect(
+        media.segments[0].keyInfo!.ivHex,
+        '00000000000000000000000000000001',
+      );
       expect(media.segments[1].keyInfo!.method, EncryptionMethod.aes256);
-      expect(media.segments[1].keyInfo!.uri,
-          'https://cdn.example.com/video/k2.bin');
+      expect(
+        media.segments[1].keyInfo!.uri,
+        'https://cdn.example.com/video/k2.bin',
+      );
       // METHOD=NONE clears encryption.
       expect(media.segments[2].keyInfo, isNull);
     });
@@ -130,9 +188,10 @@ seg0.ts
 seg1.ts
 #EXT-X-ENDLIST
 ''';
-      final media =
-          (parser.parse(content, playlistUrl: baseUrl) as MediaParseResult)
-              .media;
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
 
       expect(media.mediaSequence, 100);
       expect(media.segments[0].seq, 100);
@@ -162,8 +221,10 @@ high/index.m3u8
       // Sorted by bandwidth descending.
       expect(master.variants[0].bandwidth, 5000000);
       expect(master.variants[0].resolution, '1920x1080');
-      expect(master.variants[0].url,
-          'https://cdn.example.com/video/high/index.m3u8');
+      expect(
+        master.variants[0].url,
+        'https://cdn.example.com/video/high/index.m3u8',
+      );
       expect(master.variants[2].bandwidth, 800000);
       expect(master.variants[2].codecs, 'avc1.4d401e,mp4a.40.2');
     });
@@ -199,9 +260,10 @@ high/index.m3u8
 seg0.ts
 #EXT-X-ENDLIST
 ''';
-      final media =
-          (parser.parse(content, playlistUrl: baseUrl) as MediaParseResult)
-              .media;
+      final media = (parser.parse(
+        content,
+        playlistUrl: baseUrl,
+      ) as MediaParseResult).media;
 
       final restored = MediaPlaylist.fromJson(media.toJson());
       expect(restored.segmentCount, media.segmentCount);

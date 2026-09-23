@@ -18,35 +18,40 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(boardComments);
-          }
-          if (from < 3) {
-            await m.addColumn(boardComments, boardComments.addr);
-          }
-          if (from < 4) {
-            await m.addColumn(boardComments, boardComments.type);
-            await m.addColumn(boardComments, boardComments.label);
-          }
-        },
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(boardComments);
+      }
+      if (from < 3) {
+        await m.addColumn(boardComments, boardComments.addr);
+      }
+      if (from < 4) {
+        await m.addColumn(boardComments, boardComments.type);
+        await m.addColumn(boardComments, boardComments.label);
+      }
+      if (from < 5) {
+        await m.addColumn(tasks, tasks.sourceUrl);
+        await m.addColumn(tasks, tasks.playbackMs);
+        await m.addColumn(tasks, tasks.durationMs);
+        await m.addColumn(tasks, tasks.queueOrder);
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 
   // ---- Tasks ----
 
   Stream<List<Task>> watchAllTasks() =>
-      (select(tasks)..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-          .watch();
+      (select(tasks)..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
 
   Stream<Task> watchTask(String id) =>
       (select(tasks)..where((t) => t.id.equals(id))).watchSingle();
@@ -75,26 +80,23 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<Setting>> watchSettings() => select(settings).watch();
 
   Future<String?> settingValue(String key) async {
-    final row = await (select(settings)..where((s) => s.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (select(
+      settings,
+    )..where((s) => s.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
-  Future<void> setSetting(String key, String value) =>
-      into(settings).insertOnConflictUpdate(
-        SettingsCompanion.insert(key: key, value: value),
-      );
+  Future<void> setSetting(String key, String value) => into(settings)
+      .insertOnConflictUpdate(SettingsCompanion.insert(key: key, value: value));
 
   // ---- Board comment cache ----
 
-  Future<List<BoardComment>> cachedBoardComments() =>
-      (select(boardComments)
-            ..orderBy([(t) => OrderingTerm.asc(t.sortIndex)]))
-          .get();
+  Future<List<BoardComment>> cachedBoardComments() => (select(
+    boardComments,
+  )..orderBy([(t) => OrderingTerm.asc(t.sortIndex)])).get();
 
   /// Replaces the whole cache with the freshly fetched page set.
-  Future<void> replaceBoardComments(
-      List<BoardCommentsCompanion> rows) async {
+  Future<void> replaceBoardComments(List<BoardCommentsCompanion> rows) async {
     await batch((b) {
       b.deleteAll(boardComments);
       b.insertAll(boardComments, rows);

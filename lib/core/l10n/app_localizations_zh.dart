@@ -25,10 +25,57 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newDownload => '新建下载';
 
   @override
+  String get batchImport => '批量导入';
+
+  @override
+  String get batchUrls => '播放列表地址，每行一个';
+
+  @override
+  String get batchHint => '粘贴多个 http/https 的 m3u8 地址';
+
+  @override
+  String get batchReady => '个可下载';
+
+  @override
+  String get batchAdd => '加入下载队列';
+
+  @override
   String get downloads => '下载中';
 
   @override
   String get history => '历史记录';
+
+  @override
+  String get searchHistory => '搜索已下载内容';
+
+  @override
+  String get filterAll => '全部';
+
+  @override
+  String get filterIncomplete => '失败/取消';
+
+  @override
+  String get sortNewest => '最新';
+
+  @override
+  String get sortOldest => '最早';
+
+  @override
+  String get sortSize => '按大小';
+
+  @override
+  String get sortTitle => '按标题';
+
+  @override
+  String get fileMissing => '本地文件已移走或删除';
+
+  @override
+  String get rename => '重命名';
+
+  @override
+  String continueAt(Object time) {
+    return '继续播放 · $time';
+  }
 
   @override
   String get settings => '设置';
@@ -94,6 +141,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get estimatedSize => '估算大小';
 
   @override
+  String get availableSpace => '可用空间';
+
+  @override
+  String get lowSpaceWarning => '可用空间可能不足；合并时还需要额外空间。';
+
+  @override
+  String get recentSources => '最近来源';
+
+  @override
+  String get pasteClipboard => '粘贴剪贴板链接';
+
+  @override
+  String get downloadTitle => '视频标题';
+
+  @override
+  String get downloadTitleHint => '可选，留空则从地址生成';
+
+  @override
+  String get saveTemplate => '保存请求头模板';
+
+  @override
+  String get templateName => '模板名称';
+
+  @override
+  String get templatePrivacyHint => '请求头（包括 Cookie）将保存在本机。只保存你愿意保留的值，可随时删除模板。';
+
+  @override
   String get selectVariant => '选择清晰度';
 
   @override
@@ -148,10 +222,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get retry => '重试';
 
   @override
+  String get replaceSource => '更新失效链接';
+
+  @override
+  String get invalidHeaderLine => '请求头格式应为「名称: 值」，每行一项';
+
+  @override
+  String get copyDiagnostic => '复制诊断';
+
+  @override
+  String get diagnosticCopied => '已复制脱敏诊断信息';
+
+  @override
   String get delete => '删除';
 
   @override
   String get play => '播放';
+
+  @override
+  String get shareFile => '分享文件';
 
   @override
   String get redownload => '重新下载';
@@ -176,6 +265,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get concurrency => '任务并发数';
+
+  @override
+  String get queuePolicy => '下载策略';
+
+  @override
+  String get sequentialQueue => '逐个下载任务';
+
+  @override
+  String get wifiOnly => '仅 Wi-Fi / 有线网络下载';
+
+  @override
+  String get chargingOnly => '仅充电时下载';
+
+  @override
+  String get moveFirst => '优先下载';
+
+  @override
+  String get moveLast => '移到末尾';
+
+  @override
+  String get completionNotifications => '完成通知';
+
+  @override
+  String get completionNotificationsHint => '任务完成时发送系统通知';
+
+  @override
+  String get notificationPermissionDenied => '系统未授予通知权限';
 
   @override
   String get defaultSaveDir => '默认保存目录';

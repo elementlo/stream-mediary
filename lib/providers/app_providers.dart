@@ -11,10 +11,14 @@ import '../data/remote/waline_client.dart';
 import '../data/repositories/board_cache.dart';
 import '../data/repositories/drift_engine_task_store.dart';
 import '../data/repositories/settings_repository.dart';
+import '../data/repositories/source_repository.dart';
 import '../engine/download_engine.dart';
 import '../engine/engine_events.dart';
 import '../engine/engine_store.dart';
 import '../engine/task/task_state.dart';
+import 'queue_policy_coordinator.dart';
+import 'completion_notifications.dart';
+import '../core/router/app_router.dart';
 
 /// Singleton application database.
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -24,10 +28,16 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(
-    (ref) => SettingsRepository(ref.watch(appDatabaseProvider)));
+  (ref) => SettingsRepository(ref.watch(appDatabaseProvider)),
+);
+
+final sourceRepositoryProvider = Provider<SourceRepository>(
+  (ref) => SourceRepository(ref.watch(settingsRepositoryProvider)),
+);
 
 final engineTaskStoreProvider = Provider<EngineTaskStore>(
-    (ref) => DriftEngineTaskStore(ref.watch(appDatabaseProvider)));
+  (ref) => DriftEngineTaskStore(ref.watch(appDatabaseProvider)),
+);
 
 /// Default save directory resolved per platform.
 final defaultSaveDirProvider = FutureProvider<String>((ref) async {
@@ -55,24 +65,58 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
   // Apply persisted settings (concurrency, merge preference, ffmpeg path,
   // default save dir) once the database is readable.
   Future.microtask(() async {
-    final (taskConcurrency, segmentConcurrency, merge, ffmpegPath, saveDir) =
-        await (
+    final (
+      taskConcurrency,
+      segmentConcurrency,
+      merge,
+      ffmpegPath,
+      saveDir,
+      sequential,
+    ) = await (
       settings.taskConcurrency(),
       settings.segmentConcurrency(),
       settings.mergePreference(),
       settings.ffmpegPath(),
       ref.read(defaultSaveDirProvider.future),
+      settings.flag(SettingsRepository.keySequentialQueue),
     ).wait;
-    engine.updateConfig(engine.config.copyWith(
-      taskConcurrency: taskConcurrency,
-      segmentConcurrency: segmentConcurrency,
-      preferMp4: merge == 'prefer_mp4',
-      ffmpegPath: ffmpegPath,
-    ));
+    engine.updateConfig(
+      engine.config.copyWith(
+        taskConcurrency: sequential ? 1 : taskConcurrency,
+        segmentConcurrency: segmentConcurrency,
+        preferMp4: merge == 'prefer_mp4',
+        ffmpegPath: ffmpegPath,
+      ),
+    );
     engine.defaultSaveDir = saveDir;
   });
 
   return engine;
+});
+
+final queuePolicyProvider = Provider<QueuePolicyCoordinator>((ref) {
+  final policy = QueuePolicyCoordinator(
+    ref.watch(downloadEngineProvider),
+    ref.watch(engineTaskStoreProvider),
+    ref.watch(settingsRepositoryProvider),
+  );
+  ref.onDispose(policy.dispose);
+  Future.microtask(policy.start);
+  return policy;
+});
+
+final completionNotificationsProvider = Provider<CompletionNotifications>((
+  ref,
+) {
+  final service = CompletionNotifications(
+    ref.watch(downloadEngineProvider),
+    ref.watch(engineTaskStoreProvider),
+    ref.watch(settingsRepositoryProvider),
+    ref.watch(routerProvider),
+  );
+  ref.onDispose(service.dispose);
+  Future.microtask(service.start);
+  return service;
 });
 
 /// Live task view model surfaced to the UI.
@@ -90,6 +134,9 @@ class TaskViewModel {
     this.mergeFraction = 0,
     this.outputPath,
     this.errorMsg,
+    this.playbackMs = 0,
+    this.durationMs = 0,
+    this.queueOrder = 0,
     required this.createdAt,
   });
 
@@ -105,6 +152,9 @@ class TaskViewModel {
   final double mergeFraction;
   final String? outputPath;
   final String? errorMsg;
+  final int playbackMs;
+  final int durationMs;
+  final int queueOrder;
   final int createdAt;
 
   double get downloadFraction =>
@@ -120,22 +170,27 @@ class TaskViewModel {
     double? mergeFraction,
     String? outputPath,
     String? errorMsg,
-  }) =>
-      TaskViewModel(
-        id: id,
-        title: title,
-        url: url,
-        state: state ?? this.state,
-        doneSegments: doneSegments ?? this.doneSegments,
-        totalSegments: totalSegments ?? this.totalSegments,
-        downloadedBytes: downloadedBytes ?? this.downloadedBytes,
-        totalBytes: totalBytes ?? this.totalBytes,
-        bytesPerSecond: bytesPerSecond ?? this.bytesPerSecond,
-        mergeFraction: mergeFraction ?? this.mergeFraction,
-        outputPath: outputPath ?? this.outputPath,
-        errorMsg: errorMsg,
-        createdAt: createdAt,
-      );
+    int? playbackMs,
+    int? durationMs,
+    int? queueOrder,
+  }) => TaskViewModel(
+    id: id,
+    title: title,
+    url: url,
+    state: state ?? this.state,
+    doneSegments: doneSegments ?? this.doneSegments,
+    totalSegments: totalSegments ?? this.totalSegments,
+    downloadedBytes: downloadedBytes ?? this.downloadedBytes,
+    totalBytes: totalBytes ?? this.totalBytes,
+    bytesPerSecond: bytesPerSecond ?? this.bytesPerSecond,
+    mergeFraction: mergeFraction ?? this.mergeFraction,
+    outputPath: outputPath ?? this.outputPath,
+    errorMsg: errorMsg,
+    playbackMs: playbackMs ?? this.playbackMs,
+    durationMs: durationMs ?? this.durationMs,
+    queueOrder: queueOrder ?? this.queueOrder,
+    createdAt: createdAt,
+  );
 }
 
 /// Notifier maintaining the live map of task view models, fed by both the
@@ -164,6 +219,9 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
           totalBytes: row.totalBytes,
           outputPath: row.outputPath,
           errorMsg: row.errorMsg,
+          playbackMs: row.playbackMs,
+          durationMs: row.durationMs,
+          queueOrder: row.queueOrder,
           createdAt: row.createdAt,
         );
       }
@@ -234,7 +292,8 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
 
 final taskListProvider =
     NotifierProvider<TaskListNotifier, Map<String, TaskViewModel>>(
-        TaskListNotifier.new);
+      TaskListNotifier.new,
+    );
 
 /// Waline client for the community board. The server URL is hardcoded in
 /// [WalineClient.defaultServerUrl]; there is nothing for users to configure.
@@ -269,8 +328,9 @@ final appVersionProvider = FutureProvider<String>((ref) async {
 });
 
 /// Theme mode backed by settings.
-final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
@@ -286,10 +346,10 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   }
 
   ThemeMode _parse(String mode) => switch (mode) {
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
-      };
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
 
   Future<void> set(ThemeMode mode) async {
     state = mode;

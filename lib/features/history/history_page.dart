@@ -1,8 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/l10n/app_localizations.dart';
 import '../../core/platform/platform_profile.dart';
@@ -14,24 +17,51 @@ import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../engine/download_engine.dart';
+import '../../engine/failure_diagnostics.dart';
 import '../../engine/task/task_state.dart';
 import '../../providers/app_providers.dart';
+import '../downloads/recover_source_dialog.dart';
 
-class HistoryPage extends ConsumerWidget {
+class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends ConsumerState<HistoryPage> {
+  String _search = '';
+  String _filter = 'all';
+  String _sort = 'newest';
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tasks = ref.watch(taskListProvider);
 
-    final terminal = tasks.values
-        .where((t) => t.state.isTerminal)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final terminal =
+        tasks.values
+            .where((t) => t.state.isTerminal)
+            .where((t) => t.title.toLowerCase().contains(_search.toLowerCase()))
+            .where(
+              (t) =>
+                  _filter == 'all' ||
+                  (_filter == 'completed' && t.state == TaskState.completed) ||
+                  (_filter == 'failed' && t.state != TaskState.completed),
+            )
+            .toList()
+          ..sort(
+            (a, b) => switch (_sort) {
+              'oldest' => a.createdAt.compareTo(b.createdAt),
+              'size' => b.downloadedBytes.compareTo(a.downloadedBytes),
+              'title' => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+              _ => b.createdAt.compareTo(a.createdAt),
+            },
+          );
 
-    final completedCount =
-        terminal.where((t) => t.state == TaskState.completed).length;
+    final completedCount = terminal
+        .where((t) => t.state == TaskState.completed)
+        .length;
 
     return MediaryScaffold(
       title: l10n.history,
@@ -45,18 +75,77 @@ class HistoryPage extends ConsumerWidget {
                 _confirmClearCompleted(context, ref, completedCount),
           ),
       ],
-      child: terminal.isEmpty
-          ? EmptyState(
-              icon: Icons.history_rounded,
-              title: l10n.emptyHistoryTitle,
-              message: l10n.emptyHistoryHint,
-            )
-          : ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: terminal.length,
-              separatorBuilder: (_, _) => const SizedBox(height: Spacing.sm + 2),
-              itemBuilder: (context, i) => _HistoryRow(task: terminal[i]),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: (value) => setState(() => _search = value),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
+              hintText: l10n.searchHistory,
             ),
+          ),
+          const SizedBox(height: Spacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _filter,
+                  items: [
+                    DropdownMenuItem(value: 'all', child: Text(l10n.filterAll)),
+                    DropdownMenuItem(
+                      value: 'completed',
+                      child: Text(l10n.statusCompleted),
+                    ),
+                    DropdownMenuItem(
+                      value: 'failed',
+                      child: Text(l10n.filterIncomplete),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => _filter = v ?? 'all'),
+                ),
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _sort,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'newest',
+                      child: Text(l10n.sortNewest),
+                    ),
+                    DropdownMenuItem(
+                      value: 'oldest',
+                      child: Text(l10n.sortOldest),
+                    ),
+                    DropdownMenuItem(value: 'size', child: Text(l10n.sortSize)),
+                    DropdownMenuItem(
+                      value: 'title',
+                      child: Text(l10n.sortTitle),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => _sort = v ?? 'newest'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.md),
+          Expanded(
+            child: terminal.isEmpty
+                ? EmptyState(
+                    icon: Icons.history_rounded,
+                    title: l10n.emptyHistoryTitle,
+                    message: l10n.emptyHistoryHint,
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: terminal.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: Spacing.sm + 2),
+                    itemBuilder: (context, i) => _HistoryRow(task: terminal[i]),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -232,7 +321,9 @@ class _HistoryRow extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     final isPlayable =
-        task.state == TaskState.completed && task.outputPath != null;
+        task.state == TaskState.completed &&
+        task.outputPath != null &&
+        File(task.outputPath!).existsSync();
 
     return MediaryCard(
       onTap: isPlayable ? () => context.push('/player/${task.id}') : null,
@@ -243,7 +334,8 @@ class _HistoryRow extends ConsumerWidget {
             height: 36,
             decoration: BoxDecoration(
               color: style.color.withValues(alpha: 0.12),
-              borderRadius: Radii.smAll + const BorderRadius.all(Radius.circular(2)),
+              borderRadius:
+                  Radii.smAll + const BorderRadius.all(Radius.circular(2)),
             ),
             child: Icon(style.icon, size: 18, color: style.color),
           ),
@@ -263,19 +355,22 @@ class _HistoryRow extends ConsumerWidget {
                   children: [
                     Text(
                       formatTimestamp(task.createdAt),
-                      style: text.bodySmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
+                      style: text.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                     if (task.downloadedBytes > 0) ...[
                       Text(
                         '  ·  ',
-                        style: text.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
+                        style: text.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                       Text(
                         formatBytes(task.downloadedBytes),
-                        style: text.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
+                        style: text.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                     if (task.state == TaskState.failed) ...[
@@ -285,13 +380,39 @@ class _HistoryRow extends ConsumerWidget {
                           l10n.statusFailed,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: text.bodySmall
-                              ?.copyWith(color: context.mediaryColors.danger),
+                          style: text.bodySmall?.copyWith(
+                            color: context.mediaryColors.danger,
+                          ),
                         ),
                       ),
                     ],
                   ],
                 ),
+                if (task.state == TaskState.completed && !isPlayable)
+                  Text(
+                    l10n.fileMissing,
+                    style: text.bodySmall?.copyWith(color: scheme.error),
+                  ),
+                if (isPlayable &&
+                    task.durationMs > 0 &&
+                    task.playbackMs > 0) ...[
+                  const SizedBox(height: Spacing.xs),
+                  LinearProgressIndicator(
+                    value: (task.playbackMs / task.durationMs)
+                        .clamp(0, 1)
+                        .toDouble(),
+                    minHeight: 3,
+                  ),
+                  Text(
+                    l10n.continueAt(
+                      Duration(milliseconds: task.playbackMs)
+                          .toString()
+                          .split('.')
+                          .first,
+                    ),
+                    style: text.bodySmall,
+                  ),
+                ],
               ],
             ),
           ),
@@ -301,15 +422,76 @@ class _HistoryRow extends ConsumerWidget {
             isPlayable: isPlayable,
             onPlay: () => context.push('/player/${task.id}'),
             onRedownload: () async {
-              await engine.retryTask(task.id);
+              if (task.state == TaskState.completed) {
+                await engine.redownloadTask(task.id, const Uuid().v4());
+              } else {
+                await engine.retryTask(task.id);
+              }
               if (context.mounted) context.go('/downloads');
             },
             onOpenFolder: () => _openFolder(task.outputPath!),
+            onShare: () async {
+              final box = context.findRenderObject() as RenderBox?;
+              await SharePlus.instance.share(
+                ShareParams(
+                  files: [XFile(task.outputPath!)],
+                  sharePositionOrigin: box == null
+                      ? null
+                      : box.localToGlobal(Offset.zero) & box.size,
+                ),
+              );
+            },
             onDelete: () => _confirmDelete(context, engine),
+            onRename: () => _rename(context, engine),
+            onRecover: () async {
+              final recovered = await showRecoverSourceDialog(
+                context,
+                engine,
+                ref.read(engineTaskStoreProvider),
+                task.id,
+              );
+              if (recovered && context.mounted) context.go('/downloads');
+            },
+            onCopyDiagnostic: () async {
+              final diagnosis = FailureDiagnosis.fromError(task.errorMsg);
+              await Clipboard.setData(
+                ClipboardData(
+                  text: diagnosis.report(taskId: task.id, url: task.url),
+                ),
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.diagnosticCopied)));
+              }
+            },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _rename(BuildContext context, DownloadEngine engine) async {
+    final controller = TextEditingController(text: task.title);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context).rename),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context).cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: Text(AppLocalizations.of(context).confirm),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title != null) await engine.renameTask(task.id, title);
   }
 
   Future<void> _openFolder(String path) async {
@@ -323,7 +505,9 @@ class _HistoryRow extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, DownloadEngine engine) async {
+    BuildContext context,
+    DownloadEngine engine,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final deleteFiles = await showDialog<bool>(
       context: context,
@@ -344,7 +528,11 @@ class _RowMenu extends StatelessWidget {
     required this.onPlay,
     required this.onRedownload,
     required this.onOpenFolder,
+    required this.onShare,
     required this.onDelete,
+    required this.onRename,
+    required this.onRecover,
+    required this.onCopyDiagnostic,
   });
 
   final TaskViewModel task;
@@ -352,7 +540,11 @@ class _RowMenu extends StatelessWidget {
   final VoidCallback onPlay;
   final VoidCallback onRedownload;
   final VoidCallback onOpenFolder;
+  final VoidCallback onShare;
   final VoidCallback onDelete;
+  final VoidCallback onRename;
+  final VoidCallback onRecover;
+  final VoidCallback onCopyDiagnostic;
 
   bool get _isDesktop =>
       Platform.isMacOS || Platform.isWindows || Platform.isLinux;
@@ -375,26 +567,44 @@ class _RowMenu extends StatelessWidget {
             onRedownload();
           case 'open':
             onOpenFolder();
+          case 'share':
+            onShare();
           case 'delete':
             onDelete();
+          case 'rename':
+            onRename();
+          case 'recover':
+            onRecover();
+          case 'diagnostic':
+            onCopyDiagnostic();
         }
       },
       itemBuilder: (context) => [
         if (isPlayable)
           PopupMenuItem(
             value: 'play',
-            child: _MenuItem(
-              icon: Icons.play_arrow_rounded,
-              label: l10n.play,
-            ),
+            child: _MenuItem(icon: Icons.play_arrow_rounded, label: l10n.play),
           ),
         PopupMenuItem(
           value: 'redownload',
-          child: _MenuItem(
-            icon: Icons.refresh_rounded,
-            label: l10n.redownload,
-          ),
+          child: _MenuItem(icon: Icons.refresh_rounded, label: l10n.redownload),
         ),
+        if (task.state == TaskState.failed) ...[
+          PopupMenuItem(
+            value: 'recover',
+            child: _MenuItem(
+              icon: Icons.link_rounded,
+              label: l10n.replaceSource,
+            ),
+          ),
+          PopupMenuItem(
+            value: 'diagnostic',
+            child: _MenuItem(
+              icon: Icons.copy_rounded,
+              label: l10n.copyDiagnostic,
+            ),
+          ),
+        ],
         if (task.outputPath != null && _isDesktop)
           PopupMenuItem(
             value: 'open',
@@ -403,6 +613,15 @@ class _RowMenu extends StatelessWidget {
               label: l10n.openFolder,
             ),
           ),
+        if (isPlayable)
+          PopupMenuItem(
+            value: 'share',
+            child: _MenuItem(icon: Icons.share_rounded, label: l10n.shareFile),
+          ),
+        PopupMenuItem(
+          value: 'rename',
+          child: _MenuItem(icon: Icons.edit_rounded, label: l10n.rename),
+        ),
         PopupMenuItem(
           value: 'delete',
           child: _MenuItem(

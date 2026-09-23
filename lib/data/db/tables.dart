@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 class Tasks extends Table {
   TextColumn get id => text()();
   TextColumn get url => text()();
+  TextColumn get sourceUrl => text().nullable()();
   TextColumn get title => text()();
   IntColumn get status => integer()();
   TextColumn get headers => text().withDefault(const Constant('{}'))();
@@ -16,9 +17,11 @@ class Tasks extends Table {
   IntColumn get totalSegments => integer().withDefault(const Constant(0))();
   IntColumn get doneSegments => integer().withDefault(const Constant(0))();
   IntColumn get totalBytes => integer().withDefault(const Constant(0))();
-  IntColumn get downloadedBytes =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get downloadedBytes => integer().withDefault(const Constant(0))();
   TextColumn get errorMsg => text().nullable()();
+  IntColumn get playbackMs => integer().withDefault(const Constant(0))();
+  IntColumn get durationMs => integer().withDefault(const Constant(0))();
+  IntColumn get queueOrder => integer().withDefault(const Constant(0))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
 

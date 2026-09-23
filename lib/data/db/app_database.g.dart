@@ -26,6 +26,17 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sourceUrlMeta = const VerificationMeta(
+    'sourceUrl',
+  );
+  @override
+  late final GeneratedColumn<String> sourceUrl = GeneratedColumn<String>(
+    'source_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -181,6 +192,42 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _playbackMsMeta = const VerificationMeta(
+    'playbackMs',
+  );
+  @override
+  late final GeneratedColumn<int> playbackMs = GeneratedColumn<int>(
+    'playback_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _queueOrderMeta = const VerificationMeta(
+    'queueOrder',
+  );
+  @override
+  late final GeneratedColumn<int> queueOrder = GeneratedColumn<int>(
+    'queue_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -207,6 +254,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   List<GeneratedColumn> get $columns => [
     id,
     url,
+    sourceUrl,
     title,
     status,
     headers,
@@ -221,6 +269,9 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     totalBytes,
     downloadedBytes,
     errorMsg,
+    playbackMs,
+    durationMs,
+    queueOrder,
     createdAt,
     updatedAt,
   ];
@@ -248,6 +299,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       );
     } else if (isInserting) {
       context.missing(_urlMeta);
+    }
+    if (data.containsKey('source_url')) {
+      context.handle(
+        _sourceUrlMeta,
+        sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -354,6 +411,24 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         errorMsg.isAcceptableOrUnknown(data['error_msg']!, _errorMsgMeta),
       );
     }
+    if (data.containsKey('playback_ms')) {
+      context.handle(
+        _playbackMsMeta,
+        playbackMs.isAcceptableOrUnknown(data['playback_ms']!, _playbackMsMeta),
+      );
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('queue_order')) {
+      context.handle(
+        _queueOrderMeta,
+        queueOrder.isAcceptableOrUnknown(data['queue_order']!, _queueOrderMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -387,6 +462,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}url'],
       )!,
+      sourceUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_url'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -443,6 +522,18 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}error_msg'],
       ),
+      playbackMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}playback_ms'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      )!,
+      queueOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}queue_order'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -463,6 +554,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
 class Task extends DataClass implements Insertable<Task> {
   final String id;
   final String url;
+  final String? sourceUrl;
   final String title;
   final int status;
   final String headers;
@@ -477,11 +569,15 @@ class Task extends DataClass implements Insertable<Task> {
   final int totalBytes;
   final int downloadedBytes;
   final String? errorMsg;
+  final int playbackMs;
+  final int durationMs;
+  final int queueOrder;
   final int createdAt;
   final int updatedAt;
   const Task({
     required this.id,
     required this.url,
+    this.sourceUrl,
     required this.title,
     required this.status,
     required this.headers,
@@ -496,6 +592,9 @@ class Task extends DataClass implements Insertable<Task> {
     required this.totalBytes,
     required this.downloadedBytes,
     this.errorMsg,
+    required this.playbackMs,
+    required this.durationMs,
+    required this.queueOrder,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -504,6 +603,9 @@ class Task extends DataClass implements Insertable<Task> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['url'] = Variable<String>(url);
+    if (!nullToAbsent || sourceUrl != null) {
+      map['source_url'] = Variable<String>(sourceUrl);
+    }
     map['title'] = Variable<String>(title);
     map['status'] = Variable<int>(status);
     map['headers'] = Variable<String>(headers);
@@ -530,6 +632,9 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || errorMsg != null) {
       map['error_msg'] = Variable<String>(errorMsg);
     }
+    map['playback_ms'] = Variable<int>(playbackMs);
+    map['duration_ms'] = Variable<int>(durationMs);
+    map['queue_order'] = Variable<int>(queueOrder);
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
@@ -539,6 +644,9 @@ class Task extends DataClass implements Insertable<Task> {
     return TasksCompanion(
       id: Value(id),
       url: Value(url),
+      sourceUrl: sourceUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceUrl),
       title: Value(title),
       status: Value(status),
       headers: Value(headers),
@@ -565,6 +673,9 @@ class Task extends DataClass implements Insertable<Task> {
       errorMsg: errorMsg == null && nullToAbsent
           ? const Value.absent()
           : Value(errorMsg),
+      playbackMs: Value(playbackMs),
+      durationMs: Value(durationMs),
+      queueOrder: Value(queueOrder),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -578,6 +689,7 @@ class Task extends DataClass implements Insertable<Task> {
     return Task(
       id: serializer.fromJson<String>(json['id']),
       url: serializer.fromJson<String>(json['url']),
+      sourceUrl: serializer.fromJson<String?>(json['sourceUrl']),
       title: serializer.fromJson<String>(json['title']),
       status: serializer.fromJson<int>(json['status']),
       headers: serializer.fromJson<String>(json['headers']),
@@ -592,6 +704,9 @@ class Task extends DataClass implements Insertable<Task> {
       totalBytes: serializer.fromJson<int>(json['totalBytes']),
       downloadedBytes: serializer.fromJson<int>(json['downloadedBytes']),
       errorMsg: serializer.fromJson<String?>(json['errorMsg']),
+      playbackMs: serializer.fromJson<int>(json['playbackMs']),
+      durationMs: serializer.fromJson<int>(json['durationMs']),
+      queueOrder: serializer.fromJson<int>(json['queueOrder']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
@@ -602,6 +717,7 @@ class Task extends DataClass implements Insertable<Task> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'url': serializer.toJson<String>(url),
+      'sourceUrl': serializer.toJson<String?>(sourceUrl),
       'title': serializer.toJson<String>(title),
       'status': serializer.toJson<int>(status),
       'headers': serializer.toJson<String>(headers),
@@ -616,6 +732,9 @@ class Task extends DataClass implements Insertable<Task> {
       'totalBytes': serializer.toJson<int>(totalBytes),
       'downloadedBytes': serializer.toJson<int>(downloadedBytes),
       'errorMsg': serializer.toJson<String?>(errorMsg),
+      'playbackMs': serializer.toJson<int>(playbackMs),
+      'durationMs': serializer.toJson<int>(durationMs),
+      'queueOrder': serializer.toJson<int>(queueOrder),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
@@ -624,6 +743,7 @@ class Task extends DataClass implements Insertable<Task> {
   Task copyWith({
     String? id,
     String? url,
+    Value<String?> sourceUrl = const Value.absent(),
     String? title,
     int? status,
     String? headers,
@@ -638,11 +758,15 @@ class Task extends DataClass implements Insertable<Task> {
     int? totalBytes,
     int? downloadedBytes,
     Value<String?> errorMsg = const Value.absent(),
+    int? playbackMs,
+    int? durationMs,
+    int? queueOrder,
     int? createdAt,
     int? updatedAt,
   }) => Task(
     id: id ?? this.id,
     url: url ?? this.url,
+    sourceUrl: sourceUrl.present ? sourceUrl.value : this.sourceUrl,
     title: title ?? this.title,
     status: status ?? this.status,
     headers: headers ?? this.headers,
@@ -659,6 +783,9 @@ class Task extends DataClass implements Insertable<Task> {
     totalBytes: totalBytes ?? this.totalBytes,
     downloadedBytes: downloadedBytes ?? this.downloadedBytes,
     errorMsg: errorMsg.present ? errorMsg.value : this.errorMsg,
+    playbackMs: playbackMs ?? this.playbackMs,
+    durationMs: durationMs ?? this.durationMs,
+    queueOrder: queueOrder ?? this.queueOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -666,6 +793,7 @@ class Task extends DataClass implements Insertable<Task> {
     return Task(
       id: data.id.present ? data.id.value : this.id,
       url: data.url.present ? data.url.value : this.url,
+      sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
       title: data.title.present ? data.title.value : this.title,
       status: data.status.present ? data.status.value : this.status,
       headers: data.headers.present ? data.headers.value : this.headers,
@@ -694,6 +822,15 @@ class Task extends DataClass implements Insertable<Task> {
           ? data.downloadedBytes.value
           : this.downloadedBytes,
       errorMsg: data.errorMsg.present ? data.errorMsg.value : this.errorMsg,
+      playbackMs: data.playbackMs.present
+          ? data.playbackMs.value
+          : this.playbackMs,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      queueOrder: data.queueOrder.present
+          ? data.queueOrder.value
+          : this.queueOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -704,6 +841,7 @@ class Task extends DataClass implements Insertable<Task> {
     return (StringBuffer('Task(')
           ..write('id: $id, ')
           ..write('url: $url, ')
+          ..write('sourceUrl: $sourceUrl, ')
           ..write('title: $title, ')
           ..write('status: $status, ')
           ..write('headers: $headers, ')
@@ -718,6 +856,9 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('totalBytes: $totalBytes, ')
           ..write('downloadedBytes: $downloadedBytes, ')
           ..write('errorMsg: $errorMsg, ')
+          ..write('playbackMs: $playbackMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('queueOrder: $queueOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -725,9 +866,10 @@ class Task extends DataClass implements Insertable<Task> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     url,
+    sourceUrl,
     title,
     status,
     headers,
@@ -742,15 +884,19 @@ class Task extends DataClass implements Insertable<Task> {
     totalBytes,
     downloadedBytes,
     errorMsg,
+    playbackMs,
+    durationMs,
+    queueOrder,
     createdAt,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Task &&
           other.id == this.id &&
           other.url == this.url &&
+          other.sourceUrl == this.sourceUrl &&
           other.title == this.title &&
           other.status == this.status &&
           other.headers == this.headers &&
@@ -765,6 +911,9 @@ class Task extends DataClass implements Insertable<Task> {
           other.totalBytes == this.totalBytes &&
           other.downloadedBytes == this.downloadedBytes &&
           other.errorMsg == this.errorMsg &&
+          other.playbackMs == this.playbackMs &&
+          other.durationMs == this.durationMs &&
+          other.queueOrder == this.queueOrder &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -772,6 +921,7 @@ class Task extends DataClass implements Insertable<Task> {
 class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> id;
   final Value<String> url;
+  final Value<String?> sourceUrl;
   final Value<String> title;
   final Value<int> status;
   final Value<String> headers;
@@ -786,12 +936,16 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<int> totalBytes;
   final Value<int> downloadedBytes;
   final Value<String?> errorMsg;
+  final Value<int> playbackMs;
+  final Value<int> durationMs;
+  final Value<int> queueOrder;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> rowid;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.url = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
     this.title = const Value.absent(),
     this.status = const Value.absent(),
     this.headers = const Value.absent(),
@@ -806,6 +960,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.totalBytes = const Value.absent(),
     this.downloadedBytes = const Value.absent(),
     this.errorMsg = const Value.absent(),
+    this.playbackMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.queueOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -813,6 +970,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   TasksCompanion.insert({
     required String id,
     required String url,
+    this.sourceUrl = const Value.absent(),
     required String title,
     required int status,
     this.headers = const Value.absent(),
@@ -827,6 +985,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.totalBytes = const Value.absent(),
     this.downloadedBytes = const Value.absent(),
     this.errorMsg = const Value.absent(),
+    this.playbackMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.queueOrder = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.rowid = const Value.absent(),
@@ -840,6 +1001,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   static Insertable<Task> custom({
     Expression<String>? id,
     Expression<String>? url,
+    Expression<String>? sourceUrl,
     Expression<String>? title,
     Expression<int>? status,
     Expression<String>? headers,
@@ -854,6 +1016,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? totalBytes,
     Expression<int>? downloadedBytes,
     Expression<String>? errorMsg,
+    Expression<int>? playbackMs,
+    Expression<int>? durationMs,
+    Expression<int>? queueOrder,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? rowid,
@@ -861,6 +1026,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (url != null) 'url': url,
+      if (sourceUrl != null) 'source_url': sourceUrl,
       if (title != null) 'title': title,
       if (status != null) 'status': status,
       if (headers != null) 'headers': headers,
@@ -875,6 +1041,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (totalBytes != null) 'total_bytes': totalBytes,
       if (downloadedBytes != null) 'downloaded_bytes': downloadedBytes,
       if (errorMsg != null) 'error_msg': errorMsg,
+      if (playbackMs != null) 'playback_ms': playbackMs,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (queueOrder != null) 'queue_order': queueOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -884,6 +1053,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   TasksCompanion copyWith({
     Value<String>? id,
     Value<String>? url,
+    Value<String?>? sourceUrl,
     Value<String>? title,
     Value<int>? status,
     Value<String>? headers,
@@ -898,6 +1068,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<int>? totalBytes,
     Value<int>? downloadedBytes,
     Value<String?>? errorMsg,
+    Value<int>? playbackMs,
+    Value<int>? durationMs,
+    Value<int>? queueOrder,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? rowid,
@@ -905,6 +1078,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     return TasksCompanion(
       id: id ?? this.id,
       url: url ?? this.url,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
       title: title ?? this.title,
       status: status ?? this.status,
       headers: headers ?? this.headers,
@@ -919,6 +1093,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
       totalBytes: totalBytes ?? this.totalBytes,
       downloadedBytes: downloadedBytes ?? this.downloadedBytes,
       errorMsg: errorMsg ?? this.errorMsg,
+      playbackMs: playbackMs ?? this.playbackMs,
+      durationMs: durationMs ?? this.durationMs,
+      queueOrder: queueOrder ?? this.queueOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -933,6 +1110,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     }
     if (url.present) {
       map['url'] = Variable<String>(url.value);
+    }
+    if (sourceUrl.present) {
+      map['source_url'] = Variable<String>(sourceUrl.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -976,6 +1156,15 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (errorMsg.present) {
       map['error_msg'] = Variable<String>(errorMsg.value);
     }
+    if (playbackMs.present) {
+      map['playback_ms'] = Variable<int>(playbackMs.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (queueOrder.present) {
+      map['queue_order'] = Variable<int>(queueOrder.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -993,6 +1182,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     return (StringBuffer('TasksCompanion(')
           ..write('id: $id, ')
           ..write('url: $url, ')
+          ..write('sourceUrl: $sourceUrl, ')
           ..write('title: $title, ')
           ..write('status: $status, ')
           ..write('headers: $headers, ')
@@ -1007,6 +1197,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('totalBytes: $totalBytes, ')
           ..write('downloadedBytes: $downloadedBytes, ')
           ..write('errorMsg: $errorMsg, ')
+          ..write('playbackMs: $playbackMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('queueOrder: $queueOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -2298,6 +2491,7 @@ typedef $$TasksTableCreateCompanionBuilder =
     TasksCompanion Function({
       required String id,
       required String url,
+      Value<String?> sourceUrl,
       required String title,
       required int status,
       Value<String> headers,
@@ -2312,6 +2506,9 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<int> totalBytes,
       Value<int> downloadedBytes,
       Value<String?> errorMsg,
+      Value<int> playbackMs,
+      Value<int> durationMs,
+      Value<int> queueOrder,
       required int createdAt,
       required int updatedAt,
       Value<int> rowid,
@@ -2320,6 +2517,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
       Value<String> id,
       Value<String> url,
+      Value<String?> sourceUrl,
       Value<String> title,
       Value<int> status,
       Value<String> headers,
@@ -2334,6 +2532,9 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<int> totalBytes,
       Value<int> downloadedBytes,
       Value<String?> errorMsg,
+      Value<int> playbackMs,
+      Value<int> durationMs,
+      Value<int> queueOrder,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> rowid,
@@ -2354,6 +2555,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get url => $composableBuilder(
     column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2427,6 +2633,21 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get playbackMs => $composableBuilder(
+    column: $table.playbackMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get queueOrder => $composableBuilder(
+    column: $table.queueOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -2454,6 +2675,11 @@ class $$TasksTableOrderingComposer
 
   ColumnOrderings<String> get url => $composableBuilder(
     column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2527,6 +2753,21 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get playbackMs => $composableBuilder(
+    column: $table.playbackMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get queueOrder => $composableBuilder(
+    column: $table.queueOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2552,6 +2793,9 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get url =>
       $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -2609,6 +2853,21 @@ class $$TasksTableAnnotationComposer
   GeneratedColumn<String> get errorMsg =>
       $composableBuilder(column: $table.errorMsg, builder: (column) => column);
 
+  GeneratedColumn<int> get playbackMs => $composableBuilder(
+    column: $table.playbackMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get queueOrder => $composableBuilder(
+    column: $table.queueOrder,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -2646,6 +2905,7 @@ class $$TasksTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> url = const Value.absent(),
+                Value<String?> sourceUrl = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<String> headers = const Value.absent(),
@@ -2660,12 +2920,16 @@ class $$TasksTableTableManager
                 Value<int> totalBytes = const Value.absent(),
                 Value<int> downloadedBytes = const Value.absent(),
                 Value<String?> errorMsg = const Value.absent(),
+                Value<int> playbackMs = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<int> queueOrder = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 url: url,
+                sourceUrl: sourceUrl,
                 title: title,
                 status: status,
                 headers: headers,
@@ -2680,6 +2944,9 @@ class $$TasksTableTableManager
                 totalBytes: totalBytes,
                 downloadedBytes: downloadedBytes,
                 errorMsg: errorMsg,
+                playbackMs: playbackMs,
+                durationMs: durationMs,
+                queueOrder: queueOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -2688,6 +2955,7 @@ class $$TasksTableTableManager
               ({
                 required String id,
                 required String url,
+                Value<String?> sourceUrl = const Value.absent(),
                 required String title,
                 required int status,
                 Value<String> headers = const Value.absent(),
@@ -2702,12 +2970,16 @@ class $$TasksTableTableManager
                 Value<int> totalBytes = const Value.absent(),
                 Value<int> downloadedBytes = const Value.absent(),
                 Value<String?> errorMsg = const Value.absent(),
+                Value<int> playbackMs = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<int> queueOrder = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 url: url,
+                sourceUrl: sourceUrl,
                 title: title,
                 status: status,
                 headers: headers,
@@ -2722,6 +2994,9 @@ class $$TasksTableTableManager
                 totalBytes: totalBytes,
                 downloadedBytes: downloadedBytes,
                 errorMsg: errorMsg,
+                playbackMs: playbackMs,
+                durationMs: durationMs,
+                queueOrder: queueOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

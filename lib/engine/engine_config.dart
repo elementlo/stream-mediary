@@ -11,6 +11,7 @@ class DownloadRequest {
     this.customIvHex,
     this.saveDir,
     this.variantUrl,
+    this.sourceUrl,
   });
 
   /// The m3u8 URL (or the chosen variant URL for master playlists).
@@ -33,6 +34,7 @@ class DownloadRequest {
 
   /// When the source is a master playlist, the selected variant URL.
   final String? variantUrl;
+  final String? sourceUrl;
 
   /// Generic playlist file names that carry no identifying information.
   /// When the last path segment is one of these, the parent directory name
@@ -99,11 +101,10 @@ class EngineConfig {
     int? segmentConcurrency,
     bool? preferMp4,
     String? ffmpegPath,
-  }) =>
-      EngineConfig(
-        taskConcurrency: taskConcurrency ?? this.taskConcurrency,
-        segmentConcurrency: segmentConcurrency ?? this.segmentConcurrency,
-        preferMp4: preferMp4 ?? this.preferMp4,
-        ffmpegPath: ffmpegPath ?? this.ffmpegPath,
-      );
+  }) => EngineConfig(
+    taskConcurrency: taskConcurrency ?? this.taskConcurrency,
+    segmentConcurrency: segmentConcurrency ?? this.segmentConcurrency,
+    preferMp4: preferMp4 ?? this.preferMp4,
+    ffmpegPath: ffmpegPath ?? this.ffmpegPath,
+  );
 }

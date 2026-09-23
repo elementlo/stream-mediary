@@ -35,6 +35,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _mergePreference = 'prefer_mp4';
   String? _saveDir;
   bool _loaded = false;
+  bool _wifiOnly = false;
+  bool _chargingOnly = false;
+  bool _sequentialQueue = false;
+  bool _completionNotifications = false;
 
   @override
   void initState() {
@@ -44,16 +48,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _load() async {
     final settings = ref.read(settingsRepositoryProvider);
-    final (concurrency, merge, dir) = await (
+    final (
+      concurrency,
+      merge,
+      dir,
+      wifi,
+      charging,
+      sequential,
+      notifications,
+    ) = await (
       settings.taskConcurrency(),
       settings.mergePreference(),
       settings.defaultSaveDir(),
+      settings.flag(SettingsRepository.keyWifiOnly),
+      settings.flag(SettingsRepository.keyChargingOnly),
+      settings.flag(SettingsRepository.keySequentialQueue),
+      settings.flag(SettingsRepository.keyCompletionNotifications),
     ).wait;
     if (mounted) {
       setState(() {
         _taskConcurrency = concurrency;
         _mergePreference = merge;
         _saveDir = dir;
+        _wifiOnly = wifi;
+        _chargingOnly = charging;
+        _sequentialQueue = sequential;
+        _completionNotifications = notifications;
         _loaded = true;
       });
     }
@@ -118,9 +138,81 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   .read(settingsRepositoryProvider)
                   .setTaskConcurrency(_taskConcurrency);
               final engine = ref.read(downloadEngineProvider);
-              engine.updateConfig(engine.config
-                  .copyWith(taskConcurrency: _taskConcurrency));
+              engine.updateConfig(
+                engine.config.copyWith(
+                  taskConcurrency: _sequentialQueue ? 1 : _taskConcurrency,
+                ),
+              );
             },
+          ),
+          SectionHeader(l10n.queuePolicy),
+          MediaryCard(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: Text(l10n.sequentialQueue),
+                  value: _sequentialQueue,
+                  onChanged: (value) async {
+                    setState(() => _sequentialQueue = value);
+                    await ref
+                        .read(settingsRepositoryProvider)
+                        .setFlag(SettingsRepository.keySequentialQueue, value);
+                    await ref.read(queuePolicyProvider).refresh();
+                  },
+                ),
+                SwitchListTile(
+                  title: Text(l10n.wifiOnly),
+                  value: _wifiOnly,
+                  onChanged: (value) async {
+                    setState(() => _wifiOnly = value);
+                    await ref
+                        .read(settingsRepositoryProvider)
+                        .setFlag(SettingsRepository.keyWifiOnly, value);
+                    await ref.read(queuePolicyProvider).refresh();
+                  },
+                ),
+                SwitchListTile(
+                  title: Text(l10n.chargingOnly),
+                  value: _chargingOnly,
+                  onChanged: (value) async {
+                    setState(() => _chargingOnly = value);
+                    await ref
+                        .read(settingsRepositoryProvider)
+                        .setFlag(SettingsRepository.keyChargingOnly, value);
+                    await ref.read(queuePolicyProvider).refresh();
+                  },
+                ),
+              ],
+            ),
+          ),
+          SectionHeader(l10n.completionNotifications),
+          MediaryCard(
+            child: SwitchListTile(
+              title: Text(l10n.completionNotifications),
+              subtitle: Text(l10n.completionNotificationsHint),
+              value: _completionNotifications,
+              onChanged: (value) async {
+                final enabled =
+                    !value ||
+                    await ref
+                        .read(completionNotificationsProvider)
+                        .requestPermission();
+                if (!context.mounted) return;
+                if (!enabled) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.notificationPermissionDenied)),
+                  );
+                  return;
+                }
+                setState(() => _completionNotifications = value);
+                await ref
+                    .read(settingsRepositoryProvider)
+                    .setFlag(
+                      SettingsRepository.keyCompletionNotifications,
+                      value,
+                    );
+              },
+            ),
           ),
           SectionHeader(l10n.defaultSaveDir),
           MediaryCard(
@@ -166,10 +258,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           MediaryCard(
             child: SegmentedButton<String>(
               segments: [
-                ButtonSegment(
-                  value: 'ts_only',
-                  label: Text(l10n.mergeTsOnly),
-                ),
+                ButtonSegment(value: 'ts_only', label: Text(l10n.mergeTsOnly)),
                 ButtonSegment(
                   value: 'prefer_mp4',
                   label: Text(l10n.mergePreferMp4),
@@ -183,9 +272,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     .read(settingsRepositoryProvider)
                     .setMergePreference(_mergePreference);
                 final engine = ref.read(downloadEngineProvider);
-                engine.updateConfig(engine.config.copyWith(
-                  preferMp4: _mergePreference == 'prefer_mp4',
-                ));
+                engine.updateConfig(
+                  engine.config.copyWith(
+                    preferMp4: _mergePreference == 'prefer_mp4',
+                  ),
+                );
               },
             ),
           ),
@@ -206,7 +297,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: _SettingRow(
               icon: Icons.info_rounded,
               title: l10n.appTitle,
-              subtitle: ref.watch(appVersionProvider).maybeWhen(
+              subtitle: ref
+                  .watch(appVersionProvider)
+                  .maybeWhen(
                     data: (v) => '${l10n.version} $v',
                     orElse: () => l10n.version,
                   ),
@@ -235,17 +328,15 @@ class _ConcurrencySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(
-            bottom: Spacing.md,
-            left: Spacing.xs,
-          ),
+          padding: const EdgeInsets.only(bottom: Spacing.md, left: Spacing.xs),
           child: Row(
             children: [
               Expanded(
                 child: Text(
                   l10n.concurrency,
-                  style: text.titleSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: text.titleSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
               Container(
@@ -317,9 +408,7 @@ class _FfmpegStatus extends StatelessWidget {
             borderRadius: Radii.smAll,
           ),
           child: Icon(
-            probe.available
-                ? Icons.check_rounded
-                : Icons.priority_high_rounded,
+            probe.available ? Icons.check_rounded : Icons.priority_high_rounded,
             size: 17,
             color: probe.available ? colors.success : colors.warning,
           ),
@@ -340,7 +429,9 @@ class _FfmpegStatus extends StatelessWidget {
                     ),
                   ),
                   PillBadge(
-                    label: probe.available ? l10n.mergePreferMp4 : l10n.mergeTsOnly,
+                    label: probe.available
+                        ? l10n.mergePreferMp4
+                        : l10n.mergeTsOnly,
                     color: probe.available ? colors.success : colors.warning,
                   ),
                 ],
@@ -409,8 +500,9 @@ class _SettingRow extends StatelessWidget {
                   const SizedBox(height: 1),
                   Text(
                     subtitle!,
-                    style: text.bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
+                    style: text.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],

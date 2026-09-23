@@ -17,6 +17,8 @@ class StreamMediaryApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(queuePolicyProvider);
+    ref.watch(completionNotificationsProvider);
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     // Resolved once: the platform cannot change while the app is running.
@@ -52,10 +54,8 @@ class StreamMediaryApp extends ConsumerWidget {
         builder: (context, child) {
           // Clamp text scaling to a range the layout still holds at. The
           // signature segment bar and metric rows are the tightest spots.
-          final scale = MediaQuery.textScalerOf(context).clamp(
-            minScaleFactor: 0.85,
-            maxScaleFactor: 1.4,
-          );
+          final scale = MediaQuery.textScalerOf(context)
+              .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.4);
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: scale),
             child: child ?? const SizedBox.shrink(),

@@ -25,10 +25,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newDownload => 'New Download';
 
   @override
+  String get batchImport => 'Batch import';
+
+  @override
+  String get batchUrls => 'Playlist URLs, one per line';
+
+  @override
+  String get batchHint => 'Paste multiple http/https m3u8 URLs';
+
+  @override
+  String get batchReady => 'ready';
+
+  @override
+  String get batchAdd => 'Add to download queue';
+
+  @override
   String get downloads => 'Downloads';
 
   @override
   String get history => 'History';
+
+  @override
+  String get searchHistory => 'Search downloaded videos';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterIncomplete => 'Failed/Canceled';
+
+  @override
+  String get sortNewest => 'Newest';
+
+  @override
+  String get sortOldest => 'Oldest';
+
+  @override
+  String get sortSize => 'Size';
+
+  @override
+  String get sortTitle => 'Title';
+
+  @override
+  String get fileMissing => 'Local file moved or deleted';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String continueAt(Object time) {
+    return 'Continue · $time';
+  }
 
   @override
   String get settings => 'Settings';
@@ -95,6 +142,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get estimatedSize => 'Estimated size';
 
   @override
+  String get availableSpace => 'Available space';
+
+  @override
+  String get lowSpaceWarning =>
+      'Storage may be insufficient; merging needs extra space.';
+
+  @override
+  String get recentSources => 'Recent sources';
+
+  @override
+  String get pasteClipboard => 'Paste URL from clipboard';
+
+  @override
+  String get downloadTitle => 'Video title';
+
+  @override
+  String get downloadTitleHint => 'Optional; generated from URL if empty';
+
+  @override
+  String get saveTemplate => 'Save header template';
+
+  @override
+  String get templateName => 'Template name';
+
+  @override
+  String get templatePrivacyHint =>
+      'Headers, including cookies, are saved on this device. Save only values you want to keep; templates can be deleted.';
+
+  @override
   String get selectVariant => 'Select quality';
 
   @override
@@ -149,10 +225,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
+  String get replaceSource => 'Replace expired URL';
+
+  @override
+  String get invalidHeaderLine =>
+      'Use one request header per line: Name: Value';
+
+  @override
+  String get copyDiagnostic => 'Copy diagnostics';
+
+  @override
+  String get diagnosticCopied => 'Redacted diagnostics copied';
+
+  @override
   String get delete => 'Delete';
 
   @override
   String get play => 'Play';
+
+  @override
+  String get shareFile => 'Share file';
 
   @override
   String get redownload => 'Download again';
@@ -178,6 +270,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get concurrency => 'Task concurrency';
+
+  @override
+  String get queuePolicy => 'Download policy';
+
+  @override
+  String get sequentialQueue => 'Download tasks one at a time';
+
+  @override
+  String get wifiOnly => 'Wi-Fi / wired network only';
+
+  @override
+  String get chargingOnly => 'Only while charging';
+
+  @override
+  String get moveFirst => 'Prioritize';
+
+  @override
+  String get moveLast => 'Move to end';
+
+  @override
+  String get completionNotifications => 'Completion notifications';
+
+  @override
+  String get completionNotificationsHint =>
+      'Send a system notification when a task completes';
+
+  @override
+  String get notificationPermissionDenied =>
+      'Notification permission was not granted';
 
   @override
   String get defaultSaveDir => 'Default save directory';

@@ -5,6 +5,10 @@
 /// Emits [EngineEvent]s on [events] and persists state via [EngineTaskStore].
 library;
 
+// The public constructor keeps the named `store` and `config` API while
+// assigning them to private fields.
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -35,9 +39,9 @@ class DownloadEngine {
     EngineConfig config = const EngineConfig(),
     Dio? dio,
     this.defaultSaveDir,
-  })  : _store = store,
-        _config = config,
-        _dio = dio ?? Dio();
+  }) : _store = store,
+       _config = config,
+       _dio = dio ?? Dio();
 
   final EngineTaskStore _store;
   EngineConfig _config;
@@ -57,6 +61,9 @@ class DownloadEngine {
 
   /// Task-level concurrency limiter.
   final _TaskSemaphore _taskSemaphore = _TaskSemaphore(3);
+  void setQueueAllowed(bool allowed) {
+    _taskSemaphore.allowed = allowed;
+  }
 
   /// Broadcast stream of engine events.
   Stream<EngineEvent> get events => _events.stream;
@@ -88,8 +95,51 @@ class DownloadEngine {
     return _parser.parse(content, playlistUrl: url);
   }
 
+  /// Best-effort estimate. A byte-range playlist is exact; otherwise sample
+  /// three segment response lengths and scale by the playlist duration.
+  Future<int?> estimateMediaBytes(
+    MediaPlaylist playlist, {
+    Map<String, String> headers = const {},
+  }) async {
+    if (playlist.segments.isEmpty) return null;
+    if (playlist.segments.every((s) => s.byteRange != null)) {
+      return playlist.segments.fold<int>(
+        0,
+        (sum, s) => sum + s.byteRange!.length,
+      );
+    }
+    final segments = playlist.segments;
+    final indexes = {0, segments.length ~/ 2, segments.length - 1};
+    var sampledBytes = 0;
+    var sampledDuration = 0.0;
+    for (final index in indexes) {
+      final segment = segments[index];
+      try {
+        final response = await _dio.head<void>(
+          segment.url,
+          options: Options(
+            headers: headers,
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        );
+        final length = int.tryParse(
+          response.headers.value(Headers.contentLengthHeader) ?? '',
+        );
+        if (length == null || length <= 0 || segment.duration <= 0) continue;
+        sampledBytes += length;
+        sampledDuration += segment.duration;
+      } catch (_) {
+        // Some hosts reject HEAD; the estimate simply remains unavailable.
+      }
+    }
+    if (sampledDuration <= 0) return null;
+    return (sampledBytes * playlist.totalDuration / sampledDuration).round();
+  }
+
   Future<String> _fetchPlaylistText(
-      String url, Map<String, String> headers) async {
+    String url,
+    Map<String, String> headers,
+  ) async {
     final response = await _dio.get<List<int>>(
       url,
       options: Options(
@@ -115,6 +165,9 @@ class DownloadEngine {
     required DownloadRequest request,
     required MediaPlaylist playlist,
   }) async {
+    if (playlist.isLive) {
+      throw const M3u8ParseException('Live recording is not supported');
+    }
     final saveDir = await _resolveSaveDir(request.saveDir);
     final now = DateTime.now().millisecondsSinceEpoch;
     final title = await _uniqueTitle(request.effectiveTitle);
@@ -122,6 +175,7 @@ class DownloadEngine {
     final record = EngineTaskRecord(
       id: id,
       url: request.url,
+      sourceUrl: request.sourceUrl ?? request.url,
       title: title,
       state: TaskState.queued,
       headers: request.headers,
@@ -130,17 +184,14 @@ class DownloadEngine {
       playlistSnapshot: jsonEncode(playlist.toJson()),
       saveDir: saveDir,
       totalSegments: playlist.segmentCount,
+      queueOrder: now,
       createdAt: now,
       updatedAt: now,
     );
     await _store.saveTask(record);
 
     final segmentRecords = playlist.segments
-        .map((s) => EngineSegmentRecord(
-              taskId: id,
-              seq: s.seq,
-              url: s.url,
-            ))
+        .map((s) => EngineSegmentRecord(taskId: id, seq: s.seq, url: s.url))
         .toList();
     await _store.saveSegments(segmentRecords);
 
@@ -157,7 +208,13 @@ class DownloadEngine {
 
   Future<void> _runTask(EngineTaskRecord record, TaskRuntime runtime) async {
     // Acquire a task-level concurrency slot before downloading.
-    await _taskSemaphore.acquire();
+    final admitted = await _taskSemaphore.acquire(record.id, record.queueOrder);
+    if (!admitted) return;
+    if (runtime.state == TaskState.paused ||
+        runtime.state == TaskState.canceled) {
+      _taskSemaphore.release();
+      return;
+    }
     try {
       await _setState(record, runtime, TaskState.downloading);
       await _downloadAllSegments(record, runtime);
@@ -206,7 +263,9 @@ class DownloadEngine {
   // ---------------------------------------------------------------------------
 
   Future<void> _downloadAllSegments(
-      EngineTaskRecord record, TaskRuntime runtime) async {
+    EngineTaskRecord record,
+    TaskRuntime runtime,
+  ) async {
     final playlist = runtime.playlist!;
     final taskDir = _taskDir(record);
     final segmentsDir = Directory(p.join(taskDir, 'segments'));
@@ -231,10 +290,9 @@ class DownloadEngine {
     final pending = playlist.segments
         .where((s) => !doneSeqs.contains(s.seq))
         .toList();
+    final failures = <int, String>{};
 
-    final scheduler = SegmentScheduler(
-      concurrency: _config.segmentConcurrency,
-    );
+    final scheduler = SegmentScheduler(concurrency: _config.segmentConcurrency);
     runtime.scheduler = scheduler;
 
     scheduler.onJobDone = (seq, success, wasCanceled) {
@@ -246,7 +304,8 @@ class DownloadEngine {
         // Estimate total size from the average of completed segments so the
         // progress bar and speed are meaningful before all sizes are known.
         if (runtime.doneSegments > 0 && runtime.totalSegments > 0) {
-          runtime.totalBytes = runtime.downloadedBytes *
+          runtime.totalBytes =
+              runtime.downloadedBytes *
               runtime.totalSegments ~/
               runtime.doneSegments;
         }
@@ -268,8 +327,12 @@ class DownloadEngine {
             targetFile: target,
             headers: record.headers,
             cancelToken: token,
+            byteRange: segment.byteRange,
           );
-          if (!result.success) return false;
+          if (!result.success) {
+            failures[segment.seq] = result.error ?? 'download failed';
+            return false;
+          }
 
           // Decrypt in place if needed.
           if (segment.keyInfo?.encrypted == true) {
@@ -283,7 +346,9 @@ class DownloadEngine {
     scheduler.submit(jobs);
     await scheduler.drained;
 
-    if (scheduler.isPaused || runtime.state == TaskState.canceled) {
+    if (scheduler.isPaused ||
+        runtime.state == TaskState.paused ||
+        runtime.state == TaskState.canceled) {
       return;
     }
 
@@ -292,12 +357,15 @@ class DownloadEngine {
         .where((s) => !_segmentFile(segmentsDir, s.seq).existsSync())
         .toList();
     if (missing.isNotEmpty) {
-      throw StateError('${missing.length} segments failed to download');
+      final cause = failures[missing.first.seq] ?? 'unknown';
+      throw StateError('${missing.length} segments failed to download: $cause');
     }
   }
 
   Future<int> _estimateTotalBytes(
-      MediaPlaylist playlist, List<EngineSegmentRecord> existing) async {
+    MediaPlaylist playlist,
+    List<EngineSegmentRecord> existing,
+  ) async {
     var total = 0;
     for (final seg in existing) {
       total += seg.byteSize;
@@ -308,8 +376,9 @@ class DownloadEngine {
   File _segmentFile(Directory segmentsDir, int seq) =>
       File(p.join(segmentsDir.path, '${seq.toString().padLeft(6, '0')}.ts'));
 
-  String _taskDir(EngineTaskRecord record) =>
-      p.join(record.saveDir, _sanitize(record.title));
+  String _taskDir(EngineTaskRecord record) => record.outputPath != null
+      ? p.dirname(record.outputPath!)
+      : p.join(record.saveDir, _sanitize(record.title));
 
   /// Resolves a writable save directory.
   ///
@@ -333,8 +402,7 @@ class DownloadEngine {
         _log.warning('Save dir not writable, trying next: $dir');
       }
     }
-    // Last resort: current directory.
-    return '.';
+    throw const FileSystemException('No writable save directory');
   }
 
   String _sanitize(String name) =>
@@ -361,7 +429,11 @@ class DownloadEngine {
   }
 
   Future<void> _markSegment(
-      String taskId, int seq, SegmentStatus status, int size) async {
+    String taskId,
+    int seq,
+    SegmentStatus status,
+    int size,
+  ) async {
     final segments = await _store.loadSegments(taskId);
     for (final seg in segments) {
       if (seg.seq == seq) {
@@ -376,14 +448,16 @@ class DownloadEngine {
   void _emitProgress(EngineTaskRecord record, TaskRuntime runtime) {
     record.doneSegments = runtime.doneSegments;
     record.downloadedBytes = runtime.downloadedBytes;
-    _emit(ProgressEvent(
-      taskId: record.id,
-      doneSegments: runtime.doneSegments,
-      totalSegments: runtime.totalSegments,
-      downloadedBytes: runtime.downloadedBytes,
-      totalBytes: runtime.totalBytes,
-      bytesPerSecond: runtime.bytesPerSecond,
-    ));
+    _emit(
+      ProgressEvent(
+        taskId: record.id,
+        doneSegments: runtime.doneSegments,
+        totalSegments: runtime.totalSegments,
+        downloadedBytes: runtime.downloadedBytes,
+        totalBytes: runtime.totalBytes,
+        bytesPerSecond: runtime.bytesPerSecond,
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -447,8 +521,7 @@ class DownloadEngine {
     return Uint8List.fromList(keyBytes);
   }
 
-  Uint8List _resolveIv(
-      EngineTaskRecord record, KeyInfo keyInfo, int seq) {
+  Uint8List _resolveIv(EngineTaskRecord record, KeyInfo keyInfo, int seq) {
     if (record.customIvHex != null && record.customIvHex!.isNotEmpty) {
       return hexToBytes(record.customIvHex!);
     }
@@ -471,22 +544,46 @@ class DownloadEngine {
         .map((s) => _segmentFile(segmentsDir, s.seq))
         .toList();
 
-    final tsOutput = File(p.join(taskDir, '${_sanitize(record.title)}.ts'));
+    final init = playlist.initializationSection;
+    if (init != null) {
+      final initFile = File(p.join(taskDir, 'initialization.part.media'));
+      final downloaded = await _downloader.download(
+        init.url,
+        targetFile: initFile,
+        headers: record.headers,
+        byteRange: init.byteRange,
+      );
+      if (!downloaded.success) {
+        throw StateError(
+          'Initialization section download failed: ${downloaded.error}',
+        );
+      }
+      segmentFiles.insert(0, initFile);
+    }
+
+    final tsOutput = File(
+      p.join(
+        taskDir,
+        '${_sanitize(record.title)}.${init == null ? 'ts' : 'mp4'}',
+      ),
+    );
 
     await _merger.merge(
       segmentFiles,
       outputFile: tsOutput,
       onProgress: (written, total) {
-        _emit(MergeProgressEvent(
-          taskId: record.id,
-          writtenBytes: written,
-          totalBytes: total,
-        ));
+        _emit(
+          MergeProgressEvent(
+            taskId: record.id,
+            writtenBytes: written,
+            totalBytes: total,
+          ),
+        );
       },
     );
 
     File finalOutput = tsOutput;
-    if (_config.preferMp4) {
+    if (_config.preferMp4 && init == null) {
       final mp4 = await _remuxer.remuxToMp4(
         tsOutput,
         ffmpegPath: _config.ffmpegPath,
@@ -520,7 +617,9 @@ class DownloadEngine {
   Future<void> pauseTask(String id) async {
     final runtime = _runtimes[id];
     if (runtime == null) return;
-    runtime.scheduler?.pause();
+    runtime.scheduler?.cancel();
+    runtime.scheduler = null;
+    _taskSemaphore.cancel(id);
     final record = await _store.loadTask(id);
     if (record != null) {
       await _setState(record, runtime, TaskState.paused);
@@ -529,21 +628,16 @@ class DownloadEngine {
 
   /// Resumes a paused task.
   Future<void> resumeTask(String id) async {
-    final runtime = _runtimes[id];
     final record = await _store.loadTask(id);
-    if (runtime == null || record == null) return;
+    if (record == null) return;
 
-    if (runtime.scheduler != null) {
-      runtime.scheduler!.resume();
-      await _setState(record, runtime, TaskState.downloading);
-    } else {
-      // Cold resume: rebuild runtime from snapshot.
-      await _coldResume(record);
-    }
+    // Rebuild a scheduler so the paused task does not occupy a concurrency slot.
+    await _coldResume(record);
   }
 
   /// Cancels a task and cleans up its files.
   Future<void> cancelTask(String id, {bool deleteFiles = true}) async {
+    _taskSemaphore.cancel(id);
     final runtime = _runtimes[id];
     runtime?.scheduler?.cancel();
     runtime?.cancelToken.cancel('canceled');
@@ -594,7 +688,8 @@ class DownloadEngine {
   }
 
   /// Retries a failed or canceled task from scratch (reuses done segments).
-  Future<void> retryTask(String id) async {    final record = await _store.loadTask(id);
+  Future<void> retryTask(String id) async {
+    final record = await _store.loadTask(id);
     if (record == null) return;
     if (record.state != TaskState.failed &&
         record.state != TaskState.canceled) {
@@ -603,8 +698,9 @@ class DownloadEngine {
 
     final snapshot = record.playlistSnapshot;
     if (snapshot == null) return;
-    final playlist =
-        MediaPlaylist.fromJson(jsonDecode(snapshot) as Map<String, dynamic>);
+    final playlist = MediaPlaylist.fromJson(
+      jsonDecode(snapshot) as Map<String, dynamic>,
+    );
 
     final runtime = TaskRuntime(taskId: id)
       ..playlist = playlist
@@ -613,19 +709,166 @@ class DownloadEngine {
     _runtimes[id] = runtime;
 
     record.state = TaskState.queued;
+    record.queueOrder = DateTime.now().microsecondsSinceEpoch;
     record.errorMsg = null;
     await _store.saveTask(record);
     _emit(TaskStateChangedEvent(taskId: id, state: TaskState.queued));
     unawaited(_runTask(record, runtime));
   }
 
+  /// Creates a separate task for an already completed download.
+  Future<String> redownloadTask(String id, String newId) async {
+    final record = await _store.loadTask(id);
+    if (record == null || record.playlistSnapshot == null) {
+      throw StateError('The original download cannot be recreated');
+    }
+    final playlist = MediaPlaylist.fromJson(
+      jsonDecode(record.playlistSnapshot!) as Map<String, dynamic>,
+    );
+    return startTask(
+      id: newId,
+      request: DownloadRequest(
+        url: record.url,
+        sourceUrl: record.sourceUrl,
+        title: record.title,
+        headers: record.headers,
+        customKeyHex: record.customKeyHex,
+        customIvHex: record.customIvHex,
+        saveDir: record.saveDir,
+      ),
+      playlist: playlist,
+    );
+  }
+
+  Future<void> moveQueuedTask(String id, {required bool first}) async {
+    final record = await _store.loadTask(id);
+    if (record == null || record.state != TaskState.queued) return;
+    final tasks = await _store.loadAllTasks();
+    final orders = tasks
+        .where((t) => t.state == TaskState.queued)
+        .map((t) => t.queueOrder)
+        .toList();
+    if (orders.isEmpty) return;
+    record.queueOrder = first
+        ? orders.reduce((a, b) => a < b ? a : b) - 1
+        : orders.reduce((a, b) => a > b ? a : b) + 1;
+    await _store.saveTask(record);
+    _taskSemaphore.reorder(id, record.queueOrder);
+  }
+
+  /// Replace an expired source. Existing bytes are reused only when every
+  /// segment URL, range and key remains identical; otherwise they are removed.
+  Future<void> replaceExpiredSource(
+    String id,
+    String sourceUrl, {
+    Map<String, String>? headers,
+  }) async {
+    final record = await _store.loadTask(id);
+    if (record == null || record.state != TaskState.failed) {
+      throw StateError('Only failed tasks can replace their source');
+    }
+    final nextHeaders = headers ?? record.headers;
+    final parsed = await parseForPreview(sourceUrl, headers: nextHeaders);
+    final String mediaUrl;
+    final MediaPlaylist playlist;
+    if (parsed is MasterParseResult) {
+      mediaUrl = parsed.master.variants.first.url;
+      final child = await parseForPreview(mediaUrl, headers: nextHeaders);
+      if (child is! MediaParseResult) {
+        throw const M3u8ParseException(
+          'Selected variant is not a media playlist',
+        );
+      }
+      playlist = child.media;
+    } else {
+      mediaUrl = sourceUrl;
+      playlist = (parsed as MediaParseResult).media;
+    }
+    if (playlist.isLive) {
+      throw const M3u8ParseException('Live recording is not supported');
+    }
+    final old = record.playlistSnapshot == null
+        ? null
+        : MediaPlaylist.fromJson(
+            jsonDecode(record.playlistSnapshot!) as Map<String, dynamic>,
+          );
+    final identical = old != null && _sameMedia(old, playlist);
+    if (!identical) {
+      final segmentsDir = Directory(p.join(_taskDir(record), 'segments'));
+      if (await segmentsDir.exists()) await segmentsDir.delete(recursive: true);
+      await _store.deleteSegments(id);
+      record.doneSegments = 0;
+      record.downloadedBytes = 0;
+      record.totalBytes = 0;
+    }
+    record.url = mediaUrl;
+    record.sourceUrl = sourceUrl;
+    record.headers = nextHeaders;
+    record.playlistSnapshot = jsonEncode(playlist.toJson());
+    record.totalSegments = playlist.segmentCount;
+    record.errorMsg = null;
+    await _store.saveTask(record);
+    if (!identical) {
+      await _store.saveSegments(
+        playlist.segments
+            .map((s) => EngineSegmentRecord(taskId: id, seq: s.seq, url: s.url))
+            .toList(),
+      );
+    }
+    await retryTask(id);
+  }
+
+  bool _sameMedia(MediaPlaylist a, MediaPlaylist b) {
+    if (a.segments.length != b.segments.length ||
+        jsonEncode(a.initializationSection?.toJson()) !=
+            jsonEncode(b.initializationSection?.toJson())) {
+      return false;
+    }
+    for (var i = 0; i < a.segments.length; i++) {
+      final first = a.segments[i];
+      final second = b.segments[i];
+      if (first.seq != second.seq ||
+          first.url != second.url ||
+          first.keyInfo != second.keyInfo ||
+          jsonEncode(first.byteRange?.toJson()) !=
+              jsonEncode(second.byteRange?.toJson())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> renameTask(String id, String title) async {
+    final record = await _store.loadTask(id);
+    if (record == null ||
+        record.state != TaskState.completed ||
+        title.trim().isEmpty) {
+      return;
+    }
+    record.title = title.trim();
+    record.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _store.saveTask(record);
+  }
+
+  Future<void> savePlayback(
+    String id,
+    Duration position,
+    Duration duration,
+  ) async {
+    final record = await _store.loadTask(id);
+    if (record == null) return;
+    record.playbackMs = position.inMilliseconds;
+    record.durationMs = duration.inMilliseconds;
+    await _store.saveTask(record);
+  }
+
   /// Restores unfinished tasks after app restart (cold resume).
   Future<void> restoreUnfinished() async {
     final all = await _store.loadAllTasks();
     for (final record in all) {
-      final resumable = record.state == TaskState.downloading ||
-          record.state == TaskState.queued ||
-          record.state == TaskState.paused;
+      final resumable =
+          record.state == TaskState.downloading ||
+          record.state == TaskState.queued;
       if (resumable) {
         await _coldResume(record);
       }
@@ -635,8 +878,9 @@ class DownloadEngine {
   Future<void> _coldResume(EngineTaskRecord record) async {
     final snapshot = record.playlistSnapshot;
     if (snapshot == null) return;
-    final playlist =
-        MediaPlaylist.fromJson(jsonDecode(snapshot) as Map<String, dynamic>);
+    final playlist = MediaPlaylist.fromJson(
+      jsonDecode(snapshot) as Map<String, dynamic>,
+    );
 
     final runtime = TaskRuntime(taskId: record.id)
       ..playlist = playlist
@@ -662,28 +906,63 @@ class DownloadEngine {
 
 /// A simple counting semaphore used to bound task-level concurrency.
 class _TaskSemaphore {
-  _TaskSemaphore(this.limit);
+  _TaskSemaphore(this._limit);
 
-  int limit;
+  int _limit;
+  int get limit => _limit;
+  set limit(int value) {
+    _limit = value;
+    _pump();
+  }
+
   int _inUse = 0;
-  final List<Completer<void>> _waiters = [];
+  bool _allowed = true;
+  final List<_TaskWaiter> _waiters = [];
 
-  Future<void> acquire() async {
-    if (_inUse < limit) {
-      _inUse++;
-      return;
-    }
-    final completer = Completer<void>();
-    _waiters.add(completer);
-    await completer.future;
+  set allowed(bool value) {
+    _allowed = value;
+    _pump();
+  }
+
+  Future<bool> acquire(String id, int order) {
+    final waiter = _TaskWaiter(id, order);
+    _waiters.add(waiter);
+    _pump();
+    return waiter.completer.future;
   }
 
   void release() {
-    if (_waiters.isNotEmpty) {
-      final next = _waiters.removeAt(0);
-      if (!next.isCompleted) next.complete();
-    } else if (_inUse > 0) {
-      _inUse--;
+    if (_inUse > 0) _inUse--;
+    _pump();
+  }
+
+  void cancel(String id) {
+    for (final waiter in _waiters.where((w) => w.id == id).toList()) {
+      _waiters.remove(waiter);
+      waiter.completer.complete(false);
     }
   }
+
+  void reorder(String id, int order) {
+    for (final waiter in _waiters.where((w) => w.id == id)) {
+      waiter.order = order;
+    }
+    _pump();
+  }
+
+  void _pump() {
+    if (!_allowed) return;
+    _waiters.sort((a, b) => a.order.compareTo(b.order));
+    while (_inUse < limit && _waiters.isNotEmpty) {
+      _inUse++;
+      _waiters.removeAt(0).completer.complete(true);
+    }
+  }
+}
+
+class _TaskWaiter {
+  _TaskWaiter(this.id, this.order);
+  final String id;
+  int order;
+  final Completer<bool> completer = Completer<bool>();
 }
