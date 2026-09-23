@@ -701,19 +701,31 @@ class _CommentTile extends StatelessWidget {
                           _UserBadge(text: comment.label!),
                       ],
                     ),
-                    Text(
-                      _relativeTime(context, comment.insertedAt),
-                      style: text.labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    Row(
+                      children: [
+                        Text(
+                          _relativeTime(context, comment.insertedAt),
+                          style: text.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        if (comment.addr != null) ...[
+                          Text(
+                            ' · ',
+                            style: text.labelSmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          Flexible(
+                            child: Text(
+                              comment.addr!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.labelSmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if (comment.addr != null)
-                      Text(
-                        comment.addr!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.labelSmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
                   ],
                 ),
               ),
@@ -799,19 +811,31 @@ class _ReplyTile extends StatelessWidget {
                         ],
                       ],
                     ),
-                    Text(
-                      _relativeTime(context, comment.insertedAt),
-                      style: text.labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    Row(
+                      children: [
+                        Text(
+                          _relativeTime(context, comment.insertedAt),
+                          style: text.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        if (comment.addr != null) ...[
+                          Text(
+                            ' · ',
+                            style: text.labelSmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          Flexible(
+                            child: Text(
+                              comment.addr!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.labelSmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if (comment.addr != null)
-                      Text(
-                        comment.addr!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.labelSmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
                   ],
                 ),
               ),
