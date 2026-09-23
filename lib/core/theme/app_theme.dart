@@ -25,6 +25,14 @@ abstract final class AppTheme {
     final density = profile?.density ?? VisualDensity.standard;
     final text = _textTheme(scheme);
 
+    // Navigation label size per platform convention:
+    // - Material 3 (mobile): labelMedium = 12sp
+    // - Apple HIG (macOS sidebar): 13pt minimum
+    // - Fluent (Windows nav): 14px
+    // Desktop settles on 13.5 — readable on both, not chunky on macOS.
+    final isDesktop = profile?.isDesktop ?? false;
+    final navLabelSize = isDesktop ? 13.5 : 12.0;
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
@@ -154,6 +162,7 @@ abstract final class AppTheme {
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => text.labelMedium?.copyWith(
+            fontSize: navLabelSize,
             color: states.contains(WidgetState.selected)
                 ? scheme.primary
                 : scheme.onSurfaceVariant,
@@ -175,10 +184,10 @@ abstract final class AppTheme {
         selectedIconTheme: IconThemeData(color: scheme.primary, size: 20),
         unselectedIconTheme:
             IconThemeData(color: scheme.onSurfaceVariant, size: 20),
-        selectedLabelTextStyle:
-            text.labelMedium?.copyWith(color: scheme.primary),
-        unselectedLabelTextStyle:
-            text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+        selectedLabelTextStyle: text.labelMedium
+            ?.copyWith(fontSize: navLabelSize, color: scheme.primary),
+        unselectedLabelTextStyle: text.labelMedium?.copyWith(
+            fontSize: navLabelSize, color: scheme.onSurfaceVariant),
       ),
 
       listTileTheme: ListTileThemeData(
