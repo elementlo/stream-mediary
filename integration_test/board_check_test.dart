@@ -27,16 +27,20 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: StreamMediaryApp()),
     );
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    // Bounded pumps only: on real devices a soft keyboard or system
+    // animation can keep scheduling frames forever, which would hang an
+    // unbounded pumpAndSettle.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
 
     // Navigate to the board tab (bottom bar on phones, rail on desktop).
     await tester.tap(find.text('留言板'));
     await tester.pump();
 
-    // Wait for the network load to resolve (fixed pumps: the initial
-    // spinner animates forever, so pumpAndSettle cannot be used).
+    // Wait for the network load to resolve. Slow links (CN -> serverless
+    // backend) can take tens of seconds, so allow a generous window.
     var hasComment = false;
-    for (var i = 0; i < 15 && !hasComment; i++) {
+    for (var i = 0; i < 60 && !hasComment; i++) {
       await tester.pump(const Duration(seconds: 1));
       hasComment = find.text('probe').evaluate().isNotEmpty ||
           find.text('积极').evaluate().isNotEmpty;
@@ -46,12 +50,14 @@ void main() {
     // The compose FAB is present and opens the sheet.
     expect(find.text('发布'), findsOneWidget);
     await tester.tap(find.text('发布'));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
     expect(find.text('说点什么…'), findsOneWidget,
         reason: 'composer sheet did not open');
     // The sheet is modal (no back button); dismiss via its scrim.
     await tester.tapAt(const Offset(10, 10));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
     expect(find.text('说点什么…'), findsNothing,
         reason: 'composer sheet did not dismiss');
 
@@ -59,10 +65,11 @@ void main() {
     // assertions above.
     try {
       await binding.convertFlutterSurfaceToImage();
-      await tester.pumpAndSettle(const Duration(seconds: 1));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       await binding.takeScreenshot('board');
     } catch (_) {
       // Not supported on this platform; assertions already passed.
     }
-  }, timeout: const Timeout(Duration(minutes: 3)));
+  }, timeout: const Timeout(Duration(minutes: 4)));
 }

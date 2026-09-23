@@ -34,7 +34,10 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: StreamMediaryApp()),
     );
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    // Bounded pumps: an unbounded pumpAndSettle can hang on real devices
+    // where system animations keep scheduling frames.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
 
     // Open the board from the rail.
     await tester.tap(find.text('留言板'));
