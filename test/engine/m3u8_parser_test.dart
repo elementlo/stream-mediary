@@ -249,6 +249,63 @@ high/index.m3u8
         throwsA(isA<M3u8ParseException>()),
       );
     });
+
+    test('rejects I-frame-only playlists', () {
+      expect(
+        () => parser.parse('''
+#EXTM3U
+#EXT-X-I-FRAMES-ONLY
+#EXT-X-TARGETDURATION:10
+#EXTINF:10,
+seg0.ts
+#EXT-X-ENDLIST
+''', playlistUrl: baseUrl),
+        throwsA(isA<M3u8ParseException>()),
+      );
+    });
+
+    test('rejects encrypted initialization sections', () {
+      expect(
+        () => parser.parse('''
+#EXTM3U
+#EXT-X-KEY:METHOD=AES-128,URI="key.bin"
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:2,
+seg0.ts
+#EXT-X-ENDLIST
+''', playlistUrl: baseUrl),
+        throwsA(isA<M3u8ParseException>()),
+      );
+    });
+
+    test('rejects multiple initialization sections', () {
+      expect(
+        () => parser.parse('''
+#EXTM3U
+#EXT-X-MAP:URI="init1.mp4"
+#EXTINF:2,
+seg0.ts
+#EXT-X-MAP:URI="init2.mp4"
+#EXTINF:2,
+seg1.ts
+#EXT-X-ENDLIST
+''', playlistUrl: baseUrl),
+        throwsA(isA<M3u8ParseException>()),
+      );
+    });
+
+    test('rejects EXT-X-MAP without URI', () {
+      expect(
+        () => parser.parse('''
+#EXTM3U
+#EXT-X-MAP:BYTERANGE="64@0"
+#EXTINF:2,
+seg0.ts
+#EXT-X-ENDLIST
+''', playlistUrl: baseUrl),
+        throwsA(isA<M3u8ParseException>()),
+      );
+    });
   });
 
   group('serialization round-trip', () {
