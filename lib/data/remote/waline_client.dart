@@ -10,6 +10,7 @@ class WalineComment {
     this.rid,
     this.link,
     this.avatar,
+    this.addr,
   });
 
   factory WalineComment.fromJson(Map<String, dynamic> json) {
@@ -26,6 +27,11 @@ class WalineComment {
       rid: json['rid'] == null ? null : '${json['rid']}',
       link: json['link'] as String?,
       avatar: json['avatar'] as String?,
+      // IP-derived region. The server returns province-level for regular
+      // users (city-level is admin-only by Waline's privacy design).
+      addr: (json['addr'] as String?)?.trim().isEmpty == false
+          ? (json['addr'] as String).trim()
+          : null,
     );
   }
 
@@ -53,6 +59,9 @@ class WalineComment {
   final String? rid;
   final String? link;
   final String? avatar;
+
+  /// Province-level IP region (e.g. "浙江省"); null when unavailable.
+  final String? addr;
 
   bool get isReply => rid != null && rid!.isNotEmpty;
 }

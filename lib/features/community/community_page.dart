@@ -660,10 +660,30 @@ class _CommentTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(comment.nick, style: text.titleSmall),
-                    Text(
-                      _relativeTime(context, comment.insertedAt),
-                      style: text.labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    Row(
+                      children: [
+                        Text(
+                          _relativeTime(context, comment.insertedAt),
+                          style: text.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        if (comment.addr != null) ...[
+                          Text(
+                            ' · ',
+                            style: text.labelSmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          Flexible(
+                            child: Text(
+                              comment.addr!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.labelSmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -739,6 +759,22 @@ class _ReplyTile extends StatelessWidget {
                 style:
                     text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
+              if (comment.addr != null) ...[
+                Text(
+                  ' · ',
+                  style:
+                      text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+                Flexible(
+                  child: Text(
+                    comment.addr!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              ],
               const Spacer(),
               InkWell(
                 onTap: () => onReply(comment),

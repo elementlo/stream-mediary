@@ -1697,6 +1697,15 @@ class $BoardCommentsTable extends BoardComments
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _addrMeta = const VerificationMeta('addr');
+  @override
+  late final GeneratedColumn<String> addr = GeneratedColumn<String>(
+    'addr',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sortIndexMeta = const VerificationMeta(
     'sortIndex',
   );
@@ -1718,6 +1727,7 @@ class $BoardCommentsTable extends BoardComments
     rid,
     link,
     avatar,
+    addr,
     sortIndex,
   ];
   @override
@@ -1782,6 +1792,12 @@ class $BoardCommentsTable extends BoardComments
         avatar.isAcceptableOrUnknown(data['avatar']!, _avatarMeta),
       );
     }
+    if (data.containsKey('addr')) {
+      context.handle(
+        _addrMeta,
+        addr.isAcceptableOrUnknown(data['addr']!, _addrMeta),
+      );
+    }
     if (data.containsKey('sort_index')) {
       context.handle(
         _sortIndexMeta,
@@ -1825,6 +1841,10 @@ class $BoardCommentsTable extends BoardComments
         DriftSqlType.string,
         data['${effectivePrefix}avatar'],
       ),
+      addr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}addr'],
+      ),
       sortIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_index'],
@@ -1847,6 +1867,9 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
   final String? link;
   final String? avatar;
 
+  /// Province-level IP region shown next to the timestamp.
+  final String? addr;
+
   /// Sort order within the cached page set (server order, newest first).
   final int sortIndex;
   const BoardComment({
@@ -1857,6 +1880,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     this.rid,
     this.link,
     this.avatar,
+    this.addr,
     required this.sortIndex,
   });
   @override
@@ -1875,6 +1899,9 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     if (!nullToAbsent || avatar != null) {
       map['avatar'] = Variable<String>(avatar);
     }
+    if (!nullToAbsent || addr != null) {
+      map['addr'] = Variable<String>(addr);
+    }
     map['sort_index'] = Variable<int>(sortIndex);
     return map;
   }
@@ -1890,6 +1917,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       avatar: avatar == null && nullToAbsent
           ? const Value.absent()
           : Value(avatar),
+      addr: addr == null && nullToAbsent ? const Value.absent() : Value(addr),
       sortIndex: Value(sortIndex),
     );
   }
@@ -1907,6 +1935,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       rid: serializer.fromJson<String?>(json['rid']),
       link: serializer.fromJson<String?>(json['link']),
       avatar: serializer.fromJson<String?>(json['avatar']),
+      addr: serializer.fromJson<String?>(json['addr']),
       sortIndex: serializer.fromJson<int>(json['sortIndex']),
     );
   }
@@ -1921,6 +1950,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       'rid': serializer.toJson<String?>(rid),
       'link': serializer.toJson<String?>(link),
       'avatar': serializer.toJson<String?>(avatar),
+      'addr': serializer.toJson<String?>(addr),
       'sortIndex': serializer.toJson<int>(sortIndex),
     };
   }
@@ -1933,6 +1963,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     Value<String?> rid = const Value.absent(),
     Value<String?> link = const Value.absent(),
     Value<String?> avatar = const Value.absent(),
+    Value<String?> addr = const Value.absent(),
     int? sortIndex,
   }) => BoardComment(
     objectId: objectId ?? this.objectId,
@@ -1942,6 +1973,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     rid: rid.present ? rid.value : this.rid,
     link: link.present ? link.value : this.link,
     avatar: avatar.present ? avatar.value : this.avatar,
+    addr: addr.present ? addr.value : this.addr,
     sortIndex: sortIndex ?? this.sortIndex,
   );
   BoardComment copyWithCompanion(BoardCommentsCompanion data) {
@@ -1955,6 +1987,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
       rid: data.rid.present ? data.rid.value : this.rid,
       link: data.link.present ? data.link.value : this.link,
       avatar: data.avatar.present ? data.avatar.value : this.avatar,
+      addr: data.addr.present ? data.addr.value : this.addr,
       sortIndex: data.sortIndex.present ? data.sortIndex.value : this.sortIndex,
     );
   }
@@ -1969,6 +2002,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
           ..write('rid: $rid, ')
           ..write('link: $link, ')
           ..write('avatar: $avatar, ')
+          ..write('addr: $addr, ')
           ..write('sortIndex: $sortIndex')
           ..write(')'))
         .toString();
@@ -1983,6 +2017,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
     rid,
     link,
     avatar,
+    addr,
     sortIndex,
   );
   @override
@@ -1996,6 +2031,7 @@ class BoardComment extends DataClass implements Insertable<BoardComment> {
           other.rid == this.rid &&
           other.link == this.link &&
           other.avatar == this.avatar &&
+          other.addr == this.addr &&
           other.sortIndex == this.sortIndex);
 }
 
@@ -2007,6 +2043,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
   final Value<String?> rid;
   final Value<String?> link;
   final Value<String?> avatar;
+  final Value<String?> addr;
   final Value<int> sortIndex;
   final Value<int> rowid;
   const BoardCommentsCompanion({
@@ -2017,6 +2054,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     this.rid = const Value.absent(),
     this.link = const Value.absent(),
     this.avatar = const Value.absent(),
+    this.addr = const Value.absent(),
     this.sortIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2028,6 +2066,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     this.rid = const Value.absent(),
     this.link = const Value.absent(),
     this.avatar = const Value.absent(),
+    this.addr = const Value.absent(),
     this.sortIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : objectId = Value(objectId),
@@ -2042,6 +2081,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     Expression<String>? rid,
     Expression<String>? link,
     Expression<String>? avatar,
+    Expression<String>? addr,
     Expression<int>? sortIndex,
     Expression<int>? rowid,
   }) {
@@ -2053,6 +2093,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
       if (rid != null) 'rid': rid,
       if (link != null) 'link': link,
       if (avatar != null) 'avatar': avatar,
+      if (addr != null) 'addr': addr,
       if (sortIndex != null) 'sort_index': sortIndex,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2066,6 +2107,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     Value<String?>? rid,
     Value<String?>? link,
     Value<String?>? avatar,
+    Value<String?>? addr,
     Value<int>? sortIndex,
     Value<int>? rowid,
   }) {
@@ -2077,6 +2119,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
       rid: rid ?? this.rid,
       link: link ?? this.link,
       avatar: avatar ?? this.avatar,
+      addr: addr ?? this.addr,
       sortIndex: sortIndex ?? this.sortIndex,
       rowid: rowid ?? this.rowid,
     );
@@ -2106,6 +2149,9 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
     if (avatar.present) {
       map['avatar'] = Variable<String>(avatar.value);
     }
+    if (addr.present) {
+      map['addr'] = Variable<String>(addr.value);
+    }
     if (sortIndex.present) {
       map['sort_index'] = Variable<int>(sortIndex.value);
     }
@@ -2125,6 +2171,7 @@ class BoardCommentsCompanion extends UpdateCompanion<BoardComment> {
           ..write('rid: $rid, ')
           ..write('link: $link, ')
           ..write('avatar: $avatar, ')
+          ..write('addr: $addr, ')
           ..write('sortIndex: $sortIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2962,6 +3009,7 @@ typedef $$BoardCommentsTableCreateCompanionBuilder =
       Value<String?> rid,
       Value<String?> link,
       Value<String?> avatar,
+      Value<String?> addr,
       Value<int> sortIndex,
       Value<int> rowid,
     });
@@ -2974,6 +3022,7 @@ typedef $$BoardCommentsTableUpdateCompanionBuilder =
       Value<String?> rid,
       Value<String?> link,
       Value<String?> avatar,
+      Value<String?> addr,
       Value<int> sortIndex,
       Value<int> rowid,
     });
@@ -3019,6 +3068,11 @@ class $$BoardCommentsTableFilterComposer
 
   ColumnFilters<String> get avatar => $composableBuilder(
     column: $table.avatar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get addr => $composableBuilder(
+    column: $table.addr,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3072,6 +3126,11 @@ class $$BoardCommentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get addr => $composableBuilder(
+    column: $table.addr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortIndex => $composableBuilder(
     column: $table.sortIndex,
     builder: (column) => ColumnOrderings(column),
@@ -3109,6 +3168,9 @@ class $$BoardCommentsTableAnnotationComposer
 
   GeneratedColumn<String> get avatar =>
       $composableBuilder(column: $table.avatar, builder: (column) => column);
+
+  GeneratedColumn<String> get addr =>
+      $composableBuilder(column: $table.addr, builder: (column) => column);
 
   GeneratedColumn<int> get sortIndex =>
       $composableBuilder(column: $table.sortIndex, builder: (column) => column);
@@ -3152,6 +3214,7 @@ class $$BoardCommentsTableTableManager
                 Value<String?> rid = const Value.absent(),
                 Value<String?> link = const Value.absent(),
                 Value<String?> avatar = const Value.absent(),
+                Value<String?> addr = const Value.absent(),
                 Value<int> sortIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BoardCommentsCompanion(
@@ -3162,6 +3225,7 @@ class $$BoardCommentsTableTableManager
                 rid: rid,
                 link: link,
                 avatar: avatar,
+                addr: addr,
                 sortIndex: sortIndex,
                 rowid: rowid,
               ),
@@ -3174,6 +3238,7 @@ class $$BoardCommentsTableTableManager
                 Value<String?> rid = const Value.absent(),
                 Value<String?> link = const Value.absent(),
                 Value<String?> avatar = const Value.absent(),
+                Value<String?> addr = const Value.absent(),
                 Value<int> sortIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BoardCommentsCompanion.insert(
@@ -3184,6 +3249,7 @@ class $$BoardCommentsTableTableManager
                 rid: rid,
                 link: link,
                 avatar: avatar,
+                addr: addr,
                 sortIndex: sortIndex,
                 rowid: rowid,
               ),

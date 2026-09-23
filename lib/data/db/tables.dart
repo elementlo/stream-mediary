@@ -59,6 +59,9 @@ class BoardComments extends Table {
   TextColumn get link => text().nullable()();
   TextColumn get avatar => text().nullable()();
 
+  /// Province-level IP region shown next to the timestamp.
+  TextColumn get addr => text().nullable()();
+
   /// Sort order within the cached page set (server order, newest first).
   IntColumn get sortIndex => integer().withDefault(const Constant(0))();
 

@@ -17,6 +17,7 @@ List<WalineComment> commentsFromCache(List<BoardComment> rows) => [
           rid: row.rid,
           link: row.link,
           avatar: row.avatar,
+          addr: row.addr,
         ),
     ];
 
@@ -36,6 +37,7 @@ Future<void> cacheComments(
         rid: Value(comments[i].rid),
         link: Value(comments[i].link),
         avatar: Value(comments[i].avatar),
+        addr: Value(comments[i].addr),
       ),
   ]);
 }
