@@ -31,9 +31,16 @@ jobs:
       - name: Enable Windows desktop
         run: flutter config --enable-windows-desktop
 
-      - name: Run board check
+      - name: Run board check (phone layout)
         run: >
           flutter drive
           --driver=test_driver/integration_test.dart
           --target=integration_test/board_check_test.dart
+          -d windows
+
+      - name: Run board desktop refresh check
+        run: >
+          flutter drive
+          --driver=test_driver/integration_test.dart
+          --target=integration_test/board_desktop_refresh_test.dart
           -d windows
