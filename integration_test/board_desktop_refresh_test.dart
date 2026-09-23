@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:stream_mediary/app.dart';
+import 'package:stream_mediary/data/remote/waline_client.dart';
 
 /// Desktop-layout check for the message board refresh button.
 ///
 /// Uses a wide viewport so the app renders the desktop shell (header refresh
-/// button instead of pull-to-refresh), then exercises the refresh path that
-/// the phone-sized board_check_test never reaches.
+/// button instead of pull-to-refresh). Proves refresh actually re-fetches by
+/// posting a unique marker comment via the API first, then asserting it
+/// appears only after the button is tapped.
 ///
 /// ```bash
 /// flutter drive --driver=test_driver/integration_test.dart \
@@ -17,6 +19,11 @@ import 'package:stream_mediary/app.dart';
 /// ```
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  // Comment bodies render via SelectableText, which find.text does not match.
+  Finder commentBody(String text) => find.byWidgetPredicate(
+        (w) => w is SelectableText && w.data == text,
+      );
 
   testWidgets('desktop board refresh button reloads the list', (tester) async {
     // Wide desktop viewport -> NavigationRail + header actions.
@@ -35,7 +42,7 @@ void main() {
 
     // Wait for the first load to render a comment.
     var hasComment = false;
-    for (var i = 0; i < 15 && !hasComment; i++) {
+    for (var i = 0; i < 20 && !hasComment; i++) {
       await tester.pump(const Duration(seconds: 1));
       hasComment = find.text('probe').evaluate().isNotEmpty ||
           find.text('积极').evaluate().isNotEmpty;
@@ -47,63 +54,31 @@ void main() {
     expect(refreshBtn, findsOneWidget,
         reason: 'desktop refresh button missing');
 
-    // Tap refresh. The header button shows an in-button spinner while the
-    // request is in flight; assert it appears, then completes (disappears).
-    // This catches BOTH a hung refresh (spinner never clears) and an error.
+    // Post a unique marker via the API. It must NOT be on screen yet (the
+    // list was loaded before this post), proving the later appearance is
+    // caused by the refresh, not by stale state.
+    final marker = 'refresh_probe_${DateTime.now().millisecondsSinceEpoch}';
+    final client = WalineClient(serverUrl: WalineClient.defaultServerUrl);
+    await client.postComment(content: marker, nick: 'ci');
+    await tester.pump();
+    expect(commentBody(marker), findsNothing,
+        reason: 'marker visible before refresh — test is not meaningful');
+
+    // Tap refresh and wait for the marker to appear in the list.
     await tester.tap(refreshBtn);
     await tester.pump();
-
-    bool buttonSpinnerShowing() => find
-        .descendant(
-          of: find.byTooltip('刷新'),
-          matching: find.byType(CircularProgressIndicator),
-        )
-        .evaluate()
-        .isNotEmpty;
-
-    // Wait for the in-flight spinner to appear (request started).
-    var started = false;
-    for (var i = 0; i < 5 && !started; i++) {
-      await tester.pump(const Duration(milliseconds: 300));
-      started = buttonSpinnerShowing();
-    }
-
-    // Then wait for it to clear (request finished), up to ~30s to tolerate a
-    // cold serverless backend.
-    var finished = false;
-    for (var i = 0; i < 30 && !finished; i++) {
+    var markerAppeared = false;
+    for (var i = 0; i < 30 && !markerAppeared; i++) {
       await tester.pump(const Duration(seconds: 1));
-      finished = !buttonSpinnerShowing();
+      markerAppeared = commentBody(marker).evaluate().isNotEmpty;
     }
 
-    // Surface the exact error text if a banner appeared, so CI logs explain
-    // the failure instead of just asserting.
-    final errorTexts = find
-        .byWidgetPredicate((w) => w is Text)
-        .evaluate()
-        .map((e) => (e.widget as Text).data)
-        .whereType<String>()
-        .where((t) =>
-            t.contains('timed out') ||
-            t.contains('refused') ||
-            t.contains('reset') ||
-            t.contains('server returned') ||
-            t.contains('network') ||
-            t.contains('Socket') ||
-            t.contains('Handshake') ||
-            t.contains('certificate'))
-        .toList();
     // ignore: avoid_print
-    print('REFRESH started=$started finished=$finished errors=$errorTexts');
+    print('REFRESH markerAppeared=$markerAppeared marker=$marker');
 
-    expect(finished, isTrue,
-        reason: 'refresh hung: in-button spinner never cleared');
+    expect(markerAppeared, isTrue,
+        reason: 'refresh did not fetch the newly posted comment');
     expect(find.text('重试'), findsNothing,
-        reason: 'refresh produced an error banner: $errorTexts');
-    expect(
-        find.text('probe').evaluate().isNotEmpty ||
-            find.text('积极').evaluate().isNotEmpty,
-        isTrue,
-        reason: 'list empty after refresh');
+        reason: 'refresh produced an error banner');
   }, timeout: const Timeout(Duration(minutes: 3)));
 }
