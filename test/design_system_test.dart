@@ -534,5 +534,46 @@ void main() {
       expect(theme.textTheme.titleMedium?.fontFeatures, contains(tabularFigures.first));
       expect(theme.textTheme.bodySmall?.fontFeatures, contains(tabularFigures.first));
     });
+
+    testWidgets('switch thumb contrasts with its track in both states',
+        (tester) async {
+      // Regression: Material's default unselected switch (outline thumb on
+      // surfaceContainerHighest track) is nearly invisible in this palette.
+      for (final brightness in [Brightness.light, Brightness.dark]) {
+        late ThemeData theme;
+        await tester.pumpWidget(
+          harness(
+            Builder(builder: (context) {
+              theme = Theme.of(context);
+              return const SizedBox();
+            }),
+            brightness: brightness,
+          ),
+        );
+        final style = theme.switchTheme;
+        final scheme = theme.colorScheme;
+
+        final offThumb =
+            style.thumbColor!.resolve({})!;
+        final offTrack =
+            style.trackColor!.resolve({})!;
+        final onThumb =
+            style.thumbColor!.resolve({WidgetState.selected})!;
+        final onTrack =
+            style.trackColor!.resolve({WidgetState.selected})!;
+
+        // Relative luminance distance: 0 = identical, 1 = black vs white.
+        double contrast(Color a, Color b) =>
+            (a.computeLuminance() - b.computeLuminance()).abs();
+
+        expect(contrast(offThumb, offTrack), greaterThan(0.3),
+            reason: 'off-state thumb blends into track ($brightness)');
+        expect(contrast(onThumb, onTrack), greaterThan(0.3),
+            reason: 'on-state thumb blends into track ($brightness)');
+        // Off state must also read as "off": track stays a neutral surface,
+        // not the primary color.
+        expect(offTrack, isNot(scheme.primary));
+      }
+    });
   });
 }

@@ -210,6 +210,28 @@ abstract final class AppTheme {
         shape: const StadiumBorder(),
       ),
 
+      // Material's default unselected switch pairs an `outline` thumb with a
+      // `surfaceContainerHighest` track — nearly identical in this palette,
+      // so the control looks invisible. Use a high-contrast gray thumb and
+      // a hairline-bordered track for the off state instead.
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.onPrimary
+              : scheme.onSurfaceVariant,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.primary
+              : scheme.surfaceContainerHighest,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.primary
+              : colors.hairline,
+        ),
+      ),
+
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           textStyle: WidgetStatePropertyAll(text.labelLarge),
