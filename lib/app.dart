@@ -37,6 +37,7 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
   void _openDownloadLink() {
     final link = DownloadLinkService.instance.value;
     if (link == null || !mounted) return;
+    DownloadLinkService.instance.value = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(routerProvider).go('/new', extra: link);
     });

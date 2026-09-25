@@ -46,6 +46,7 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   String _parsedUrl = '';
   Map<String, String> _parsedHeaders = const {};
   int _preflightEpoch = 0;
+  int _spaceEpoch = 0;
   int _selectedVariant = 0;
   String? _saveDir;
   bool _advancedOpen = false;
@@ -134,6 +135,8 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       _result = null;
       _selectedMedia = null;
       _preflightEpoch++;
+      _spaceEpoch++;
+      _availableBytes = null;
     });
 
     final engine = ref.read(downloadEngineProvider);
@@ -169,6 +172,8 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       _checking = true;
       _selectedMedia = null;
       _estimatedBytes = null;
+      _availableBytes = null;
+      _spaceEpoch++;
     });
     try {
       final engine = ref.read(downloadEngineProvider);
@@ -189,13 +194,6 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
         media,
         headers: _parsedHeaders,
       );
-      final dir = _saveDir ?? await ref.read(defaultSaveDirProvider.future);
-      int? available;
-      try {
-        available = await DiskUsage.freeSpace(dir);
-      } catch (_) {
-        /* unsupported */
-      }
       if (!mounted || result != _result || epoch != _preflightEpoch) return;
       setState(() {
         _selectedMedia = media;
@@ -208,8 +206,8 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
                           8)
                       .round()
                 : null);
-        _availableBytes = available;
       });
+      await _refreshAvailableSpace();
     } catch (e, st) {
       logUserError('Check HLS media', e, st);
       if (mounted && epoch == _preflightEpoch) {
@@ -223,6 +221,19 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
         setState(() => _checking = false);
       }
     }
+  }
+
+  Future<void> _refreshAvailableSpace() async {
+    final epoch = ++_spaceEpoch;
+    final dir = _saveDir ?? await ref.read(defaultSaveDirProvider.future);
+    int? available;
+    try {
+      available = await DiskUsage.freeSpace(dir);
+    } catch (_) {
+      // Free-space queries are not supported on every platform.
+    }
+    if (!mounted || epoch != _spaceEpoch) return;
+    setState(() => _availableBytes = available);
   }
 
   void _applyTemplate(SourceTemplate template) {
@@ -361,9 +372,13 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       final dir = await file_selector.getDirectoryPath(
         confirmButtonText: l10n.chooseDirectory,
       );
+      if (!mounted) return;
       if (dir != null) {
-        setState(() => _saveDir = dir);
-        if (_result != null) await _refreshPreflight();
+        setState(() {
+          _saveDir = dir;
+          _availableBytes = null;
+        });
+        if (_result != null) await _refreshAvailableSpace();
       }
     } catch (_) {
       // Platform without directory picker; keep default.
@@ -373,6 +388,7 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final defaultSaveDir = ref.watch(defaultSaveDirProvider).asData?.value;
 
     return MediaryScaffold(
       title: l10n.newDownload,
@@ -512,7 +528,7 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
                 setState(() => _selectedVariant = i);
                 _refreshPreflight();
               },
-              saveDir: _saveDir,
+              saveDir: _saveDir ?? defaultSaveDir,
               onChooseDir: _chooseDir,
               onStart: _starting || _checking || _selectedMedia == null
                   ? null

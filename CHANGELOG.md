@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.9] - 2026-09-26
+
+### Fixed
+
+- Reuse the running Windows downloader when the browser extension opens another video link.
+- Show the configured default download directory on the parse preview and keep the parsed playlist when choosing a different directory.
+- Refresh available disk space for a changed directory without refetching the media playlist.
+
+### Companion extension
+
+- Open captured signed PNG stream URLs directly when available, avoiding a second request to the HLS entry endpoint.
+- Show in-page video controls on mouse hover and close their menu when clicking outside it.
+
 ## [0.0.8] - 2026-09-25
 
 ### Added

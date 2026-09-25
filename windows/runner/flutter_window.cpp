@@ -1,8 +1,14 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <flutter/standard_method_codec.h>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "utils.h"
+
+namespace {
+constexpr ULONG_PTR kDownloadLinkCopyData = 0x4D444C4B;
+}
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,6 +31,24 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  deep_link_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "stream_mediary/deep_link", &flutter::StandardMethodCodec::GetInstance());
+  deep_link_channel_->SetMethodCallHandler(
+      [this](const auto& call, auto result) {
+        if (call.method_name() == "getInitialLink") {
+          if (pending_link_.empty()) {
+            result->Success();
+          } else {
+            result->Success(flutter::EncodableValue(pending_link_));
+            pending_link_.clear();
+          }
+          dart_ready_ = true;
+        } else {
+          result->NotImplemented();
+        }
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -40,6 +64,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  deep_link_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -62,8 +87,30 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   switch (message) {
+    case WM_COPYDATA: {
+      const auto* data = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
+      if (data == nullptr || data->dwData != kDownloadLinkCopyData ||
+          data->lpData == nullptr || data->cbData < sizeof(wchar_t) ||
+          data->cbData > 32768 || data->cbData % sizeof(wchar_t) != 0) {
+        return FALSE;
+      }
+      const auto* raw = static_cast<const wchar_t*>(data->lpData);
+      const size_t length = data->cbData / sizeof(wchar_t);
+      if (raw[length - 1] != L'\0') return FALSE;
+      const std::string link = Utf8FromUtf16(raw);
+      if (link.empty() && length > 1) return FALSE;
+      if (!link.empty()) {
+        if (dart_ready_ && deep_link_channel_) {
+          deep_link_channel_->InvokeMethod(
+              "onOpenLink", std::make_unique<flutter::EncodableValue>(link));
+        } else {
+          pending_link_ = link;
+        }
+      }
+      return TRUE;
+    }
     case WM_FONTCHANGE:
-      flutter_controller_->engine()->ReloadSystemFonts();
+      if (flutter_controller_) flutter_controller_->engine()->ReloadSystemFonts();
       break;
   }
 

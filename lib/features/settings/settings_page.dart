@@ -102,6 +102,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         setState(() => _saveDir = dir);
         await ref.read(settingsRepositoryProvider).setDefaultSaveDir(dir);
         ref.read(downloadEngineProvider).defaultSaveDir = dir;
+        ref.invalidate(defaultSaveDirProvider);
       }
     } catch (_) {
       // Platform without directory picker; keep current value.

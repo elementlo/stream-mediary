@@ -45,8 +45,8 @@ class DownloadLink {
   }
 }
 
-/// Receives OS custom-protocol launches. Windows starts a new process with
-/// the URL as an argument; macOS sends the URL to the running app.
+/// Receives OS custom-protocol launches. Windows forwards later launches to
+/// the first process; macOS sends URLs to the running app directly.
 class DownloadLinkService extends ValueNotifier<DownloadLink?> {
   DownloadLinkService._() : super(null);
 
@@ -60,7 +60,7 @@ class DownloadLinkService extends ValueNotifier<DownloadLink?> {
         if (parsed != null) value = parsed;
       }
     }
-    if (Platform.isMacOS) {
+    if (Platform.isWindows || Platform.isMacOS) {
       _channel.setMethodCallHandler((call) async {
         if (call.method == 'onOpenLink' && call.arguments is String) {
           final parsed = DownloadLink.parse(call.arguments as String);

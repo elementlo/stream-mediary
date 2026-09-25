@@ -71,6 +71,12 @@ void main() {
       DownloadLink.parse('stream-mediary://download?url=file:///etc/passwd'),
       isNull,
     );
+    final signed = DownloadLink.parse(
+      'stream-mediary://download?url=https%3A%2F%2Fcdn.example%2Fmaster.png%3Fsig%3Da%252Bb'
+      '&referer=https%3A%2F%2Frou.video%2Fv%2Fid&userAgent=Chrome',
+    );
+    expect(signed?.url, 'https://cdn.example/master.png?sig=a%2Bb');
+    expect(signed?.headers['Referer'], 'https://rou.video/v/id');
   });
 
   test('applies byte ranges after PNG decoding', () async {
