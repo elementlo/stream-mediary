@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import '../../features/new_download/new_download_page.dart';
 import '../../features/new_download/batch_download_page.dart';
 import '../../features/player/player_page.dart';
 import '../../features/settings/settings_page.dart';
+import '../platform/download_link_service.dart';
 import '../../features/shell/adaptive_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -49,7 +51,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/new',
         name: 'new_download',
-        builder: (context, state) => const NewDownloadPage(),
+        builder: (context, state) {
+          final link = state.extra is DownloadLink
+              ? state.extra as DownloadLink
+              : null;
+          return NewDownloadPage(key: ValueKey(link), link: link);
+        },
       ),
       GoRoute(
         path: '/batch',

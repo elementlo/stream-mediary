@@ -10,6 +10,9 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
+    (NSApp.delegate as? AppDelegate)?.configureDeepLinkChannel(
+      messenger: flutterViewController.engine.binaryMessenger)
+
     super.awakeFromNib()
   }
 }

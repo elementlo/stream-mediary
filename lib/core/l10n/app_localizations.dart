@@ -746,6 +746,84 @@ abstract class AppLocalizations {
   /// **'请输入有效的地址'**
   String get errorInvalidUrl;
 
+  /// No description provided for @errorAccessDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'访问被拒绝或链接已过期，请更新地址及请求头后重试'**
+  String get errorAccessDenied;
+
+  /// No description provided for @errorMediaMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'视频资源不存在或已失效，请重新获取播放地址'**
+  String get errorMediaMissing;
+
+  /// No description provided for @errorNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络连接失败，请检查网络后重试'**
+  String get errorNetwork;
+
+  /// No description provided for @errorServer.
+  ///
+  /// In zh, this message translates to:
+  /// **'视频服务器暂时无法响应，请稍后重试'**
+  String get errorServer;
+
+  /// No description provided for @errorStorage.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法使用保存目录，请检查存储空间和目录权限'**
+  String get errorStorage;
+
+  /// No description provided for @errorLiveMedia.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不支持录制直播流'**
+  String get errorLiveMedia;
+
+  /// No description provided for @errorProtectedMedia.
+  ///
+  /// In zh, this message translates to:
+  /// **'此视频使用了暂不支持的内容保护方式'**
+  String get errorProtectedMedia;
+
+  /// No description provided for @errorUnsupportedMedia.
+  ///
+  /// In zh, this message translates to:
+  /// **'此视频流格式暂不支持'**
+  String get errorUnsupportedMedia;
+
+  /// No description provided for @errorInvalidMedia.
+  ///
+  /// In zh, this message translates to:
+  /// **'未识别到可下载的 HLS 视频，请检查播放地址'**
+  String get errorInvalidMedia;
+
+  /// No description provided for @errorTryAgain.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作未能完成，请稍后重试'**
+  String get errorTryAgain;
+
+  /// No description provided for @errorCommunityUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'留言服务暂时不可用，请稍后重试'**
+  String get errorCommunityUnavailable;
+
+  /// No description provided for @errorMergeSegmentMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并所需的切片文件缺失，请重新下载后再试'**
+  String get errorMergeSegmentMissing;
+
+  /// No description provided for @errorMergeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并失败，请检查保存目录和剩余空间后重试'**
+  String get errorMergeFailed;
+
   /// No description provided for @errorParseFailed.
   ///
   /// In zh, this message translates to:

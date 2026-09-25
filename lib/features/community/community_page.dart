@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/utils/user_error.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
@@ -101,18 +102,12 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
         _loading = false;
         _error = null;
       });
-    } on WalineException catch (e) {
+    } catch (e, st) {
+      logUserError('Load message board', e, st);
       if (!mounted) return;
       setState(() {
         _loading = false;
-        // Keep showing the cache; surface the failure quietly.
-        _error = e.message;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = '$e';
+        _error = AppLocalizations.of(context).errorCommunityUnavailable;
       });
     }
   }
@@ -137,17 +132,12 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
         _loading = false;
         _error = null;
       });
-    } on WalineException catch (e) {
+    } catch (e, st) {
+      logUserError('Load more messages', e, st);
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.message;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = '$e';
+        _error = AppLocalizations.of(context).errorCommunityUnavailable;
       });
     }
   }
@@ -171,11 +161,13 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       ref.invalidate(boardPrefetchProvider);
       await _applyPrefetch(silent: true);
       return true;
-    } on WalineException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-      return false;
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+    } catch (e, st) {
+      logUserError('Post message', e, st);
+      if (mounted) {
+        setState(
+          () => _error = AppLocalizations.of(context).errorCommunityUnavailable,
+        );
+      }
       return false;
     }
   }
@@ -196,8 +188,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       useSafeArea: true,
       builder: (sheetContext) => Padding(
         // Keep the fields above the soft keyboard on touch platforms.
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+        ),
         child: _ComposerSheet(
           title: replyTo == null
               ? l10n.communitySheetTitle
@@ -206,8 +199,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
           contentController: _contentController,
           nickHint: l10n.communityNickHint,
           contentHint: l10n.communityContentHint,
-          submitLabel:
-              replyTo == null ? l10n.communityPost : l10n.communityReply,
+          submitLabel: replyTo == null
+              ? l10n.communityPost
+              : l10n.communityReply,
           onSubmit: _submit,
         ),
       ),
@@ -275,14 +269,9 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.md),
-            child: _ErrorRetry(
-              message: _error!,
-              onRetry: _manualRefresh,
-            ),
+            child: _ErrorRetry(message: _error!, onRetry: _manualRefresh),
           ),
-        Expanded(
-          child: _buildList(l10n, profile),
-        ),
+        Expanded(child: _buildList(l10n, profile)),
       ],
     );
   }
@@ -293,11 +282,12 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
       controller: _scrollController,
       // Mobile: allow overscroll even when content is shorter than the
       // viewport, otherwise RefreshIndicator can never trigger.
-      physics: profile.isDesktop
-          ? null
-          : const AlwaysScrollableScrollPhysics(),
+      physics: profile.isDesktop ? null : const AlwaysScrollableScrollPhysics(),
       // Extra bottom room so the FAB never covers the last card.
-      padding: const EdgeInsets.only(top: Spacing.lg, bottom: Spacing.xxl * 2.5),
+      padding: const EdgeInsets.only(
+        top: Spacing.lg,
+        bottom: Spacing.xxl * 2.5,
+      ),
       children: [
         const _BoardWarning(),
         const SizedBox(height: Spacing.md),
@@ -333,9 +323,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                 children: [
                   Text(
                     l10n.communityPageInfo(_page, _totalPages),
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
+                    style: Theme.of(context).textTheme.labelSmall
                         ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: Spacing.xs),
@@ -382,6 +370,7 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
         }
       }
     }
+
     walk(objectId);
     return result;
   }
@@ -450,7 +439,11 @@ class _ComposerSheetState extends State<_ComposerSheet> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
+        Spacing.xl,
+        Spacing.md,
+        Spacing.xl,
+        Spacing.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -484,8 +477,9 @@ class _ComposerSheetState extends State<_ComposerSheet> {
               padding: const EdgeInsets.only(top: Spacing.xs),
               child: Text(
                 _error!,
-                style: text.bodySmall
-                    ?.copyWith(color: context.mediaryColors.danger),
+                style: text.bodySmall?.copyWith(
+                  color: context.mediaryColors.danger,
+                ),
               ),
             ),
           const SizedBox(height: Spacing.md),
@@ -547,7 +541,10 @@ class _CommentThreadState extends State<_CommentThread> {
         if (widget.replies.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(
-                left: Spacing.xl, top: 2, bottom: Spacing.sm),
+              left: Spacing.xl,
+              top: 2,
+              bottom: Spacing.sm,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -558,7 +555,9 @@ class _CommentThreadState extends State<_CommentThread> {
                   borderRadius: Radii.smAll,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: Spacing.sm, vertical: 3),
+                      horizontal: Spacing.sm,
+                      vertical: 3,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -566,10 +565,9 @@ class _CommentThreadState extends State<_CommentThread> {
                           _expanded
                               ? l10n.communityCollapseReplies
                               : l10n.communityExpandReplies(
-                                  widget.replies.length),
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
+                                  widget.replies.length,
+                                ),
+                          style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                         Icon(
@@ -588,7 +586,10 @@ class _CommentThreadState extends State<_CommentThread> {
                   // without heavy indentation or extra cards.
                   Container(
                     margin: const EdgeInsets.only(
-                        left: Spacing.md, top: 2, bottom: 2),
+                      left: Spacing.md,
+                      top: 2,
+                      bottom: 2,
+                    ),
                     padding: const EdgeInsets.only(left: Spacing.md),
                     decoration: BoxDecoration(
                       border: Border(
@@ -627,16 +628,17 @@ class _UserBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(left: Spacing.xs + 2),
-      padding: const EdgeInsets.symmetric(horizontal: Spacing.xs + 2, vertical: 1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.xs + 2,
+        vertical: 1,
+      ),
       decoration: BoxDecoration(
         color: scheme.primary.withValues(alpha: 0.12),
         borderRadius: Radii.smAll,
       ),
       child: Text(
         text,
-        style: Theme.of(context)
-            .textTheme
-            .labelSmall
+        style: Theme.of(context).textTheme.labelSmall
             ?.copyWith(color: scheme.primary, fontSize: 10),
       ),
     );
@@ -705,22 +707,25 @@ class _CommentTile extends StatelessWidget {
                       children: [
                         Text(
                           _relativeTime(context, comment.insertedAt),
-                          style: text.labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                         if (comment.addr != null) ...[
                           Text(
                             ' · ',
-                            style: text.labelSmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+                            style: text.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                           Flexible(
                             child: Text(
                               comment.addr!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: text.labelSmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                              style: text.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ],
@@ -791,8 +796,9 @@ class _ReplyTile extends StatelessWidget {
                             comment.nick,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style:
-                                text.labelLarge?.copyWith(color: scheme.primary),
+                            style: text.labelLarge?.copyWith(
+                              color: scheme.primary,
+                            ),
                           ),
                         ),
                         if (comment.label != null)
@@ -804,8 +810,9 @@ class _ReplyTile extends StatelessWidget {
                               '@$mentionNick',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  text.labelSmall?.copyWith(color: colors.accent),
+                              style: text.labelSmall?.copyWith(
+                                color: colors.accent,
+                              ),
                             ),
                           ),
                         ],
@@ -815,22 +822,25 @@ class _ReplyTile extends StatelessWidget {
                       children: [
                         Text(
                           _relativeTime(context, comment.insertedAt),
-                          style: text.labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                         if (comment.addr != null) ...[
                           Text(
                             ' · ',
-                            style: text.labelSmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+                            style: text.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                           Flexible(
                             child: Text(
                               comment.addr!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: text.labelSmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                              style: text.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ],
@@ -844,7 +854,9 @@ class _ReplyTile extends StatelessWidget {
                 borderRadius: Radii.smAll,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: Spacing.xs, vertical: 2),
+                    horizontal: Spacing.xs,
+                    vertical: 2,
+                  ),
                   child: Text(
                     replyLabel,
                     style: text.labelSmall?.copyWith(color: colors.accent),
@@ -874,7 +886,9 @@ class _BoardWarning extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md, vertical: Spacing.sm + 2),
+        horizontal: Spacing.md,
+        vertical: Spacing.sm + 2,
+      ),
       decoration: BoxDecoration(
         color: colors.warning.withValues(alpha: 0.10),
         borderRadius: Radii.mdAll,
@@ -915,17 +929,14 @@ class _ErrorRetry extends StatelessWidget {
         Expanded(
           child: Text(
             message,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
+            style: Theme.of(context).textTheme.bodySmall
                 ?.copyWith(color: colors.danger),
           ),
         ),
         TextButton(
-            onPressed: onRetry,
-            child: Text(
-              AppLocalizations.of(context).retry,
-            )),
+          onPressed: onRetry,
+          child: Text(AppLocalizations.of(context).retry),
+        ),
       ],
     );
   }

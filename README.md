@@ -47,6 +47,7 @@
 ## ✨ 功能特性
 
 - **🔗 HLS 解析** — 粘贴 `.m3u8` 地址即可预览分片数量、总时长、加密状态与估算大小；master playlist 会列出全部清晰度/带宽供选择。
+- **🖼️ PNG 包装 HLS** — 直接解析 `roUd` PNG 中的清单、分片和密钥；macOS / Windows 可通过 `stream-mediary://download` 从 Chrome 扩展打开下载界面，无需本地代理。
 - **⚡ 并发下载** — 两级调度：任务级并发（默认 3）+ 任务内分片并发（默认 8）。
 - **🔐 AES 解密** — 纯 Dart 流式 AES-128/192/256-CBC 解密，支持自定义 HTTP 请求头与用户指定的 KEY / IV 覆盖。
 - **🧩 智能合并** — 分片按序拼接为单个 `.ts`；检测到 `ffmpeg` 时无损 remux 为 `.mp4`（`-c copy`），失败自动回退保留 `.ts`。
@@ -75,12 +76,18 @@
 
 | 平台 | 安装包 |
 |---|---|
-| Windows | `.exe` / `.msix` |
-| macOS | `.dmg` / `.app` |
-| Android | `.apk` |
-| iOS | 需自行编译并侧载 |
+| Windows x64 | `Mediary-windows-x64.zip`（解压后运行 `Mediary.exe`） |
+| macOS | `Mediary-macos-<架构>.zip`（内含 `Mediary.app`） |
+| Android | ARM64 / ARMv7 `.apk` |
+| iOS | 无签名 `.app.zip`，需自行签名后侧载 |
 
 ## 🚀 快速开始
+
+### Chrome 扩展导入
+
+安装并启动一次桌面版 Mediary，再安装 [Video Stream Link Detector](https://github.com/elementlo/IDM-shell-extension) 扩展。在视频页选择“在 Mediary 中下载”，应用会读取入口地址、来源页和浏览器 User-Agent，预览流媒体并允许选择清晰度后开始下载。扩展也可复制原始 HTTP(S) 入口，粘贴到新版 Mediary 的新建下载页。PNG 包装的入口不适用于未实现 `roUd` 解包的普通 HLS 下载器。
+
+macOS 的协议由 `.app` 注册；Windows 在应用首次启动时写入当前用户的协议注册表项。签名 CDN 地址可能过期，需要重新从网页获取入口。
 
 ### 环境要求
 

@@ -4,19 +4,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/l10n/app_localizations.dart';
 import 'core/platform/platform_profile.dart';
+import 'core/platform/download_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_providers.dart';
 
-class StreamMediaryApp extends ConsumerWidget {
+class StreamMediaryApp extends ConsumerStatefulWidget {
   const StreamMediaryApp({super.key});
 
+  @override
+  ConsumerState<StreamMediaryApp> createState() => _StreamMediaryAppState();
+}
+
+class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
   /// One-shot guard: the board prefetch must fire exactly once per process,
   /// not on every rebuild of the app widget.
   static bool _boardPrefetchStarted = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    DownloadLinkService.instance.addListener(_openDownloadLink);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openDownloadLink());
+  }
+
+  @override
+  void dispose() {
+    DownloadLinkService.instance.removeListener(_openDownloadLink);
+    super.dispose();
+  }
+
+  void _openDownloadLink() {
+    final link = DownloadLinkService.instance.value;
+    if (link == null || !mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(routerProvider).go('/new', extra: link);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.watch(queuePolicyProvider);
     ref.watch(completionNotificationsProvider);
     final router = ref.watch(routerProvider);

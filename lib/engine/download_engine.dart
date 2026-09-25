@@ -27,6 +27,7 @@ import 'm3u8/playlist.dart';
 import 'merge/ffmpeg_remuxer.dart';
 import 'merge/ts_merger.dart';
 import 'net/segment_downloader.dart';
+import 'net/roud_decoder.dart';
 import 'scheduler/segment_scheduler.dart';
 import 'task/task_runtime.dart';
 import 'task/task_state.dart';
@@ -91,8 +92,8 @@ class DownloadEngine {
     String url, {
     Map<String, String> headers = const {},
   }) async {
-    final content = await _fetchPlaylistText(url, headers);
-    return _parser.parse(content, playlistUrl: url);
+    final (content, finalUrl, wrapped) = await _fetchPlaylistText(url, headers);
+    return _parser.parse(content, playlistUrl: finalUrl, inheritQuery: wrapped);
   }
 
   /// Best-effort estimate. A byte-range playlist is exact; otherwise sample
@@ -136,7 +137,7 @@ class DownloadEngine {
     return (sampledBytes * playlist.totalDuration / sampledDuration).round();
   }
 
-  Future<String> _fetchPlaylistText(
+  Future<(String, String, bool)> _fetchPlaylistText(
     String url,
     Map<String, String> headers,
   ) async {
@@ -149,7 +150,21 @@ class DownloadEngine {
         receiveTimeout: const Duration(seconds: 30),
       ),
     );
-    return utf8.decode(response.data ?? const [], allowMalformed: true);
+    final bytes = response.data ?? const <int>[];
+    final wrapped = isPng(bytes);
+    final decoded = unwrapRoud(bytes);
+    var finalUri = response.requestOptions.uri;
+    for (final redirect in response.redirects) {
+      finalUri = finalUri.resolveUri(redirect.location);
+    }
+    if (response.redirects.isEmpty) {
+      finalUri = finalUri.resolveUri(response.realUri);
+    }
+    return (
+      utf8.decode(decoded, allowMalformed: true).replaceFirst('\uFEFF', ''),
+      finalUri.toString(),
+      wrapped,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -516,7 +531,7 @@ class DownloadEngine {
       ),
       cancelToken: runtime.cancelToken,
     );
-    final keyBytes = response.data ?? const [];
+    final keyBytes = unwrapRoud(response.data ?? const <int>[]);
     runtime.keyCache[uri] = keyBytes;
     return Uint8List.fromList(keyBytes);
   }

@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:logging/logging.dart';
 
 import '../m3u8/playlist.dart';
+import 'roud_decoder.dart';
 
 final Logger _log = Logger('SegmentDownloader');
 
@@ -53,6 +54,10 @@ class SegmentDownloader {
   }) async {
     final partFile = File('${targetFile.path}.part');
     await targetFile.parent.create(recursive: true);
+    // Byte ranges refer to the decoded media, not the outer PNG container.
+    final localRange =
+        byteRange != null &&
+        Uri.tryParse(url)?.path.toLowerCase().endsWith('.png') == true;
 
     for (var attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -62,7 +67,7 @@ class SegmentDownloader {
             responseType: ResponseType.stream,
             headers: {
               ...headers,
-              if (byteRange != null)
+              if (byteRange != null && !localRange)
                 'Range': 'bytes=${byteRange.offset}-${byteRange.end}',
             },
             followRedirects: true,
@@ -71,10 +76,10 @@ class SegmentDownloader {
           cancelToken: cancelToken,
         );
 
-        if (byteRange != null && response.statusCode != 206) {
+        if (byteRange != null && !localRange && response.statusCode != 206) {
           throw StateError('Server ignored the requested byte range');
         }
-        if (byteRange != null) {
+        if (byteRange != null && !localRange) {
           final contentRange = response.headers.value(
             HttpHeaders.contentRangeHeader,
           );
@@ -102,10 +107,42 @@ class SegmentDownloader {
           await sink.close();
         }
 
-        if (byteRange != null && received != byteRange.length) {
+        if (byteRange != null && !localRange && received != byteRange.length) {
           throw StateError(
             'Byte range length mismatch: $received of ${byteRange.length}',
           );
+        }
+
+        // PNG-wrapped resources must be decoded before AES and merge.
+        final input = await partFile.open();
+        final signature = await input.read(8);
+        await input.close();
+        if (isPng(signature)) {
+          final decoded = unwrapRoud(await partFile.readAsBytes());
+          if (localRange) {
+            if (byteRange.end >= decoded.length) {
+              throw const FormatException('Decoded byte range exceeds media');
+            }
+            await partFile.writeAsBytes(
+              decoded.sublist(byteRange.offset, byteRange.end + 1),
+              flush: true,
+            );
+            received = byteRange.length;
+          } else {
+            await partFile.writeAsBytes(decoded, flush: true);
+            received = decoded.length;
+          }
+        } else if (localRange) {
+          // A .png URL may actually return plain media; apply the range here.
+          final data = await partFile.readAsBytes();
+          if (byteRange.end >= data.length) {
+            throw const FormatException('Byte range exceeds media');
+          }
+          await partFile.writeAsBytes(
+            data.sublist(byteRange.offset, byteRange.end + 1),
+            flush: true,
+          );
+          received = byteRange.length;
         }
 
         // Atomic rename into place.

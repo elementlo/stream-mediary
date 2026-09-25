@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/utils/user_error.dart';
 import '../../engine/download_engine.dart';
 import '../../engine/engine_store.dart';
 
@@ -88,11 +89,11 @@ Future<bool> showRecoverSourceDialog(
   try {
     await engine.replaceExpiredSource(taskId, url, headers: headers);
     return true;
-  } catch (error) {
+  } catch (error, st) {
+    logUserError('Replace expired source', error, st);
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.errorParseFailed('$error'))));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(userErrorMessage(error, l10n))));
     }
     return false;
   }

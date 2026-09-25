@@ -2,24 +2,19 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logging/logging.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
+import 'core/platform/download_link_service.dart';
+import 'core/utils/app_logging.dart';
 
-Future<void> main() async {
+Future<void> main([List<String> arguments = const []]) async {
   WidgetsFlutterBinding.ensureInitialized();
+  configureAppLogging();
+  await DownloadLinkService.instance.initialize(arguments: arguments);
 
   // media_kit native libraries are loaded lazily on first Player creation
   // (see playerProvider) to keep cold start fast.
-
-  // Basic logging.
-  Logger.root.level = Level.INFO;
-  Logger.root.onRecord.listen((record) {
-    // ignore: avoid_print
-    print('${record.level.name}: ${record.time}: '
-        '[${record.loggerName}] ${record.message}');
-  });
 
   // Desktop window configuration.
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {

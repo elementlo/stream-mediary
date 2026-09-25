@@ -27,7 +27,11 @@ class M3u8Parser {
   ///
   /// [playlistUrl] is the absolute URL the content was fetched from; it is
   /// used to resolve relative segment/variant/key URIs.
-  ParseResult parse(String content, {required String playlistUrl}) {
+  ParseResult parse(
+    String content, {
+    required String playlistUrl,
+    bool inheritQuery = false,
+  }) {
     final lines = content
         .split(RegExp(r'\r\n|\r|\n'))
         .map((l) => l.trim())
@@ -41,11 +45,15 @@ class M3u8Parser {
     // Detect master playlist by presence of STREAM-INF.
     final isMaster = lines.any((l) => l.startsWith('#EXT-X-STREAM-INF'));
     return isMaster
-        ? _parseMaster(lines, playlistUrl)
-        : _parseMedia(lines, playlistUrl);
+        ? _parseMaster(lines, playlistUrl, inheritQuery)
+        : _parseMedia(lines, playlistUrl, inheritQuery);
   }
 
-  MasterParseResult _parseMaster(List<String> lines, String baseUrl) {
+  MasterParseResult _parseMaster(
+    List<String> lines,
+    String baseUrl,
+    bool inheritQuery,
+  ) {
     final variants = <Variant>[];
     Map<String, String>? pendingAttrs;
 
@@ -58,7 +66,7 @@ class M3u8Parser {
         final resolution = attrs['RESOLUTION'];
         variants.add(
           Variant(
-            url: resolveUrl(line, baseUrl),
+            url: resolveUrl(line, baseUrl, inheritQuery: inheritQuery),
             bandwidth: int.tryParse(attrs['BANDWIDTH'] ?? ''),
             resolution: resolution,
             codecs: attrs['CODECS'],
@@ -77,7 +85,11 @@ class M3u8Parser {
     return MasterParseResult(MasterPlaylist(variants: variants));
   }
 
-  MediaParseResult _parseMedia(List<String> lines, String baseUrl) {
+  MediaParseResult _parseMedia(
+    List<String> lines,
+    String baseUrl,
+    bool inheritQuery,
+  ) {
     final segments = <Segment>[];
     var mediaSequence = 0;
     var hasEndList = false;
@@ -120,7 +132,7 @@ class M3u8Parser {
           );
         }
         initializationSection = InitializationSection(
-          url: resolveUrl(uri, baseUrl),
+          url: resolveUrl(uri, baseUrl, inheritQuery: inheritQuery),
           byteRange: attrs['BYTERANGE'] == null
               ? null
               : _parseRange(attrs['BYTERANGE']!, null),
@@ -130,7 +142,7 @@ class M3u8Parser {
       } else if (line.startsWith('#EXT-X-DISCONTINUITY')) {
         pendingDiscontinuity = true;
       } else if (line.startsWith('#EXT-X-KEY')) {
-        currentKey = _parseKey(_tagValue(line), baseUrl);
+        currentKey = _parseKey(_tagValue(line), baseUrl, inheritQuery);
       } else if (line.startsWith('#EXTINF')) {
         final value = _tagValue(line);
         final comma = value?.indexOf(',');
@@ -138,7 +150,7 @@ class M3u8Parser {
         pendingDuration = double.tryParse(durationText ?? '') ?? 0;
       } else if (!line.startsWith('#')) {
         // Segment URI line.
-        final url = resolveUrl(line, baseUrl);
+        final url = resolveUrl(line, baseUrl, inheritQuery: inheritQuery);
         final range = pendingRange == null
             ? null
             : _parseRange(
@@ -211,7 +223,7 @@ class M3u8Parser {
     return ByteRange(offset, length);
   }
 
-  KeyInfo? _parseKey(String? attrsRaw, String baseUrl) {
+  KeyInfo? _parseKey(String? attrsRaw, String baseUrl, bool inheritQuery) {
     final attrs = parseAttributeList(attrsRaw);
     final method = parseEncryptionMethod(attrs['METHOD']);
     if (attrs['METHOD'] != 'NONE' && method == EncryptionMethod.none) {
@@ -237,7 +249,11 @@ class M3u8Parser {
         ivHex = ivHex.substring(2);
       }
     }
-    return KeyInfo(method: method, uri: resolveUrl(uri, baseUrl), ivHex: ivHex);
+    return KeyInfo(
+      method: method,
+      uri: resolveUrl(uri, baseUrl, inheritQuery: inheritQuery),
+      ivHex: ivHex,
+    );
   }
 
   /// Returns the value part of a `#TAG:value` line, or null.
@@ -251,7 +267,11 @@ class M3u8Parser {
   ///
   /// Handles absolute URLs, protocol-relative URLs, absolute paths and
   /// relative paths (including `../` and query strings).
-  static String resolveUrl(String url, String baseUrl) {
+  static String resolveUrl(
+    String url,
+    String baseUrl, {
+    bool inheritQuery = false,
+  }) {
     final trimmed = url.trim();
     final parsed = Uri.tryParse(trimmed);
     if (parsed != null && parsed.hasScheme) {
@@ -265,11 +285,14 @@ class M3u8Parser {
       return '${base.scheme}:$trimmed';
     }
 
-    if (trimmed.startsWith('/')) {
-      return base.replace(path: trimmed, query: null).toString();
+    final resolved = base.resolve(trimmed);
+    if (inheritQuery &&
+        parsed != null &&
+        !parsed.hasQuery &&
+        !resolved.hasQuery &&
+        base.hasQuery) {
+      return resolved.replace(query: base.query).toString();
     }
-
-    // Relative path: resolve against the base directory.
-    return base.resolve(trimmed).toString();
+    return resolved.toString();
   }
 }

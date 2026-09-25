@@ -8,6 +8,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/utils/user_error.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../providers/app_providers.dart';
@@ -104,8 +105,13 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
       }
     });
     _errorSub = player.stream.error.listen((message) {
+      logUserError(
+        'Open downloaded video',
+        StateError(message),
+        StackTrace.current,
+      );
       if (mounted && !_ready) {
-        setState(() => _error = '${l10n.playerOpenFailed}: $message');
+        setState(() => _error = l10n.playerOpenFailed);
       }
     });
     // Give up waiting for a playable stream after 15s.

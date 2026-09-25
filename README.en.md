@@ -75,10 +75,10 @@ Grab the latest pre-built binaries for your platform from the **[Releases](https
 
 | Platform | Artifact |
 |---|---|
-| Windows | `.exe` / `.msix` |
-| macOS | `.dmg` / `.app` |
-| Android | `.apk` |
-| iOS | Build from source (sideload) |
+| Windows x64 | `Mediary-windows-x64.zip` (extract and run `Mediary.exe`) |
+| macOS | `Mediary-macos-<architecture>.zip` (contains `Mediary.app`) |
+| Android | ARM64 / ARMv7 `.apk` |
+| iOS | Unsigned `.app.zip`; sign it yourself before sideloading |
 
 ## 🚀 Getting Started
 

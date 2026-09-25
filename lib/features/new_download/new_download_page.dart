@@ -8,9 +8,11 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/platform/download_link_service.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/user_error.dart';
 import '../../core/utils/storage_access.dart';
 import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
@@ -23,7 +25,9 @@ import '../../data/repositories/source_repository.dart';
 import '../../providers/app_providers.dart';
 
 class NewDownloadPage extends ConsumerStatefulWidget {
-  const NewDownloadPage({super.key});
+  const NewDownloadPage({super.key, this.link});
+
+  final DownloadLink? link;
 
   @override
   ConsumerState<NewDownloadPage> createState() => _NewDownloadPageState();
@@ -56,6 +60,19 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
   @override
   void initState() {
     super.initState();
+    final link = widget.link;
+    if (link != null) {
+      _urlController.text = link.url;
+      for (final header in link.headers.entries) {
+        final row = _HeaderRow();
+        row.keyController.text = header.key;
+        row.valueController.text = header.value;
+        _headers.add(row);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _parse();
+      });
+    }
     _loadSources();
   }
 
@@ -85,11 +102,18 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
     super.dispose();
   }
 
-  Map<String, String> get _headerMap => {
-    for (final h in _headers)
-      if (h.keyController.text.trim().isNotEmpty)
-        h.keyController.text.trim(): h.valueController.text.trim(),
-  };
+  Map<String, String> get _headerMap {
+    final uri = Uri.tryParse(_urlController.text.trim());
+    final match = uri?.host == 'rou.video'
+        ? RegExp(r'^/api/hls/([^/]+)$').firstMatch(uri!.path)
+        : null;
+    return {
+      if (match != null) 'Referer': 'https://rou.video/v/${match.group(1)}',
+      for (final h in _headers)
+        if (h.keyController.text.trim().isNotEmpty)
+          h.keyController.text.trim(): h.valueController.text.trim(),
+    };
+  }
 
   bool get _urlLooksValid {
     final uri = Uri.tryParse(_urlController.text.trim());
@@ -123,17 +147,12 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
         _selectedVariant = 0;
       });
       await _refreshPreflight();
-    } on M3u8ParseException catch (e) {
+    } catch (e, st) {
+      logUserError('Parse HLS preview', e, st);
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(
-          () =>
-              _error = AppLocalizations.of(context).errorParseFailed(e.message),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => _error = AppLocalizations.of(context).errorParseFailed('$e'),
+          () => _error = l10n.errorParseFailed(userErrorMessage(e, l10n)),
         );
       }
     } finally {
@@ -191,11 +210,12 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
                 : null);
         _availableBytes = available;
       });
-    } catch (e) {
+    } catch (e, st) {
+      logUserError('Check HLS media', e, st);
       if (mounted && epoch == _preflightEpoch) {
+        final l10n = AppLocalizations.of(context);
         setState(
-          () =>
-              _error = AppLocalizations.of(context).errorParseFailed('$e'),
+          () => _error = l10n.errorParseFailed(userErrorMessage(e, l10n)),
         );
       }
     } finally {
@@ -315,10 +335,9 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       await engine.startTask(id: id, request: request, playlist: media);
       await ref.read(sourceRepositoryProvider).remember(_parsedUrl);
       if (mounted) context.go('/downloads');
-    } on M3u8ParseException catch (e) {
-      if (mounted) setState(() => _error = l10n.errorParseFailed(e.message));
-    } catch (e) {
-      if (mounted) setState(() => _error = l10n.errorParseFailed('$e'));
+    } catch (e, st) {
+      logUserError('Start HLS download', e, st);
+      if (mounted) setState(() => _error = userErrorMessage(e, l10n));
     } finally {
       if (mounted) setState(() => _starting = false);
     }

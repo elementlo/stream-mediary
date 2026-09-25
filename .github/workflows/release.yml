@@ -36,6 +36,9 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
+      - name: Test
+        run: flutter test
+
       - name: Decode signing keystore (optional)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -105,6 +108,40 @@ jobs:
           name: macos
           path: release/*
 
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
+
+      - name: Stage artifact for manual signing
+        run: |
+          mkdir -p release
+          ditto -c -k --keepParent build/ios/iphoneos/Runner.app \
+            release/Mediary-ios-unsigned.app.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: release/*
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -146,9 +183,12 @@ jobs:
   release:
     # Only publish a GitHub Release for version tags; manual runs stop at artifacts.
     if: github.ref_type == 'tag'
-    needs: [build-android, build-macos, build-windows]
+    needs: [build-android, build-ios, build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -158,10 +198,15 @@ jobs:
       - name: List release files
         run: ls -la release
 
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum Mediary-* > SHA256SUMS.txt
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: release/*
-          generate_release_notes: true
+          body_path: release-notes/${{ github.ref_name }}.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

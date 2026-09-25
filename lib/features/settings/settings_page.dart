@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/utils/user_error.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
@@ -285,10 +286,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: ffmpeg.when(
               data: (probe) => _FfmpegStatus(probe: probe, l10n: l10n),
               loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text(
-                '$e',
-                style: TextStyle(color: context.mediaryColors.danger),
-              ),
+              error: (e, st) {
+                logUserError('Check ffmpeg availability', e, st);
+                return Text(
+                  l10n.ffmpegNotFound,
+                  style: TextStyle(color: context.mediaryColors.danger),
+                );
+              },
             ),
           ),
           SectionHeader(l10n.about),

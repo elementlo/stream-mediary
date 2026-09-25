@@ -11,6 +11,7 @@ import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/user_error.dart';
 import '../../core/utils/storage_access.dart';
 import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
@@ -20,7 +21,9 @@ import '../../engine/merge/folder_merger.dart';
 import '../../providers/app_providers.dart';
 
 /// Folder merger used by this page. Overridable in tests.
-final folderMergerProvider = Provider<FolderMerger>((ref) => const FolderMerger());
+final folderMergerProvider = Provider<FolderMerger>(
+  (ref) => const FolderMerger(),
+);
 
 /// Standalone tool: merge the TS segments inside a user-chosen folder into a
 /// single video file (MP4 on desktop via ffmpeg, TS on mobile).
@@ -102,9 +105,7 @@ class _MergePageState extends ConsumerState<MergePage> {
         SnackBar(content: Text(l10n.mergeFolderUnreadable)),
       );
     } else if (scan.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.mergeNoTsFiles)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.mergeNoTsFiles)));
     }
   }
 
@@ -114,8 +115,7 @@ class _MergePageState extends ConsumerState<MergePage> {
 
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final ffmpegPath =
-        await ref.read(settingsRepositoryProvider).ffmpegPath();
+    final ffmpegPath = await ref.read(settingsRepositoryProvider).ffmpegPath();
     if (!mounted) return;
 
     setState(() {
@@ -127,25 +127,35 @@ class _MergePageState extends ConsumerState<MergePage> {
       _phase = FolderMergePhase.concatenating;
     });
 
-    final result = await ref.read(folderMergerProvider).mergeFolder(
-      Directory(folderPath),
-      preferMp4: _preferMp4,
-      ffmpegPath: ffmpegPath,
-      onProgress: (written, total) {
-        if (!mounted) return;
-        final v = total == 0 ? 1.0 : written / total;
-        // Throttle rebuilds: ignore sub-0.5% changes until completion.
-        if ((v - _progress).abs() < 0.005 && v < 1.0) return;
-        setState(() {
-          _progress = v;
-          _written = written;
-          _total = total;
-        });
-      },
-      onPhaseChanged: (phase) {
-        if (mounted) setState(() => _phase = phase);
-      },
-    );
+    final result = await ref
+        .read(folderMergerProvider)
+        .mergeFolder(
+          Directory(folderPath),
+          preferMp4: _preferMp4,
+          ffmpegPath: ffmpegPath,
+          onProgress: (written, total) {
+            if (!mounted) return;
+            final v = total == 0 ? 1.0 : written / total;
+            // Throttle rebuilds: ignore sub-0.5% changes until completion.
+            if ((v - _progress).abs() < 0.005 && v < 1.0) return;
+            setState(() {
+              _progress = v;
+              _written = written;
+              _total = total;
+            });
+          },
+          onPhaseChanged: (phase) {
+            if (mounted) setState(() => _phase = phase);
+          },
+        );
+
+    if (result.error != null) {
+      logUserError(
+        'Merge video folder',
+        StateError('${result.error}: ${result.errorMessage ?? ''}'),
+        StackTrace.current,
+      );
+    }
 
     if (!mounted) return;
     setState(() {
@@ -153,9 +163,7 @@ class _MergePageState extends ConsumerState<MergePage> {
       _result = result;
       _progress = 1;
     });
-    messenger.showSnackBar(
-      SnackBar(content: Text(_messageFor(result, l10n))),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(_messageFor(result, l10n))));
   }
 
   String _messageFor(FolderMergeResult result, AppLocalizations l10n) {
@@ -168,10 +176,8 @@ class _MergePageState extends ConsumerState<MergePage> {
     return switch (result.error) {
       FolderMergeError.noTsFiles => l10n.mergeNoTsFiles,
       FolderMergeError.folderUnreadable => l10n.mergeFolderUnreadable,
-      FolderMergeError.segmentMissing =>
-        l10n.mergeSegmentMissing(result.errorMessage ?? ''),
-      FolderMergeError.writeFailed || null =>
-        l10n.mergeFailed(result.errorMessage ?? ''),
+      FolderMergeError.segmentMissing => l10n.errorMergeSegmentMissing,
+      FolderMergeError.writeFailed || null => l10n.errorMergeFailed,
     };
   }
 
@@ -179,7 +185,8 @@ class _MergePageState extends ConsumerState<MergePage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scan = _scan;
-    final canMerge = _folderPath != null &&
+    final canMerge =
+        _folderPath != null &&
         scan != null &&
         !scan.isEmpty &&
         scan.error == null &&
@@ -195,10 +202,7 @@ class _MergePageState extends ConsumerState<MergePage> {
           MediaryCard(
             padding: EdgeInsets.zero,
             onTap: _merging ? null : _chooseFolder,
-            child: _FolderRow(
-              path: _folderPath,
-              label: l10n.mergeChooseFolder,
-            ),
+            child: _FolderRow(path: _folderPath, label: l10n.mergeChooseFolder),
           ),
           if (_scanning) ...[
             const SizedBox(height: Spacing.md),
@@ -215,14 +219,8 @@ class _MergePageState extends ConsumerState<MergePage> {
           MediaryCard(
             child: SegmentedButton<bool>(
               segments: [
-                ButtonSegment(
-                  value: false,
-                  label: Text(l10n.mergeTsOnly),
-                ),
-                ButtonSegment(
-                  value: true,
-                  label: Text(l10n.mergePreferMp4),
-                ),
+                ButtonSegment(value: false, label: Text(l10n.mergeTsOnly)),
+                ButtonSegment(value: true, label: Text(l10n.mergePreferMp4)),
               ],
               selected: {_preferMp4},
               showSelectedIcon: false,
@@ -294,8 +292,11 @@ class _FolderRow extends StatelessWidget {
                   : text.bodyLarge,
             ),
           ),
-          Icon(Icons.chevron_right_rounded,
-              size: 18, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -336,8 +337,11 @@ class _ScanSummary extends StatelessWidget {
         const SizedBox(height: Spacing.md),
         Row(
           children: [
-            Icon(Icons.playlist_play_rounded,
-                size: 14, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.playlist_play_rounded,
+              size: 14,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(width: Spacing.xs + 2),
             Expanded(
               child: Text(
@@ -454,8 +458,11 @@ class _ResultCard extends StatelessWidget {
                 color: colors.danger.withValues(alpha: 0.12),
                 borderRadius: Radii.smAll,
               ),
-              child: Icon(Icons.error_outline_rounded,
-                  size: 17, color: colors.danger),
+              child: Icon(
+                Icons.error_outline_rounded,
+                size: 17,
+                color: colors.danger,
+              ),
             ),
             const SizedBox(width: Spacing.md),
             Expanded(
@@ -484,8 +491,11 @@ class _ResultCard extends StatelessWidget {
                   color: colors.success.withValues(alpha: 0.12),
                   borderRadius: Radii.smAll,
                 ),
-                child: Icon(Icons.check_rounded,
-                    size: 17, color: colors.success),
+                child: Icon(
+                  Icons.check_rounded,
+                  size: 17,
+                  color: colors.success,
+                ),
               ),
               const SizedBox(width: Spacing.md),
               Expanded(
@@ -519,8 +529,11 @@ class _ResultCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline_rounded,
-                    size: 15, color: colors.warning),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 15,
+                  color: colors.warning,
+                ),
                 const SizedBox(width: Spacing.sm - 2),
                 Expanded(
                   child: Text(
@@ -538,9 +551,7 @@ class _ResultCard extends StatelessWidget {
                 onPressed: () => OpenFilex.open(output.path),
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
                 label: Text(l10n.mergeOpenOutput),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 36),
-                ),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 36)),
               ),
             ],
           ),
@@ -553,9 +564,7 @@ class _ResultCard extends StatelessWidget {
       switch (result.error) {
         FolderMergeError.noTsFiles => l10n.mergeNoTsFiles,
         FolderMergeError.folderUnreadable => l10n.mergeFolderUnreadable,
-        FolderMergeError.segmentMissing =>
-          l10n.mergeSegmentMissing(result.errorMessage ?? ''),
-        FolderMergeError.writeFailed || null =>
-          l10n.mergeFailed(result.errorMessage ?? ''),
+        FolderMergeError.segmentMissing => l10n.errorMergeSegmentMissing,
+        FolderMergeError.writeFailed || null => l10n.errorMergeFailed,
       };
 }

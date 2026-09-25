@@ -343,6 +343,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorInvalidUrl => 'Please enter a valid URL';
 
   @override
+  String get errorAccessDenied =>
+      'Access was denied or the link expired. Update the URL and request headers, then retry';
+
+  @override
+  String get errorMediaMissing =>
+      'The video resource is missing or expired. Get a fresh playback URL';
+
+  @override
+  String get errorNetwork => 'Could not connect. Check your network and retry';
+
+  @override
+  String get errorServer => 'The video server is unavailable. Try again later';
+
+  @override
+  String get errorStorage =>
+      'Cannot use the save folder. Check free space and folder permissions';
+
+  @override
+  String get errorLiveMedia => 'Recording live streams is not supported yet';
+
+  @override
+  String get errorProtectedMedia =>
+      'This video uses an unsupported content protection method';
+
+  @override
+  String get errorUnsupportedMedia =>
+      'This video stream format is not supported yet';
+
+  @override
+  String get errorInvalidMedia =>
+      'No downloadable HLS video was found. Check the playback URL';
+
+  @override
+  String get errorTryAgain =>
+      'The operation could not be completed. Try again later';
+
+  @override
+  String get errorCommunityUnavailable =>
+      'The message board is unavailable. Try again later';
+
+  @override
+  String get errorMergeSegmentMissing =>
+      'A segment needed for merging is missing. Download it again and retry';
+
+  @override
+  String get errorMergeFailed =>
+      'Could not merge the video. Check the save folder and free space, then retry';
+
+  @override
   String errorParseFailed(Object message) {
     return 'Parse failed: $message';
   }

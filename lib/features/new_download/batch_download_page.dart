@@ -7,9 +7,11 @@ import 'package:uuid/uuid.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/user_error.dart';
 import '../../core/widgets/mediary_scaffold.dart';
 import '../../engine/engine_config.dart';
 import '../../engine/m3u8/playlist.dart';
+import '../../engine/m3u8/m3u8_parser.dart';
 import '../../providers/app_providers.dart';
 import '../../data/repositories/source_repository.dart';
 
@@ -91,7 +93,7 @@ class _BatchDownloadPageState extends ConsumerState<BatchDownloadPage> {
             headers: headers,
           );
           if (child is! MediaParseResult) {
-            throw StateError('Variant is not media');
+            throw const M3u8ParseException('Variant is not media');
           }
           item.playlist = child.media;
           item.estimatedBytes =
@@ -110,10 +112,13 @@ class _BatchDownloadPageState extends ConsumerState<BatchDownloadPage> {
           );
         }
         if (item.playlist!.isLive) {
-          throw StateError('Live recording is not supported');
+          throw const M3u8ParseException('Live recording is not supported');
         }
-      } catch (error) {
-        item.error = '$error';
+      } catch (error, st) {
+        logUserError('Preview batch HLS item', error, st);
+        if (mounted) {
+          item.error = userErrorMessage(error, AppLocalizations.of(context));
+        }
         item.playlist = null;
         item.estimatedBytes = null;
       }
@@ -140,8 +145,11 @@ class _BatchDownloadPageState extends ConsumerState<BatchDownloadPage> {
         );
         await ref.read(sourceRepositoryProvider).remember(item.sourceUrl);
         item.added = true;
-      } catch (error) {
-        item.error = '$error';
+      } catch (error, st) {
+        logUserError('Start batch HLS item', error, st);
+        if (mounted) {
+          item.error = userErrorMessage(error, AppLocalizations.of(context));
+        }
       }
       if (mounted) setState(() {});
     }

@@ -336,6 +336,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorInvalidUrl => '请输入有效的地址';
 
   @override
+  String get errorAccessDenied => '访问被拒绝或链接已过期，请更新地址及请求头后重试';
+
+  @override
+  String get errorMediaMissing => '视频资源不存在或已失效，请重新获取播放地址';
+
+  @override
+  String get errorNetwork => '网络连接失败，请检查网络后重试';
+
+  @override
+  String get errorServer => '视频服务器暂时无法响应，请稍后重试';
+
+  @override
+  String get errorStorage => '无法使用保存目录，请检查存储空间和目录权限';
+
+  @override
+  String get errorLiveMedia => '暂不支持录制直播流';
+
+  @override
+  String get errorProtectedMedia => '此视频使用了暂不支持的内容保护方式';
+
+  @override
+  String get errorUnsupportedMedia => '此视频流格式暂不支持';
+
+  @override
+  String get errorInvalidMedia => '未识别到可下载的 HLS 视频，请检查播放地址';
+
+  @override
+  String get errorTryAgain => '操作未能完成，请稍后重试';
+
+  @override
+  String get errorCommunityUnavailable => '留言服务暂时不可用，请稍后重试';
+
+  @override
+  String get errorMergeSegmentMissing => '合并所需的切片文件缺失，请重新下载后再试';
+
+  @override
+  String get errorMergeFailed => '合并失败，请检查保存目录和剩余空间后重试';
+
+  @override
   String errorParseFailed(Object message) {
     return '解析失败：$message';
   }
