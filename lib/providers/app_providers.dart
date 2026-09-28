@@ -16,6 +16,7 @@ import '../engine/download_engine.dart';
 import '../engine/engine_events.dart';
 import '../engine/engine_store.dart';
 import '../engine/task/task_state.dart';
+import '../features/update/update_service.dart';
 import 'queue_policy_coordinator.dart';
 import 'completion_notifications.dart';
 import '../core/router/app_router.dart';
@@ -208,7 +209,13 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
     _dbSub = db.watchAllTasks().listen((rows) {
       final next = <String, TaskViewModel>{};
       for (final row in rows) {
-        next[row.id] = TaskViewModel(
+        // Merge with the live view model instead of replacing it: the
+        // database snapshot can lag behind engine events (progress is
+        // persisted on a throttle), and speed/merge fraction only exist in
+        // memory. A blind rebuild would flash the progress bar back to 0
+        // whenever any unrelated saveTask fires.
+        final prev = state[row.id];
+        final dbModel = TaskViewModel(
           id: row.id,
           title: row.title,
           url: row.url,
@@ -223,6 +230,32 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
           durationMs: row.durationMs,
           queueOrder: row.queueOrder,
           createdAt: row.createdAt,
+        );
+        if (prev == null) {
+          next[row.id] = dbModel;
+          continue;
+        }
+        final active =
+            dbModel.state == TaskState.downloading ||
+            dbModel.state == TaskState.merging ||
+            dbModel.state == TaskState.queued;
+        next[row.id] = dbModel.copyWith(
+          doneSegments: active && prev.doneSegments > dbModel.doneSegments
+              ? prev.doneSegments
+              : dbModel.doneSegments,
+          downloadedBytes:
+              active && prev.downloadedBytes > dbModel.downloadedBytes
+              ? prev.downloadedBytes
+              : dbModel.downloadedBytes,
+          totalBytes: dbModel.totalBytes > 0
+              ? dbModel.totalBytes
+              : prev.totalBytes,
+          bytesPerSecond: active ? prev.bytesPerSecond : 0,
+          mergeFraction: dbModel.state == TaskState.merging
+              ? prev.mergeFraction
+              : 0,
+          // copyWith assigns errorMsg unconditionally; keep the DB value.
+          errorMsg: dbModel.errorMsg,
         );
       }
       state = next;
@@ -326,6 +359,9 @@ final appVersionProvider = FutureProvider<String>((ref) async {
   final info = await PackageInfo.fromPlatform();
   return info.version;
 });
+
+/// Service that checks GitHub releases and installs updates.
+final updateServiceProvider = Provider<UpdateService>((ref) => UpdateService());
 
 /// Theme mode backed by settings.
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(

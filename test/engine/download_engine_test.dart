@@ -404,8 +404,11 @@ seg1.ts?token=new
       final t2 = (await store.loadTask('dup-2'))!.title;
       final t3 = (await store.loadTask('dup-3'))!.title;
       expect({t1, t2, t3}, hasLength(3), reason: 'titles must be unique');
-      expect(t2, '$t1 (2)');
-      expect(t3, '$t1 (3)');
+      // The playlist URL has only generic segments (`index.m3u8`), so each
+      // task falls back to a unique host + timestamp default title.
+      expect(t1, matches(RegExp(r'^127\.0\.0\.1-\d{8}-\d{8}$')));
+      expect(t2, matches(RegExp(r'^127\.0\.0\.1-\d{8}-\d{8}$')));
+      expect(t3, matches(RegExp(r'^127\.0\.0\.1-\d{8}-\d{8}$')));
 
       await engine.dispose();
     },

@@ -21,9 +21,14 @@ void main() {
       expect(r.effectiveTitle, 'ep');
     });
 
-    test('falls back to raw url when no path segments', () {
+    test('falls back to the raw url when it has no usable host', () {
       const r = DownloadRequest(url: 'not-a-url');
       expect(r.effectiveTitle, 'not-a-url');
+    });
+
+    test('empty path yields a unique host name', () {
+      const r = DownloadRequest(url: 'https://rou.video/');
+      expect(r.effectiveTitle, matches(RegExp(r'^rou\.video-\d{8}-\d{8}$')));
     });
 
     test('skips generic playlist names and uses the parent directory', () {
@@ -42,9 +47,29 @@ void main() {
       expect(r.effectiveTitle, 'show');
     });
 
-    test('falls back to host when every segment is generic', () {
+    test('strips a .png disguise suffix from a meaningful name', () {
+      const r = DownloadRequest(url: 'https://cdn/videos/episode01.png');
+      expect(r.effectiveTitle, 'episode01');
+    });
+
+    test('png disguise with only generic names yields a unique host name', () {
+      const r = DownloadRequest(url: 'https://rou.video/cdn/master.png?sig=x');
+      expect(r.effectiveTitle, matches(RegExp(r'^rou\.video-\d{8}-\d{8}$')));
+    });
+
+    test('two disguised downloads do not share a default title', () async {
+      const a = DownloadRequest(url: 'https://rou.video/cdn/master.png?sig=1');
+      await Future<void>.delayed(const Duration(seconds: 1));
+      const b = DownloadRequest(url: 'https://rou.video/cdn/master.png?sig=2');
+      expect(a.effectiveTitle, isNot(b.effectiveTitle));
+    });
+
+    test('falls back to a unique host name when every segment is generic', () {
       const r = DownloadRequest(url: 'https://cdn.example.com/index.m3u8');
-      expect(r.effectiveTitle, 'cdn.example.com');
+      expect(
+        r.effectiveTitle,
+        matches(RegExp(r'^cdn\.example\.com-\d{8}-\d{8}$')),
+      );
     });
 
     test('meaningful last segment still wins', () {

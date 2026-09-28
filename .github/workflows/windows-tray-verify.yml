@@ -1,0 +1,134 @@
+name: Windows Tray Verify
+
+# Manual workflow: builds the Windows app on a GitHub-hosted runner and
+# verifies the close-to-tray behavior end to end:
+#   1. the tray icon asset is packaged into flutter_assets
+#   2. the app launches and its main window appears
+#   3. after WM_CLOSE the window is hidden but the PROCESS STAYS ALIVE
+#      (downloads keep running in the background)
+#   4. full-screen captures (taskbar included) are uploaded as artifacts so
+#      the tray icon can be eyeballed manually — Windows has no public API
+#      to enumerate notification-area icons, so that part cannot be asserted.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.47.2'
+
+jobs:
+  verify-windows-tray:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Verify tray icon asset is packaged
+        shell: pwsh
+        run: |
+          $asset = "build\windows\x64\runner\Release\data\flutter_assets\assets\tray_icon.ico"
+          if (-not (Test-Path $asset)) {
+            throw "tray_icon.ico missing from flutter_assets: $asset"
+          }
+          Write-Host "OK: $asset ($((Get-Item $asset).Length) bytes)"
+
+      - name: Launch, close window, assert process survives
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class Win32Tray {
+            [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+            [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+          }
+          "@
+          $WM_CLOSE = 0x0010
+
+          $exe = "build\windows\x64\runner\Release\Mediary.exe"
+          Start-Process -FilePath $exe
+          Write-Host "Waiting for Mediary window..."
+
+          $proc = $null
+          for ($i = 0; $i -lt 60; $i++) {
+            $proc = Get-Process -Name "Mediary" -ErrorAction SilentlyContinue |
+              Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+            if ($proc) { break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $proc) { throw "Mediary window did not appear within 60s" }
+          Write-Host "OK: main window appeared (pid $($proc.Id))"
+
+          # Let the first frame render and the tray icon initialize.
+          Start-Sleep -Seconds 10
+
+          # Capture the full screen BEFORE closing: the tray icon (if the
+          # runner shell shows it) is in the taskbar notification area.
+          function Capture-Screen([string]$path) {
+            $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($bounds.Left, $bounds.Top, 0, 0, $bmp.Size)
+            $g.Dispose()
+            New-Item -ItemType Directory -Force -Path tray-verify | Out-Null
+            $bmp.Save("$PWD\tray-verify\$path", [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+            Write-Host "Saved tray-verify\$path"
+          }
+          Capture-Screen "01-window-with-taskbar.png"
+
+          # Close the main window the way a user would (X button).
+          $hwnd = $proc.MainWindowHandle
+          [Win32Tray]::PostMessage($hwnd, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+          Write-Host "Sent WM_CLOSE to $hwnd"
+          Start-Sleep -Seconds 5
+
+          # The process must still be alive: close-to-tray, not quit.
+          $alive = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
+          if (-not $alive) {
+            Capture-Screen "99-failure-process-exited.png"
+            throw "FAIL: process exited after WM_CLOSE (expected hide-to-tray)"
+          }
+          Write-Host "OK: process $($proc.Id) still alive after window close"
+
+          # The window should now be hidden.
+          if ([Win32Tray]::IsWindowVisible($hwnd)) {
+            Write-Host "WARN: window still visible after WM_CLOSE"
+          } else {
+            Write-Host "OK: window hidden after WM_CLOSE"
+          }
+
+          # Capture the desktop with the app backgrounded: the tray icon
+          # should remain (manually inspect the artifact).
+          Capture-Screen "02-after-close-taskbar.png"
+
+          # Quit through the tray menu path is not scriptable here; kill.
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+
+      - name: Upload screen captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-tray-captures
+          path: tray-verify/
+          if-no-files-found: warn

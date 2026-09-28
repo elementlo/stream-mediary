@@ -333,6 +333,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get version => '版本';
 
   @override
+  String get checkUpdate => '检查更新';
+
+  @override
+  String updateAvailable(Object version) {
+    return '发现新版本 $version';
+  }
+
+  @override
+  String get updateSize => '安装包大小';
+
+  @override
+  String get updateMacHint => '下载完成后会在访达中显示新版本，请将其拖入「应用程序」文件夹完成更新。';
+
+  @override
+  String get updateNoChangelog => '此版本没有更新说明';
+
+  @override
+  String get updateLater => '稍后';
+
+  @override
+  String get updateDownload => '下载更新';
+
+  @override
+  String get updateRetry => '重试';
+
+  @override
+  String get updateInstalling => '正在安装…';
+
+  @override
+  String get updateDownloadFailed => '下载失败，请检查网络后重试';
+
+  @override
+  String get updateInstallFailed => '安装失败，请稍后重试';
+
+  @override
+  String get updateUpToDate => '当前已是最新版本';
+
+  @override
+  String get updateCheckFailed => '检查更新失败，请稍后重试';
+
+  @override
   String get errorInvalidUrl => '请输入有效的地址';
 
   @override

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
+import 'core/platform/desktop_window_service.dart';
 import 'core/platform/download_link_service.dart';
 import 'core/utils/app_logging.dart';
 
@@ -30,6 +31,9 @@ Future<void> main([List<String> arguments = const []]) async {
         await windowManager.focus();
       },
     );
+    // Closing the window hides it (downloads continue); Windows also gets
+    // a tray icon to restore or quit.
+    await DesktopWindowService.instance.initialize();
   }
 
   runApp(const ProviderScope(child: StreamMediaryApp()));

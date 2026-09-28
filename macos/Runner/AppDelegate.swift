@@ -38,6 +38,18 @@ class AppDelegate: FlutterAppDelegate {
     return true
   }
 
+  // The main window is hidden (not closed) when the user dismisses it, so
+  // downloads keep running while the app stays in the Dock. Clicking the
+  // Dock icon must bring the window back.
+  override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    if !flag {
+      for window in sender.windows {
+        window.makeKeyAndOrderFront(self)
+      }
+    }
+    return true
+  }
+
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     return true
   }

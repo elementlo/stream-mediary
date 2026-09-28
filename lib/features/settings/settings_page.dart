@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_selector/file_selector.dart' as file_selector;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,7 @@ import '../../core/widgets/status_badge.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../engine/merge/ffmpeg_remuxer.dart';
 import '../../providers/app_providers.dart';
+import '../update/update_dialog.dart';
 
 /// ffmpeg probe result.
 final ffmpegProbeProvider = FutureProvider<FfmpegProbeResult>((ref) async {
@@ -299,15 +302,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           SectionHeader(l10n.about),
           MediaryCard(
             padding: EdgeInsets.zero,
-            child: _SettingRow(
-              icon: Icons.info_rounded,
-              title: l10n.appTitle,
-              subtitle: ref
-                  .watch(appVersionProvider)
-                  .maybeWhen(
-                    data: (v) => '${l10n.version} $v',
-                    orElse: () => l10n.version,
+            child: Column(
+              children: [
+                _SettingRow(
+                  icon: Icons.info_rounded,
+                  title: l10n.appTitle,
+                  subtitle: ref
+                      .watch(appVersionProvider)
+                      .maybeWhen(
+                        data: (v) => '${l10n.version} $v',
+                        orElse: () => l10n.version,
+                      ),
+                ),
+                if (!Platform.isIOS) ...[
+                  Divider(height: 1, color: context.mediaryHairline),
+                  InkWell(
+                    onTap: () =>
+                        checkAndPromptUpdate(context, ref, manual: true),
+                    child: _SettingRow(
+                      icon: Icons.system_update_rounded,
+                      title: l10n.checkUpdate,
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
+                ],
+              ],
             ),
           ),
         ],

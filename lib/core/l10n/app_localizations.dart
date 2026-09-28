@@ -740,6 +740,84 @@ abstract class AppLocalizations {
   /// **'版本'**
   String get version;
 
+  /// No description provided for @checkUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新'**
+  String get checkUpdate;
+
+  /// No description provided for @updateAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现新版本 {version}'**
+  String updateAvailable(Object version);
+
+  /// No description provided for @updateSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包大小'**
+  String get updateSize;
+
+  /// No description provided for @updateMacHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载完成后会在访达中显示新版本，请将其拖入「应用程序」文件夹完成更新。'**
+  String get updateMacHint;
+
+  /// No description provided for @updateNoChangelog.
+  ///
+  /// In zh, this message translates to:
+  /// **'此版本没有更新说明'**
+  String get updateNoChangelog;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍后'**
+  String get updateLater;
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载更新'**
+  String get updateDownload;
+
+  /// No description provided for @updateRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get updateRetry;
+
+  /// No description provided for @updateInstalling.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在安装…'**
+  String get updateInstalling;
+
+  /// No description provided for @updateDownloadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败，请检查网络后重试'**
+  String get updateDownloadFailed;
+
+  /// No description provided for @updateInstallFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装失败，请稍后重试'**
+  String get updateInstallFailed;
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已是最新版本'**
+  String get updateUpToDate;
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新失败，请稍后重试'**
+  String get updateCheckFailed;
+
   /// No description provided for @errorInvalidUrl.
   ///
   /// In zh, this message translates to:

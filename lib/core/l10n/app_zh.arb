@@ -108,6 +108,24 @@
   "ffmpegNotFound": "未检测到 ffmpeg",
   "about": "关于",
   "version": "版本",
+  "checkUpdate": "检查更新",
+  "updateAvailable": "发现新版本 {version}",
+  "@updateAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "updateSize": "安装包大小",
+  "updateMacHint": "下载完成后会在访达中显示新版本，请将其拖入「应用程序」文件夹完成更新。",
+  "updateNoChangelog": "此版本没有更新说明",
+  "updateLater": "稍后",
+  "updateDownload": "下载更新",
+  "updateRetry": "重试",
+  "updateInstalling": "正在安装…",
+  "updateDownloadFailed": "下载失败，请检查网络后重试",
+  "updateInstallFailed": "安装失败，请稍后重试",
+  "updateUpToDate": "当前已是最新版本",
+  "updateCheckFailed": "检查更新失败，请稍后重试",
   "errorInvalidUrl": "请输入有效的地址",
   "errorAccessDenied": "访问被拒绝或链接已过期，请更新地址及请求头后重试",
   "errorMediaMissing": "视频资源不存在或已失效，请重新获取播放地址",

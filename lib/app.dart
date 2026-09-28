@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'core/platform/platform_profile.dart';
 import 'core/platform/download_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/update/update_dialog.dart';
 import 'providers/app_providers.dart';
 
 class StreamMediaryApp extends ConsumerStatefulWidget {
@@ -20,6 +23,9 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
   /// One-shot guard: the board prefetch must fire exactly once per process,
   /// not on every rebuild of the app widget.
   static bool _boardPrefetchStarted = false;
+
+  /// One-shot guard for the startup update check (same reasoning).
+  static bool _updateCheckStarted = false;
 
   @override
   void initState() {
@@ -43,6 +49,21 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
     });
   }
 
+  /// Silently checks GitHub for a newer release shortly after startup and
+  /// prompts once per version. Also drops stale update downloads.
+  void _startUpdateCheck() {
+    final service = ref.read(updateServiceProvider);
+    service.cleanupStaleUpdates().ignore();
+    // Delay so the check never competes with first-frame work or an
+    // incoming download link.
+    Future<void>.delayed(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      final context = rootNavigatorKey.currentContext;
+      if (context == null || !context.mounted) return;
+      checkAndPromptUpdate(context, ref, manual: false).ignore();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(queuePolicyProvider);
@@ -59,6 +80,13 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
       _boardPrefetchStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(boardPrefetchProvider.future).ignore();
+      });
+    }
+
+    if (!_updateCheckStarted && !Platform.isIOS) {
+      _updateCheckStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startUpdateCheck();
       });
     }
 

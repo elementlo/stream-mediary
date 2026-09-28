@@ -340,6 +340,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get version => 'Version';
 
   @override
+  String get checkUpdate => 'Check for updates';
+
+  @override
+  String updateAvailable(Object version) {
+    return 'New version $version available';
+  }
+
+  @override
+  String get updateSize => 'Package size';
+
+  @override
+  String get updateMacHint =>
+      'After the download, the new version is revealed in Finder. Drag it into Applications to finish updating.';
+
+  @override
+  String get updateNoChangelog => 'No release notes for this version';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateDownload => 'Download update';
+
+  @override
+  String get updateRetry => 'Retry';
+
+  @override
+  String get updateInstalling => 'Installing…';
+
+  @override
+  String get updateDownloadFailed =>
+      'Download failed. Check your network and retry';
+
+  @override
+  String get updateInstallFailed => 'Installation failed. Try again later';
+
+  @override
+  String get updateUpToDate => 'You are on the latest version';
+
+  @override
+  String get updateCheckFailed =>
+      'Could not check for updates. Try again later';
+
+  @override
   String get errorInvalidUrl => 'Please enter a valid URL';
 
   @override

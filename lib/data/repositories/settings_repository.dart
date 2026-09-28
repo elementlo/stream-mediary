@@ -22,6 +22,7 @@ class SettingsRepository {
   static const String keyChargingOnly = 'charging_only';
   static const String keySequentialQueue = 'sequential_queue';
   static const String keyCompletionNotifications = 'completion_notifications';
+  static const String keyUpdatePromptedVersion = 'update_prompted_version';
 
   Future<bool> flag(String key) async => await _db.settingValue(key) == 'true';
   Future<void> setFlag(String key, bool value) =>

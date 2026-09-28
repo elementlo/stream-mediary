@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,8 +13,15 @@ import '../../features/settings/settings_page.dart';
 import '../platform/download_link_service.dart';
 import '../../features/shell/adaptive_shell.dart';
 
+/// Global navigator key so app-level flows (e.g. the startup update check)
+/// can show dialogs without a page context.
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/downloads',
     routes: [
       ShellRoute(

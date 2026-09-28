@@ -211,6 +211,7 @@ class DownloadEngine {
     await _store.saveSegments(segmentRecords);
 
     final runtime = TaskRuntime(taskId: id)
+      ..record = record
       ..playlist = playlist
       ..state = TaskState.queued
       ..totalSegments = playlist.segmentCount;
@@ -268,6 +269,11 @@ class DownloadEngine {
     runtime.state = to;
     record.state = to;
     record.errorMsg = error;
+    // Carry the live progress into the persisted record so a state change
+    // (e.g. pause) never writes stale zeros over the real progress.
+    record.doneSegments = runtime.doneSegments;
+    record.downloadedBytes = runtime.downloadedBytes;
+    record.totalBytes = runtime.totalBytes;
     record.updatedAt = DateTime.now().millisecondsSinceEpoch;
     await _store.saveTask(record);
     _emit(TaskStateChangedEvent(taskId: record.id, state: to, error: error));
@@ -463,6 +469,7 @@ class DownloadEngine {
   void _emitProgress(EngineTaskRecord record, TaskRuntime runtime) {
     record.doneSegments = runtime.doneSegments;
     record.downloadedBytes = runtime.downloadedBytes;
+    record.totalBytes = runtime.totalBytes;
     _emit(
       ProgressEvent(
         taskId: record.id,
@@ -473,6 +480,15 @@ class DownloadEngine {
         bytesPerSecond: runtime.bytesPerSecond,
       ),
     );
+    // Throttled persistence so progress survives an app kill: without it the
+    // database only ever holds the zeros written when the task started.
+    final now = DateTime.now();
+    if (now.difference(runtime.lastProgressPersist) >=
+        const Duration(seconds: 2)) {
+      runtime.lastProgressPersist = now;
+      record.updatedAt = now.millisecondsSinceEpoch;
+      unawaited(_store.saveTask(record));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -635,7 +651,9 @@ class DownloadEngine {
     runtime.scheduler?.cancel();
     runtime.scheduler = null;
     _taskSemaphore.cancel(id);
-    final record = await _store.loadTask(id);
+    // Prefer the in-memory record: it carries the live progress. Reloading
+    // from the store would persist a stale snapshot and reset the UI to 0.
+    final record = runtime.record ?? await _store.loadTask(id);
     if (record != null) {
       await _setState(record, runtime, TaskState.paused);
     }
@@ -657,7 +675,7 @@ class DownloadEngine {
     runtime?.scheduler?.cancel();
     runtime?.cancelToken.cancel('canceled');
 
-    final record = await _store.loadTask(id);
+    final record = runtime?.record ?? await _store.loadTask(id);
     if (record != null) {
       if (runtime != null) {
         runtime.state = TaskState.canceled;
@@ -711,6 +729,10 @@ class DownloadEngine {
       return;
     }
 
+    // Signed (e.g. PNG-disguised) sources expire: refresh the snapshot so
+    // the retry does not immediately fail again on stale URLs.
+    await _refreshSource(record);
+
     final snapshot = record.playlistSnapshot;
     if (snapshot == null) return;
     final playlist = MediaPlaylist.fromJson(
@@ -718,6 +740,7 @@ class DownloadEngine {
     );
 
     final runtime = TaskRuntime(taskId: id)
+      ..record = record
       ..playlist = playlist
       ..state = TaskState.queued
       ..totalSegments = playlist.segmentCount;
@@ -734,12 +757,27 @@ class DownloadEngine {
   /// Creates a separate task for an already completed download.
   Future<String> redownloadTask(String id, String newId) async {
     final record = await _store.loadTask(id);
-    if (record == null || record.playlistSnapshot == null) {
+    if (record == null) {
       throw StateError('The original download cannot be recreated');
     }
-    final playlist = MediaPlaylist.fromJson(
-      jsonDecode(record.playlistSnapshot!) as Map<String, dynamic>,
-    );
+    // Re-parse the source instead of replaying the stored snapshot: signed
+    // URLs in an old snapshot are almost certainly expired by now. Falls
+    // back to the snapshot when the source cannot be re-parsed (offline or
+    // the source page is gone) so the redownload still has a chance.
+    MediaPlaylist? playlist;
+    try {
+      (playlist, _) = await _resolveFreshPlaylist(record);
+    } catch (e) {
+      _log.warning('Redownload re-parse failed for $id: $e');
+    }
+    playlist ??= record.playlistSnapshot == null
+        ? null
+        : MediaPlaylist.fromJson(
+            jsonDecode(record.playlistSnapshot!) as Map<String, dynamic>,
+          );
+    if (playlist == null) {
+      throw StateError('The original download cannot be recreated');
+    }
     return startTask(
       id: newId,
       request: DownloadRequest(
@@ -753,6 +791,137 @@ class DownloadEngine {
       ),
       playlist: playlist,
     );
+  }
+
+  /// Re-parses [record]'s source into a fresh media playlist.
+  ///
+  /// Returns the playlist and its media URL. For master sources the variant
+  /// matching the stored media URL (path compared without query, since
+  /// signatures rotate) is selected; falls back to the highest-bandwidth
+  /// variant. Throws when the source cannot be parsed or is not a finite
+  /// media playlist.
+  Future<(MediaPlaylist, String)> _resolveFreshPlaylist(
+    EngineTaskRecord record,
+  ) async {
+    final source = record.sourceUrl ?? record.url;
+    final parsed = await parseForPreview(source, headers: record.headers);
+    if (parsed is MediaParseResult) {
+      if (parsed.media.isLive) {
+        throw const M3u8ParseException('Live recording is not supported');
+      }
+      return (parsed.media, source);
+    }
+    final master = (parsed as MasterParseResult).master;
+    final oldPath = Uri.tryParse(record.url)?.path;
+    var variant = master.variants.first;
+    if (oldPath != null) {
+      for (final candidate in master.variants) {
+        if (Uri.tryParse(candidate.url)?.path == oldPath) {
+          variant = candidate;
+          break;
+        }
+      }
+    }
+    final child = await parseForPreview(
+      variant.url,
+      headers: record.headers,
+    );
+    if (child is! MediaParseResult) {
+      throw const M3u8ParseException(
+        'Selected variant is not a media playlist',
+      );
+    }
+    if (child.media.isLive) {
+      throw const M3u8ParseException('Live recording is not supported');
+    }
+    return (child.media, variant.url);
+  }
+
+  /// Refreshes expired signed URLs before resuming or retrying.
+  ///
+  /// PNG-disguised sources (e.g. rou.video) sign every playlist, segment
+  /// and key URL with a short-lived token. A paused or failed task holds a
+  /// stale snapshot; replaying it verbatim fails with 403 on every segment.
+  /// When the re-parsed playlist describes the same media (paths, ranges
+  /// and keys identical once queries are ignored), the snapshot, record URL
+  /// and segment URLs are replaced with the fresh ones while completed
+  /// segment files stay reusable. Returns true when refreshed.
+  Future<bool> _refreshSource(EngineTaskRecord record) async {
+    if (record.playlistSnapshot == null) return false;
+    try {
+      final (fresh, mediaUrl) = await _resolveFreshPlaylist(record);
+      final old = MediaPlaylist.fromJson(
+        jsonDecode(record.playlistSnapshot!) as Map<String, dynamic>,
+      );
+      if (!_sameMediaIgnoringQuery(old, fresh)) return false;
+
+      record.playlistSnapshot = jsonEncode(fresh.toJson());
+      record.url = mediaUrl;
+      record.updatedAt = DateTime.now().millisecondsSinceEpoch;
+      await _store.saveTask(record);
+
+      // Point persisted segment rows at the new signed URLs, keeping their
+      // status/byteSize so already-downloaded files are still reused.
+      final bySeq = {for (final s in fresh.segments) s.seq: s.url};
+      final existing = await _store.loadSegments(record.id);
+      final updated = <EngineSegmentRecord>[];
+      for (final seg in existing) {
+        final url = bySeq[seg.seq];
+        if (url != null && url != seg.url) {
+          updated.add(
+            EngineSegmentRecord(
+              taskId: seg.taskId,
+              seq: seg.seq,
+              url: url,
+              status: seg.status,
+              byteSize: seg.byteSize,
+              retryCount: seg.retryCount,
+            ),
+          );
+        }
+      }
+      if (updated.isNotEmpty) await _store.saveSegments(updated);
+      return true;
+    } catch (e) {
+      // Offline or source gone: fall back to the stale snapshot; segments
+      // already on disk may still let the task finish.
+      _log.warning('Source refresh failed for ${record.id}: $e');
+      return false;
+    }
+  }
+
+  /// Like [_sameMedia] but ignores URL queries, which rotate with signatures.
+  bool _sameMediaIgnoringQuery(MediaPlaylist a, MediaPlaylist b) {
+    if (a.segments.length != b.segments.length) return false;
+    for (var i = 0; i < a.segments.length; i++) {
+      final first = a.segments[i];
+      final second = b.segments[i];
+      if (first.seq != second.seq ||
+          _withoutQuery(first.url) != _withoutQuery(second.url) ||
+          (first.keyInfo == null) != (second.keyInfo == null) ||
+          (first.keyInfo?.uri != null &&
+              second.keyInfo?.uri != null &&
+              _withoutQuery(first.keyInfo!.uri!) !=
+                  _withoutQuery(second.keyInfo!.uri!)) ||
+          jsonEncode(first.byteRange?.toJson()) !=
+              jsonEncode(second.byteRange?.toJson())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static String _withoutQuery(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    // Uri.replace(query: null) keeps the original query, so rebuild without
+    // query/fragment to compare only scheme, host, port and path.
+    return Uri(
+      scheme: uri.scheme,
+      host: uri.host,
+      port: uri.port,
+      path: uri.path,
+    ).toString();
   }
 
   Future<void> moveQueuedTask(String id, {required bool first}) async {
@@ -891,6 +1060,9 @@ class DownloadEngine {
   }
 
   Future<void> _coldResume(EngineTaskRecord record) async {
+    // Signed sources expire while paused; refresh before rebuilding so the
+    // resumed download does not fail on stale segment URLs.
+    await _refreshSource(record);
     final snapshot = record.playlistSnapshot;
     if (snapshot == null) return;
     final playlist = MediaPlaylist.fromJson(
@@ -898,6 +1070,7 @@ class DownloadEngine {
     );
 
     final runtime = TaskRuntime(taskId: record.id)
+      ..record = record
       ..playlist = playlist
       ..state = TaskState.queued
       ..totalSegments = playlist.segmentCount;

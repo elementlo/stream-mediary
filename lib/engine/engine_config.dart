@@ -57,21 +57,54 @@ class DownloadRequest {
     if (title != null && title!.trim().isNotEmpty) return title!.trim();
     final uri = Uri.tryParse(url);
     final segments = uri?.pathSegments ?? const [];
-    // Walk from the last segment upwards, skipping generic playlist names,
-    // so `.../my-show/index.m3u8` yields `my-show` instead of `index`.
-    for (var i = segments.length - 1; i >= 0; i--) {
-      var name = segments[i];
-      if (name.isEmpty) continue;
-      name = name.replaceAll(RegExp(r'\.m3u8.*$'), '');
-      if (name.isEmpty || _genericNames.contains(name.toLowerCase())) {
-        continue;
+
+    // A PNG-disguised playlist (`.../cdn/master.png`) carries no identifying
+    // information: its path segments are CDN infrastructure names shared by
+    // every video on the host. Walking up to a parent directory would give
+    // every disguised download the same title, so when the file is a `.png`
+    // whose own name is generic we fall straight through to a unique name.
+    final last = segments.isEmpty ? '' : segments.last.toLowerCase();
+    final disguised = last.contains('.png');
+
+    if (!disguised) {
+      // Walk from the last segment upwards, skipping generic playlist names,
+      // so `.../my-show/index.m3u8` yields `my-show` instead of `index`.
+      for (var i = segments.length - 1; i >= 0; i--) {
+        var name = segments[i];
+        if (name.isEmpty) continue;
+        name = name.replaceAll(RegExp(r'\.(m3u8|png).*$'), '');
+        if (name.isEmpty || _genericNames.contains(name.toLowerCase())) {
+          continue;
+        }
+        return name;
       }
-      return name;
+    } else {
+      // Use the disguised file's own name when it is meaningful
+      // (`episode01.png` -> `episode01`); otherwise fall through.
+      var name = segments.last.replaceAll(RegExp(r'\.png.*$'), '');
+      if (name.isNotEmpty && !_genericNames.contains(name.toLowerCase())) {
+        return name;
+      }
     }
-    // No meaningful path segment: fall back to the host, then the raw URL.
+
+    // No meaningful path segment (or a disguise): build a unique host +
+    // timestamp name so concurrent downloads never collide on a default.
     final host = uri?.host;
-    if (host != null && host.isNotEmpty) return host;
-    return url;
+    final stamp = _uniqueStamp();
+    if (host != null && host.isNotEmpty) return '$host-$stamp';
+    return 'mediary-$stamp';
+  }
+
+  /// Monotonic counter appended to the timestamp so two disguised downloads
+  /// created within the same second still get distinct default titles.
+  static int _stampCounter = 0;
+
+  static String _uniqueStamp() {
+    final t = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final seq = (_stampCounter++ % 100).toString().padLeft(2, '0');
+    return '${t.year}${two(t.month)}${two(t.day)}'
+        '-${two(t.hour)}${two(t.minute)}${two(t.second)}$seq';
   }
 }
 

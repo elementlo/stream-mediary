@@ -3,6 +3,7 @@ library;
 
 import 'package:dio/dio.dart';
 
+import '../engine_store.dart';
 import '../m3u8/playlist.dart';
 import '../scheduler/segment_scheduler.dart';
 import 'task_state.dart';
@@ -12,6 +13,12 @@ class TaskRuntime {
   TaskRuntime({required this.taskId});
 
   final String taskId;
+
+  /// The in-memory record this runtime is driving. Holding it here keeps
+  /// live progress (doneSegments/downloadedBytes) authoritative: control
+  /// operations like pause must persist *this* record, not a stale reload
+  /// from the store, or the UI progress would snap back to zero.
+  EngineTaskRecord? record;
 
   MediaPlaylist? playlist;
   SegmentScheduler? scheduler;
@@ -30,6 +37,9 @@ class TaskRuntime {
   int _lastBytes = 0;
   DateTime _lastSample = DateTime.now();
   double bytesPerSecond = 0;
+
+  /// Timestamp of the last throttled progress flush to the store.
+  DateTime lastProgressPersist = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Cached AES keys by key URI.
   final Map<String, List<int>> keyCache = {};
