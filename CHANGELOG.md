@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.10] - 2026-09-28
+
+### Added
+
+- In-app update check: the app looks for new GitHub releases at startup (once per version) and from Settings → About, shows the changelog in a dialog, downloads the platform installer with resume support and SHA-256 verification, then hands off to the system installer (Android), reveals the new app in Finder (macOS), or replaces the install directory and relaunches (Windows).
+- Closing the main window on Windows and macOS now hides it instead of quitting, so downloads keep running in the background. Windows shows a tray icon with "show" and "quit" actions; macOS keeps the app in the Dock and clicking it reopens the window.
+
+### Fixed
+
+- Pausing or retrying a PNG-disguised download no longer fails on expired signed URLs: the engine re-parses the source and refreshes playlist, segment and key URLs while reusing already-downloaded segments. "Redownload" also re-parses the source instead of replaying the stale snapshot.
+- Pausing a task no longer resets its progress to zero in the UI or the database; progress is persisted periodically so it also survives an app kill mid-download.
+- Disguised sources whose URLs carry no meaningful name (e.g. `.../cdn/master.png`) now get unique default titles (`host-timestamp`) instead of all sharing the same folder name.
+
 ## [0.0.9] - 2026-09-26
 
 ### Fixed
