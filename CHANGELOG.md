@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.11] - 2026-09-28
+
+### Fixed
+
+- Downloads no longer freeze when a server stalls mid-transfer: segment, key and playlist requests now carry connect (30s) and idle-receive (60s) timeouts, so a hung connection fails and retries instead of blocking its scheduler slot forever.
+- Pausing a task now also cancels an in-flight AES key fetch (it previously used a token that pause never cancelled), so resume starts cleanly instead of waiting on a dead connection.
+
 ## [0.0.10] - 2026-09-28
 
 ### Added

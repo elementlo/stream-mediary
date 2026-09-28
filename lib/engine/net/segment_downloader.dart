@@ -71,7 +71,14 @@ class SegmentDownloader {
                 'Range': 'bytes=${byteRange.offset}-${byteRange.end}',
             },
             followRedirects: true,
-            receiveTimeout: const Duration(minutes: 5),
+            // Bound both the TCP connect and the gap between body chunks so a
+            // stalled server cannot hang a segment (and its scheduler slot)
+            // forever. A hung slot is what makes a task appear frozen while
+            // the last completed segment's speed still shows. The receive
+            // timeout is an idle bound (reset on every chunk), so slow but
+            // progressing connections are never cut off.
+            connectTimeout: const Duration(seconds: 30),
+            receiveTimeout: const Duration(seconds: 60),
           ),
           cancelToken: cancelToken,
         );

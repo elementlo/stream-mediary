@@ -120,6 +120,7 @@ class DownloadEngine {
           segment.url,
           options: Options(
             headers: headers,
+            connectTimeout: const Duration(seconds: 8),
             receiveTimeout: const Duration(seconds: 8),
           ),
         );
@@ -147,7 +148,8 @@ class DownloadEngine {
         responseType: ResponseType.bytes,
         headers: headers,
         followRedirects: true,
-        receiveTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60),
       ),
     );
     final bytes = response.data ?? const <int>[];
@@ -355,9 +357,17 @@ class DownloadEngine {
             return false;
           }
 
-          // Decrypt in place if needed.
+          // Decrypt in place if needed. Pass the job token so pausing the
+          // scheduler also cancels an in-flight key fetch; otherwise a hung
+          // key request keeps its scheduler slot forever and the task stalls.
           if (segment.keyInfo?.encrypted == true) {
-            await _decryptSegmentFile(record, runtime, segment, target);
+            await _decryptSegmentFile(
+              record,
+              runtime,
+              segment,
+              target,
+              cancelToken: token,
+            );
           }
           return true;
         },
@@ -499,10 +509,16 @@ class DownloadEngine {
     EngineTaskRecord record,
     TaskRuntime runtime,
     Segment segment,
-    File file,
-  ) async {
+    File file, {
+    CancelToken? cancelToken,
+  }) async {
     final keyInfo = segment.keyInfo!;
-    final key = await _resolveKey(record, runtime, keyInfo);
+    final key = await _resolveKey(
+      record,
+      runtime,
+      keyInfo,
+      cancelToken: cancelToken,
+    );
     final iv = _resolveIv(record, keyInfo, segment.seq);
 
     final input = file.openRead();
@@ -524,8 +540,9 @@ class DownloadEngine {
   Future<Uint8List> _resolveKey(
     EngineTaskRecord record,
     TaskRuntime runtime,
-    KeyInfo keyInfo,
-  ) async {
+    KeyInfo keyInfo, {
+    CancelToken? cancelToken,
+  }) async {
     // User-provided key takes precedence.
     if (record.customKeyHex != null && record.customKeyHex!.isNotEmpty) {
       return hexToBytes(record.customKeyHex!);
@@ -544,8 +561,14 @@ class DownloadEngine {
       options: Options(
         responseType: ResponseType.bytes,
         headers: record.headers,
+        // Bound the key fetch: a hung key server would otherwise block this
+        // segment's scheduler slot indefinitely and freeze the whole task.
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60),
       ),
-      cancelToken: runtime.cancelToken,
+      // Prefer the per-segment job token so pausing cancels the fetch; fall
+      // back to the runtime token when called outside a scheduled job.
+      cancelToken: cancelToken ?? runtime.cancelToken,
     );
     final keyBytes = unwrapRoud(response.data ?? const <int>[]);
     runtime.keyCache[uri] = keyBytes;
