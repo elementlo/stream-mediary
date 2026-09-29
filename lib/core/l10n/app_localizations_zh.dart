@@ -282,6 +282,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get concurrency => '任务并发数';
 
   @override
+  String get segmentConcurrency => '分片并发数';
+
+  @override
+  String get segmentConcurrencyHint => '单个任务内同时下载的分片数量，网络或源站较慢时可适当调低';
+
+  @override
   String get queuePolicy => '下载策略';
 
   @override

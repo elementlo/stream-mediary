@@ -12,6 +12,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -34,6 +35,24 @@ import 'task/task_runtime.dart';
 import 'task/task_state.dart';
 
 final Logger _log = Logger('DownloadEngine');
+
+/// Decrypts a segment file in place (synchronous; runs on a worker isolate).
+///
+/// Reads the whole file, applies AES-CBC with PKCS7 stripping and atomically
+/// replaces it via a `.dec` temp file. Segments are bounded in size (a few
+/// MB each), so holding one in memory is fine and far simpler than piping
+/// streams across the isolate boundary.
+void _decryptFileSync(String path, Uint8List key, Uint8List iv) {
+  final file = File(path);
+  final cipher = AesCbcDecryptor(key: key, iv: iv);
+  final data = file.readAsBytesSync();
+  final decrypted = BytesBuilder(copy: false)
+    ..add(cipher.process(data))
+    ..add(cipher.finalize());
+  final tmp = File('$path.dec');
+  tmp.writeAsBytesSync(decrypted.takeBytes(), flush: true);
+  tmp.renameSync(path);
+}
 
 class DownloadEngine {
   DownloadEngine({
@@ -393,6 +412,7 @@ class DownloadEngine {
             headers: record.headers,
             cancelToken: token,
             byteRange: segment.byteRange,
+            onCongestion: scheduler.reportCongestion,
           );
           if (!result.success) {
             failures[segment.seq] = result.error ?? 'download failed';
@@ -563,20 +583,11 @@ class DownloadEngine {
     );
     final iv = _resolveIv(record, keyInfo, segment.seq);
 
-    final input = file.openRead();
-    final decrypted = decryptSegmentStream(input, key: key, iv: iv);
-
-    final tmp = File('${file.path}.dec');
-    final sink = tmp.openWrite();
-    try {
-      await for (final chunk in decrypted) {
-        sink.add(chunk);
-      }
-      await sink.flush();
-    } finally {
-      await sink.close();
-    }
-    await tmp.rename(file.path);
+    // AES-CBC over a whole segment is CPU-bound; run it on a worker isolate
+    // so the event loop keeps servicing other concurrent downloads. The
+    // closure captures only plain data (paths and key bytes).
+    final path = file.path;
+    await Isolate.run(() => _decryptFileSync(path, key, iv));
   }
 
   Future<Uint8List> _resolveKey(

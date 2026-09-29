@@ -36,6 +36,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   int _taskConcurrency = SettingsRepository.defaultTaskConcurrency;
+  int _segmentConcurrency = SettingsRepository.defaultSegmentConcurrency;
   String _mergePreference = 'prefer_mp4';
   String? _saveDir;
   bool _loaded = false;
@@ -62,29 +63,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _load() async {
     final settings = ref.read(settingsRepositoryProvider);
     final (
-      concurrency,
-      merge,
-      dir,
-      wifi,
-      charging,
-      sequential,
-      notifications,
-      proxyHost,
-      proxyPort,
+      (
+        concurrency,
+        segmentConcurrency,
+        merge,
+        dir,
+        wifi,
+      ),
+      (
+        charging,
+        sequential,
+        notifications,
+        proxyHost,
+        proxyPort,
+      ),
     ) = await (
-      settings.taskConcurrency(),
-      settings.mergePreference(),
-      settings.defaultSaveDir(),
-      settings.flag(SettingsRepository.keyWifiOnly),
-      settings.flag(SettingsRepository.keyChargingOnly),
-      settings.flag(SettingsRepository.keySequentialQueue),
-      settings.flag(SettingsRepository.keyCompletionNotifications),
-      settings.proxyHost(),
-      settings.proxyPort(),
+      (
+        settings.taskConcurrency(),
+        settings.segmentConcurrency(),
+        settings.mergePreference(),
+        settings.defaultSaveDir(),
+        settings.flag(SettingsRepository.keyWifiOnly),
+      ).wait,
+      (
+        settings.flag(SettingsRepository.keyChargingOnly),
+        settings.flag(SettingsRepository.keySequentialQueue),
+        settings.flag(SettingsRepository.keyCompletionNotifications),
+        settings.proxyHost(),
+        settings.proxyPort(),
+      ).wait,
     ).wait;
     if (mounted) {
       setState(() {
         _taskConcurrency = concurrency;
+        _segmentConcurrency = segmentConcurrency;
         _mergePreference = merge;
         _saveDir = dir;
         _wifiOnly = wifi;
@@ -176,7 +188,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         padding: EdgeInsets.zero,
         children: [
           _ConcurrencySection(
+            label: l10n.concurrency,
             value: _taskConcurrency,
+            min: 1,
+            max: 16,
             onChanged: (v) async {
               setState(() => _taskConcurrency = v.round());
               await ref
@@ -186,6 +201,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               engine.updateConfig(
                 engine.config.copyWith(
                   taskConcurrency: _sequentialQueue ? 1 : _taskConcurrency,
+                ),
+              );
+            },
+          ),
+          _ConcurrencySection(
+            label: l10n.segmentConcurrency,
+            hint: l10n.segmentConcurrencyHint,
+            value: _segmentConcurrency,
+            min: 2,
+            max: 32,
+            onChanged: (v) async {
+              setState(() => _segmentConcurrency = v.round());
+              await ref
+                  .read(settingsRepositoryProvider)
+                  .setSegmentConcurrency(_segmentConcurrency);
+              final engine = ref.read(downloadEngineProvider);
+              engine.updateConfig(
+                engine.config.copyWith(
+                  segmentConcurrency: _segmentConcurrency,
                 ),
               );
             },
@@ -431,16 +465,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 }
 
-/// Task concurrency slider with a live numeric readout.
+/// Concurrency slider with a live numeric readout.
 class _ConcurrencySection extends StatelessWidget {
-  const _ConcurrencySection({required this.value, required this.onChanged});
+  const _ConcurrencySection({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.min,
+    required this.max,
+    this.hint,
+  });
 
+  final String label;
+  final String? hint;
   final int value;
+  final int min;
+  final int max;
   final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
@@ -453,7 +497,7 @@ class _ConcurrencySection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  l10n.concurrency,
+                  label,
                   style: text.titleSmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -481,21 +525,35 @@ class _ConcurrencySection extends StatelessWidget {
             children: [
               Slider(
                 value: value.toDouble(),
-                min: 1,
-                max: 16,
-                divisions: 15,
+                min: min.toDouble(),
+                max: max.toDouble(),
+                divisions: max - min,
                 onChanged: onChanged,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
                 child: Row(
                   children: [
-                    Text('1', style: text.labelSmall),
+                    Text('$min', style: text.labelSmall),
                     const Spacer(),
-                    Text('16', style: text.labelSmall),
+                    Text('$max', style: text.labelSmall),
                   ],
                 ),
               ),
+              if (hint != null)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: Spacing.sm,
+                    left: Spacing.xs,
+                    right: Spacing.xs,
+                  ),
+                  child: Text(
+                    hint!,
+                    style: text.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

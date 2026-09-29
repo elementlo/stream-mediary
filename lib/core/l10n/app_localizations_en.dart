@@ -287,6 +287,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get concurrency => 'Task concurrency';
 
   @override
+  String get segmentConcurrency => 'Segment concurrency';
+
+  @override
+  String get segmentConcurrencyHint =>
+      'Segments downloaded at the same time within one task; lower it if the network or source server is slow';
+
+  @override
   String get queuePolicy => 'Download policy';
 
   @override

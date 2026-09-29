@@ -638,6 +638,18 @@ abstract class AppLocalizations {
   /// **'任务并发数'**
   String get concurrency;
 
+  /// No description provided for @segmentConcurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'分片并发数'**
+  String get segmentConcurrency;
+
+  /// No description provided for @segmentConcurrencyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'单个任务内同时下载的分片数量，网络或源站较慢时可适当调低'**
+  String get segmentConcurrencyHint;
+
   /// No description provided for @queuePolicy.
   ///
   /// In zh, this message translates to:

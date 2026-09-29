@@ -31,7 +31,7 @@ class SettingsRepository {
       _db.setSetting(key, value.toString());
 
   static const int defaultTaskConcurrency = 3;
-  static const int defaultSegmentConcurrency = 8;
+  static const int defaultSegmentConcurrency = 16;
 
   Future<int> taskConcurrency() async {
     final v = await _db.settingValue(keyConcurrency);

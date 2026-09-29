@@ -148,7 +148,7 @@ class DownloadRequest {
 class EngineConfig {
   const EngineConfig({
     this.taskConcurrency = 3,
-    this.segmentConcurrency = 8,
+    this.segmentConcurrency = 16,
     this.preferMp4 = true,
     this.ffmpegPath,
     this.proxyHost,

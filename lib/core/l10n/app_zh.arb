@@ -91,6 +91,8 @@
   "linkCopied": "下载链接已复制",
   "sourcePageCopied": "来源网页已复制",
   "concurrency": "任务并发数",
+  "segmentConcurrency": "分片并发数",
+  "segmentConcurrencyHint": "单个任务内同时下载的分片数量，网络或源站较慢时可适当调低",
   "queuePolicy": "下载策略",
   "sequentialQueue": "逐个下载任务",
   "wifiOnly": "仅 Wi-Fi / 有线网络下载",

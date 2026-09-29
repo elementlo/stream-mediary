@@ -6,6 +6,7 @@
 library;
 
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:logging/logging.dart';
@@ -21,12 +22,25 @@ class SegmentDownloadResult {
     required this.success,
     this.bytes = 0,
     this.error,
+    this.congested = false,
   });
 
   final bool success;
   final int bytes;
   final String? error;
+
+  /// True when the failure signals server/network congestion (timeouts,
+  /// connection errors, 429/5xx) rather than a permanent problem. Consumers
+  /// use it to throttle adaptive concurrency.
+  final bool congested;
 }
+
+/// HTTP statuses that will not change by retrying: fail fast instead of
+/// burning three backoff rounds on a dead or forbidden URL.
+const Set<int> _permanentStatuses = {400, 401, 403, 404, 410};
+
+/// HTTP statuses that indicate the server is overloaded or rate-limiting.
+const Set<int> _congestionStatuses = {429, 500, 502, 503, 504};
 
 class SegmentDownloader {
   SegmentDownloader({Dio? dio}) : _dio = dio ?? Dio();
@@ -34,16 +48,21 @@ class SegmentDownloader {
   final Dio _dio;
 
   static const int maxRetries = 3;
+
+  // Short first backoff: a transient blip should cost milliseconds, not
+  // seconds. Later rounds grow to ride out longer server hiccups.
   static const List<Duration> _backoffs = [
+    Duration(milliseconds: 300),
     Duration(seconds: 1),
     Duration(seconds: 3),
-    Duration(seconds: 9),
   ];
 
   /// Downloads [url] to [targetFile] (writing to a `.part` file first).
   ///
   /// [headers] are attached to the request. [cancelToken] aborts the
-  /// transfer. Returns a [SegmentDownloadResult]; never throws for network
+  /// transfer. [onCongestion] fires on every congestion-type failure
+  /// (including retried attempts) so callers can adapt concurrency.
+  /// Returns a [SegmentDownloadResult]; never throws for network
   /// errors (they are captured in the result).
   Future<SegmentDownloadResult> download(
     String url, {
@@ -51,6 +70,7 @@ class SegmentDownloader {
     Map<String, String> headers = const {},
     CancelToken? cancelToken,
     ByteRange? byteRange,
+    void Function()? onCongestion,
   }) async {
     final partFile = File('${targetFile.path}.part');
     await targetFile.parent.create(recursive: true);
@@ -120,12 +140,18 @@ class SegmentDownloader {
           );
         }
 
-        // PNG-wrapped resources must be decoded before AES and merge.
+        // PNG-wrapped resources must be decoded before AES and merge. The
+        // roUd unwrap runs zlib decompression, which is CPU-bound: do it on
+        // a worker isolate so the event loop keeps servicing the other
+        // concurrent segment connections.
         final input = await partFile.open();
         final signature = await input.read(8);
         await input.close();
         if (isPng(signature)) {
-          final decoded = unwrapRoud(await partFile.readAsBytes());
+          final path = partFile.path;
+          final decoded = await Isolate.run(
+            () => unwrapRoud(File(path).readAsBytesSync()),
+          );
           if (localRange) {
             if (byteRange.end >= decoded.length) {
               throw const FormatException('Decoded byte range exceeds media');
@@ -162,14 +188,31 @@ class SegmentDownloader {
         }
         _log.warning('Segment attempt ${attempt + 1} failed: $url ($e)');
         await _cleanup(partFile);
+
+        final status = e.response?.statusCode;
+        final congested =
+            status == null || _congestionStatuses.contains(status);
+        if (congested) onCongestion?.call();
+
+        // Permanent client errors (403/404/…) will not heal by retrying;
+        // fail immediately so the task surfaces the real problem instead of
+        // burning backoff rounds.
+        if (status != null && _permanentStatuses.contains(status)) {
+          return SegmentDownloadResult(
+            success: false,
+            error: 'HTTP $status',
+            congested: false,
+          );
+        }
         if (attempt < maxRetries) {
           await Future<void>.delayed(_backoffs[attempt]);
         } else {
           return SegmentDownloadResult(
             success: false,
-            error: e.response?.statusCode == null
+            error: status == null
                 ? (e.message ?? 'download failed')
-                : 'HTTP ${e.response!.statusCode}',
+                : 'HTTP $status',
+            congested: congested,
           );
         }
       } catch (e) {

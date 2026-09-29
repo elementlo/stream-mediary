@@ -91,6 +91,8 @@
   "linkCopied": "Download link copied",
   "sourcePageCopied": "Source page copied",
   "concurrency": "Task concurrency",
+  "segmentConcurrency": "Segment concurrency",
+  "segmentConcurrencyHint": "Segments downloaded at the same time within one task; lower it if the network or source server is slow",
   "queuePolicy": "Download policy",
   "sequentialQueue": "Download tasks one at a time",
   "wifiOnly": "Wi-Fi / wired network only",
