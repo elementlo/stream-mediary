@@ -43,11 +43,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _chargingOnly = false;
   bool _sequentialQueue = false;
   bool _completionNotifications = false;
+  final TextEditingController _proxyHostController = TextEditingController();
+  final TextEditingController _proxyPortController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _proxyHostController.dispose();
+    _proxyPortController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -60,6 +69,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       charging,
       sequential,
       notifications,
+      proxyHost,
+      proxyPort,
     ) = await (
       settings.taskConcurrency(),
       settings.mergePreference(),
@@ -68,6 +79,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       settings.flag(SettingsRepository.keyChargingOnly),
       settings.flag(SettingsRepository.keySequentialQueue),
       settings.flag(SettingsRepository.keyCompletionNotifications),
+      settings.proxyHost(),
+      settings.proxyPort(),
     ).wait;
     if (mounted) {
       setState(() {
@@ -78,9 +91,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _chargingOnly = charging;
         _sequentialQueue = sequential;
         _completionNotifications = notifications;
+        _proxyHostController.text = proxyHost ?? '';
+        _proxyPortController.text = proxyPort == null ? '' : '$proxyPort';
         _loaded = true;
       });
     }
+  }
+
+  Future<void> _saveProxy() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final settings = ref.read(settingsRepositoryProvider);
+    final host = _proxyHostController.text.trim();
+    final portText = _proxyPortController.text.trim();
+    int? port;
+    if (portText.isNotEmpty) {
+      port = int.tryParse(portText);
+      if (port == null || port <= 0 || port > 65535) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.proxyInvalidPort)),
+        );
+        return;
+      }
+    }
+    await settings.setProxyHost(host);
+    await settings.setProxyPort(port);
+    final engine = ref.read(downloadEngineProvider);
+    engine.updateConfig(
+      engine.config.copyWith(proxyHost: host, proxyPort: port),
+    );
+    messenger.showSnackBar(SnackBar(content: Text(l10n.proxySaved)));
   }
 
   Future<void> _chooseSaveDir() async {
@@ -283,6 +323,59 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                 );
               },
+            ),
+          ),
+          SectionHeader(l10n.downloadProxy),
+          MediaryCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.downloadProxyHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: Spacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: _proxyHostController,
+                        decoration: InputDecoration(
+                          labelText: l10n.proxyHost,
+                          hintText: l10n.proxyHostHint,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Spacing.md),
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: _proxyPortController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.proxyPort,
+                          hintText: l10n.proxyPortHint,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Spacing.md),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: _saveProxy,
+                    child: Text(l10n.save),
+                  ),
+                ),
+              ],
             ),
           ),
           const SectionHeader('ffmpeg'),

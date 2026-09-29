@@ -269,6 +269,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirm => 'Confirm';
 
   @override
+  String get save => 'Save';
+
+  @override
+  String get copyDownloadLink => 'Copy download link';
+
+  @override
+  String get copySourcePage => 'Copy source page';
+
+  @override
+  String get linkCopied => 'Download link copied';
+
+  @override
+  String get sourcePageCopied => 'Source page copied';
+
+  @override
   String get concurrency => 'Task concurrency';
 
   @override
@@ -323,6 +338,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mergePreferMp4 => 'Prefer MP4';
+
+  @override
+  String get downloadProxy => 'Download proxy';
+
+  @override
+  String get downloadProxyHint =>
+      'All download traffic goes through this HTTP proxy; leave empty for a direct connection';
+
+  @override
+  String get proxyHost => 'Proxy host';
+
+  @override
+  String get proxyHostHint => 'e.g. 127.0.0.1';
+
+  @override
+  String get proxyPort => 'Port';
+
+  @override
+  String get proxyPortHint => 'e.g. 7890';
+
+  @override
+  String get proxySaved => 'Proxy settings saved';
+
+  @override
+  String get proxyInvalidPort => 'Invalid port';
 
   @override
   String get ffmpegPath => 'ffmpeg path';

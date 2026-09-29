@@ -13,6 +13,7 @@ class EngineTaskRecord {
     required this.id,
     required this.url,
     this.sourceUrl,
+    this.refererUrl,
     required this.title,
     required this.state,
     this.headers = const {},
@@ -37,6 +38,10 @@ class EngineTaskRecord {
   final String id;
   String url;
   String? sourceUrl;
+
+  /// Web page the stream was imported from (browser-extension deep link);
+  /// null for manually added tasks.
+  String? refererUrl;
   String title;
   TaskState state;
   Map<String, String> headers;

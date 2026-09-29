@@ -602,6 +602,36 @@ abstract class AppLocalizations {
   /// **'确定'**
   String get confirm;
 
+  /// No description provided for @save.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get save;
+
+  /// No description provided for @copyDownloadLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制下载链接'**
+  String get copyDownloadLink;
+
+  /// No description provided for @copySourcePage.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制来源网页'**
+  String get copySourcePage;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载链接已复制'**
+  String get linkCopied;
+
+  /// No description provided for @sourcePageCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源网页已复制'**
+  String get sourcePageCopied;
+
   /// No description provided for @concurrency.
   ///
   /// In zh, this message translates to:
@@ -709,6 +739,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'优先 MP4'**
   String get mergePreferMp4;
+
+  /// No description provided for @downloadProxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载代理'**
+  String get downloadProxy;
+
+  /// No description provided for @downloadProxyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有下载流量将通过该代理（HTTP 代理），留空表示直连'**
+  String get downloadProxyHint;
+
+  /// No description provided for @proxyHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'代理地址'**
+  String get proxyHost;
+
+  /// No description provided for @proxyHostHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 127.0.0.1'**
+  String get proxyHostHint;
+
+  /// No description provided for @proxyPort.
+  ///
+  /// In zh, this message translates to:
+  /// **'端口'**
+  String get proxyPort;
+
+  /// No description provided for @proxyPortHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 7890'**
+  String get proxyPortHint;
+
+  /// No description provided for @proxySaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'代理设置已保存'**
+  String get proxySaved;
+
+  /// No description provided for @proxyInvalidPort.
+  ///
+  /// In zh, this message translates to:
+  /// **'端口无效'**
+  String get proxyInvalidPort;
 
   /// No description provided for @ffmpegPath.
   ///

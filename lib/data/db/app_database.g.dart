@@ -37,6 +37,17 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _refererUrlMeta = const VerificationMeta(
+    'refererUrl',
+  );
+  @override
+  late final GeneratedColumn<String> refererUrl = GeneratedColumn<String>(
+    'referer_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -255,6 +266,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     id,
     url,
     sourceUrl,
+    refererUrl,
     title,
     status,
     headers,
@@ -304,6 +316,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       context.handle(
         _sourceUrlMeta,
         sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta),
+      );
+    }
+    if (data.containsKey('referer_url')) {
+      context.handle(
+        _refererUrlMeta,
+        refererUrl.isAcceptableOrUnknown(data['referer_url']!, _refererUrlMeta),
       );
     }
     if (data.containsKey('title')) {
@@ -466,6 +484,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}source_url'],
       ),
+      refererUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}referer_url'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -555,6 +577,10 @@ class Task extends DataClass implements Insertable<Task> {
   final String id;
   final String url;
   final String? sourceUrl;
+
+  /// The web page the stream was imported from (browser-extension deep link).
+  /// Null for tasks added manually, so the UI can tell plugin imports apart.
+  final String? refererUrl;
   final String title;
   final int status;
   final String headers;
@@ -578,6 +604,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.id,
     required this.url,
     this.sourceUrl,
+    this.refererUrl,
     required this.title,
     required this.status,
     required this.headers,
@@ -605,6 +632,9 @@ class Task extends DataClass implements Insertable<Task> {
     map['url'] = Variable<String>(url);
     if (!nullToAbsent || sourceUrl != null) {
       map['source_url'] = Variable<String>(sourceUrl);
+    }
+    if (!nullToAbsent || refererUrl != null) {
+      map['referer_url'] = Variable<String>(refererUrl);
     }
     map['title'] = Variable<String>(title);
     map['status'] = Variable<int>(status);
@@ -647,6 +677,9 @@ class Task extends DataClass implements Insertable<Task> {
       sourceUrl: sourceUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceUrl),
+      refererUrl: refererUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refererUrl),
       title: Value(title),
       status: Value(status),
       headers: Value(headers),
@@ -690,6 +723,7 @@ class Task extends DataClass implements Insertable<Task> {
       id: serializer.fromJson<String>(json['id']),
       url: serializer.fromJson<String>(json['url']),
       sourceUrl: serializer.fromJson<String?>(json['sourceUrl']),
+      refererUrl: serializer.fromJson<String?>(json['refererUrl']),
       title: serializer.fromJson<String>(json['title']),
       status: serializer.fromJson<int>(json['status']),
       headers: serializer.fromJson<String>(json['headers']),
@@ -718,6 +752,7 @@ class Task extends DataClass implements Insertable<Task> {
       'id': serializer.toJson<String>(id),
       'url': serializer.toJson<String>(url),
       'sourceUrl': serializer.toJson<String?>(sourceUrl),
+      'refererUrl': serializer.toJson<String?>(refererUrl),
       'title': serializer.toJson<String>(title),
       'status': serializer.toJson<int>(status),
       'headers': serializer.toJson<String>(headers),
@@ -744,6 +779,7 @@ class Task extends DataClass implements Insertable<Task> {
     String? id,
     String? url,
     Value<String?> sourceUrl = const Value.absent(),
+    Value<String?> refererUrl = const Value.absent(),
     String? title,
     int? status,
     String? headers,
@@ -767,6 +803,7 @@ class Task extends DataClass implements Insertable<Task> {
     id: id ?? this.id,
     url: url ?? this.url,
     sourceUrl: sourceUrl.present ? sourceUrl.value : this.sourceUrl,
+    refererUrl: refererUrl.present ? refererUrl.value : this.refererUrl,
     title: title ?? this.title,
     status: status ?? this.status,
     headers: headers ?? this.headers,
@@ -794,6 +831,9 @@ class Task extends DataClass implements Insertable<Task> {
       id: data.id.present ? data.id.value : this.id,
       url: data.url.present ? data.url.value : this.url,
       sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
+      refererUrl: data.refererUrl.present
+          ? data.refererUrl.value
+          : this.refererUrl,
       title: data.title.present ? data.title.value : this.title,
       status: data.status.present ? data.status.value : this.status,
       headers: data.headers.present ? data.headers.value : this.headers,
@@ -842,6 +882,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('id: $id, ')
           ..write('url: $url, ')
           ..write('sourceUrl: $sourceUrl, ')
+          ..write('refererUrl: $refererUrl, ')
           ..write('title: $title, ')
           ..write('status: $status, ')
           ..write('headers: $headers, ')
@@ -870,6 +911,7 @@ class Task extends DataClass implements Insertable<Task> {
     id,
     url,
     sourceUrl,
+    refererUrl,
     title,
     status,
     headers,
@@ -897,6 +939,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.id == this.id &&
           other.url == this.url &&
           other.sourceUrl == this.sourceUrl &&
+          other.refererUrl == this.refererUrl &&
           other.title == this.title &&
           other.status == this.status &&
           other.headers == this.headers &&
@@ -922,6 +965,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> id;
   final Value<String> url;
   final Value<String?> sourceUrl;
+  final Value<String?> refererUrl;
   final Value<String> title;
   final Value<int> status;
   final Value<String> headers;
@@ -946,6 +990,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.id = const Value.absent(),
     this.url = const Value.absent(),
     this.sourceUrl = const Value.absent(),
+    this.refererUrl = const Value.absent(),
     this.title = const Value.absent(),
     this.status = const Value.absent(),
     this.headers = const Value.absent(),
@@ -971,6 +1016,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     required String id,
     required String url,
     this.sourceUrl = const Value.absent(),
+    this.refererUrl = const Value.absent(),
     required String title,
     required int status,
     this.headers = const Value.absent(),
@@ -1002,6 +1048,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? id,
     Expression<String>? url,
     Expression<String>? sourceUrl,
+    Expression<String>? refererUrl,
     Expression<String>? title,
     Expression<int>? status,
     Expression<String>? headers,
@@ -1027,6 +1074,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (id != null) 'id': id,
       if (url != null) 'url': url,
       if (sourceUrl != null) 'source_url': sourceUrl,
+      if (refererUrl != null) 'referer_url': refererUrl,
       if (title != null) 'title': title,
       if (status != null) 'status': status,
       if (headers != null) 'headers': headers,
@@ -1054,6 +1102,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String>? id,
     Value<String>? url,
     Value<String?>? sourceUrl,
+    Value<String?>? refererUrl,
     Value<String>? title,
     Value<int>? status,
     Value<String>? headers,
@@ -1079,6 +1128,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       id: id ?? this.id,
       url: url ?? this.url,
       sourceUrl: sourceUrl ?? this.sourceUrl,
+      refererUrl: refererUrl ?? this.refererUrl,
       title: title ?? this.title,
       status: status ?? this.status,
       headers: headers ?? this.headers,
@@ -1113,6 +1163,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     }
     if (sourceUrl.present) {
       map['source_url'] = Variable<String>(sourceUrl.value);
+    }
+    if (refererUrl.present) {
+      map['referer_url'] = Variable<String>(refererUrl.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -1183,6 +1236,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('id: $id, ')
           ..write('url: $url, ')
           ..write('sourceUrl: $sourceUrl, ')
+          ..write('refererUrl: $refererUrl, ')
           ..write('title: $title, ')
           ..write('status: $status, ')
           ..write('headers: $headers, ')
@@ -2492,6 +2546,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       required String id,
       required String url,
       Value<String?> sourceUrl,
+      Value<String?> refererUrl,
       required String title,
       required int status,
       Value<String> headers,
@@ -2518,6 +2573,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> url,
       Value<String?> sourceUrl,
+      Value<String?> refererUrl,
       Value<String> title,
       Value<int> status,
       Value<String> headers,
@@ -2560,6 +2616,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get sourceUrl => $composableBuilder(
     column: $table.sourceUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refererUrl => $composableBuilder(
+    column: $table.refererUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2683,6 +2744,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get refererUrl => $composableBuilder(
+    column: $table.refererUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -2797,6 +2863,11 @@ class $$TasksTableAnnotationComposer
   GeneratedColumn<String> get sourceUrl =>
       $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
 
+  GeneratedColumn<String> get refererUrl => $composableBuilder(
+    column: $table.refererUrl,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
@@ -2906,6 +2977,7 @@ class $$TasksTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> url = const Value.absent(),
                 Value<String?> sourceUrl = const Value.absent(),
+                Value<String?> refererUrl = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<String> headers = const Value.absent(),
@@ -2930,6 +3002,7 @@ class $$TasksTableTableManager
                 id: id,
                 url: url,
                 sourceUrl: sourceUrl,
+                refererUrl: refererUrl,
                 title: title,
                 status: status,
                 headers: headers,
@@ -2956,6 +3029,7 @@ class $$TasksTableTableManager
                 required String id,
                 required String url,
                 Value<String?> sourceUrl = const Value.absent(),
+                Value<String?> refererUrl = const Value.absent(),
                 required String title,
                 required int status,
                 Value<String> headers = const Value.absent(),
@@ -2980,6 +3054,7 @@ class $$TasksTableTableManager
                 id: id,
                 url: url,
                 sourceUrl: sourceUrl,
+                refererUrl: refererUrl,
                 title: title,
                 status: status,
                 headers: headers,

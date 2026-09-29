@@ -143,7 +143,7 @@ class TaskCard extends ConsumerWidget {
         ? task.mergeFraction
         : task.downloadFraction.clamp(0.0, 1.0);
 
-    return MediaryCard(
+    final card = MediaryCard(
       accent: isLive ? style.color : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,6 +288,59 @@ class TaskCard extends ConsumerWidget {
         ],
       ),
     );
+
+    // Context menu: right-click on desktop, long-press on touch platforms
+    // (Android/iOS). The source-page entry shows only for tasks imported
+    // from the browser extension (they carry the originating web page);
+    // everything else can just copy the stream link.
+    return GestureDetector(
+      onSecondaryTapDown: (details) =>
+          _showContextMenu(context, details.globalPosition),
+      onLongPressStart: (details) =>
+          _showContextMenu(context, details.globalPosition),
+      child: card,
+    );
+  }
+
+  Future<void> _showContextMenu(BuildContext context, Offset position) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final action = await showMenu<_CopyAction>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        overlay.size.width - position.dx,
+        overlay.size.height - position.dy,
+      ),
+      items: [
+        PopupMenuItem(
+          value: _CopyAction.link,
+          child: Text(l10n.copyDownloadLink),
+        ),
+        if (task.refererUrl != null && task.refererUrl!.isNotEmpty)
+          PopupMenuItem(
+            value: _CopyAction.sourcePage,
+            child: Text(l10n.copySourcePage),
+          ),
+      ],
+    );
+    if (action == null) return;
+    final text = switch (action) {
+      _CopyAction.link => task.url,
+      _CopyAction.sourcePage => task.refererUrl,
+    };
+    if (text == null || text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          action == _CopyAction.link ? l10n.linkCopied : l10n.sourcePageCopied,
+        ),
+      ),
+    );
   }
 
   bool _hasActions(TaskState state) => switch (state) {
@@ -401,7 +454,16 @@ class _MetricsRow extends StatelessWidget {
             style: style,
           ),
         if (task.totalSegments > 0) const SizedBox(width: Spacing.md),
-        Text(formatBytes(task.downloadedBytes), style: style),
+        // Show "downloaded / total" when the total size is known (exact for
+        // byte-range playlists, estimated otherwise). When it cannot be
+        // determined yet, show only the downloaded amount.
+        Text(
+          task.totalBytes > 0
+              ? '${formatBytes(task.downloadedBytes)} / '
+                    '${formatBytes(task.totalBytes)}'
+              : formatBytes(task.downloadedBytes),
+          style: style,
+        ),
         if (showEta) ...[
           const SizedBox(width: Spacing.md),
           Flexible(
@@ -514,3 +576,6 @@ class _Action extends StatelessWidget {
     );
   }
 }
+
+/// Which URL the right-click context menu should copy.
+enum _CopyAction { link, sourcePage }

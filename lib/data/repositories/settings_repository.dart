@@ -23,6 +23,8 @@ class SettingsRepository {
   static const String keySequentialQueue = 'sequential_queue';
   static const String keyCompletionNotifications = 'completion_notifications';
   static const String keyUpdatePromptedVersion = 'update_prompted_version';
+  static const String keyProxyHost = 'proxy_host';
+  static const String keyProxyPort = 'proxy_port';
 
   Future<bool> flag(String key) async => await _db.settingValue(key) == 'true';
   Future<void> setFlag(String key, bool value) =>
@@ -74,4 +76,19 @@ class SettingsRepository {
   Future<String?> boardNick() => _db.settingValue(keyBoardNick);
 
   Future<void> setBoardNick(String nick) => _db.setSetting(keyBoardNick, nick);
+
+  /// HTTP proxy host for download traffic; null/empty means direct.
+  Future<String?> proxyHost() => _db.settingValue(keyProxyHost);
+
+  Future<void> setProxyHost(String? host) =>
+      _db.setSetting(keyProxyHost, host?.trim() ?? '');
+
+  /// Proxy port; defaults to 8080 when unset.
+  Future<int?> proxyPort() async {
+    final v = await _db.settingValue(keyProxyPort);
+    return int.tryParse(v ?? '');
+  }
+
+  Future<void> setProxyPort(int? port) =>
+      _db.setSetting(keyProxyPort, port == null ? '' : '$port');
 }

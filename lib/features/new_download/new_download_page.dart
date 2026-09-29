@@ -330,6 +330,9 @@ class _NewDownloadPageState extends ConsumerState<NewDownloadPage> {
       final request = DownloadRequest(
         url: effectiveUrl,
         sourceUrl: _parsedUrl,
+        // Only a browser-extension deep link carries the originating web
+        // page; manual entries leave it null.
+        refererUrl: widget.link?.referer,
         title: _titleController.text.trim().isEmpty
             ? null
             : _titleController.text.trim(),

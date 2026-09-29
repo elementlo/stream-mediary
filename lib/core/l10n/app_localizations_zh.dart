@@ -264,6 +264,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirm => '确定';
 
   @override
+  String get save => '保存';
+
+  @override
+  String get copyDownloadLink => '复制下载链接';
+
+  @override
+  String get copySourcePage => '复制来源网页';
+
+  @override
+  String get linkCopied => '下载链接已复制';
+
+  @override
+  String get sourcePageCopied => '来源网页已复制';
+
+  @override
   String get concurrency => '任务并发数';
 
   @override
@@ -316,6 +331,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mergePreferMp4 => '优先 MP4';
+
+  @override
+  String get downloadProxy => '下载代理';
+
+  @override
+  String get downloadProxyHint => '所有下载流量将通过该代理（HTTP 代理），留空表示直连';
+
+  @override
+  String get proxyHost => '代理地址';
+
+  @override
+  String get proxyHostHint => '例如 127.0.0.1';
+
+  @override
+  String get proxyPort => '端口';
+
+  @override
+  String get proxyPortHint => '例如 7890';
+
+  @override
+  String get proxySaved => '代理设置已保存';
+
+  @override
+  String get proxyInvalidPort => '端口无效';
 
   @override
   String get ffmpegPath => 'ffmpeg 路径';

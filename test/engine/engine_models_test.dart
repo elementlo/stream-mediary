@@ -57,6 +57,47 @@ void main() {
       expect(r.effectiveTitle, matches(RegExp(r'^rou\.video-\d{8}-\d{8}$')));
     });
 
+    test('generic index.jpg yields a unique host name, not "index.jpg"', () {
+      const r = DownloadRequest(url: 'https://cdn.example.com/hls/index.jpg');
+      expect(
+        r.effectiveTitle,
+        matches(RegExp(r'^cdn\.example\.com-\d{8}-\d{8}$')),
+      );
+    });
+
+    test('two generic index.jpg downloads do not share a title', () async {
+      const a = DownloadRequest(url: 'https://cdn.example.com/a/index.jpg');
+      await Future<void>.delayed(const Duration(seconds: 1));
+      const b = DownloadRequest(url: 'https://cdn.example.com/b/index.jpg');
+      expect(a.effectiveTitle, isNot(b.effectiveTitle));
+    });
+
+    test('meaningful jpg disguise keeps its own name', () {
+      const r = DownloadRequest(url: 'https://cdn/videos/episode01.jpg');
+      expect(r.effectiveTitle, 'episode01');
+    });
+
+    test('jpeg/webp disguises are recognized', () {
+      const jpeg = DownloadRequest(url: 'https://cdn.example.com/x/index.jpeg');
+      const webp = DownloadRequest(url: 'https://cdn.example.com/x/master.webp');
+      expect(
+        jpeg.effectiveTitle,
+        matches(RegExp(r'^cdn\.example\.com-\d{8}-\d{8}$')),
+      );
+      expect(
+        webp.effectiveTitle,
+        matches(RegExp(r'^cdn\.example\.com-\d{8}-\d{8}$')),
+      );
+    });
+
+    test('generic name matching is case-insensitive for disguises', () {
+      const r = DownloadRequest(url: 'https://cdn.example.com/hls/INDEX.JPG');
+      expect(
+        r.effectiveTitle,
+        matches(RegExp(r'^cdn\.example\.com-\d{8}-\d{8}$')),
+      );
+    });
+
     test('two disguised downloads do not share a default title', () async {
       const a = DownloadRequest(url: 'https://rou.video/cdn/master.png?sig=1');
       await Future<void>.delayed(const Duration(seconds: 1));

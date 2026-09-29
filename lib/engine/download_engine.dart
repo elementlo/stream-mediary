@@ -15,6 +15,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
@@ -42,7 +43,9 @@ class DownloadEngine {
     this.defaultSaveDir,
   }) : _store = store,
        _config = config,
-       _dio = dio ?? Dio();
+       _dio = dio ?? Dio() {
+    _applyProxy(config);
+  }
 
   final EngineTaskStore _store;
   EngineConfig _config;
@@ -52,7 +55,7 @@ class DownloadEngine {
   String? defaultSaveDir;
 
   final M3u8Parser _parser = const M3u8Parser();
-  final SegmentDownloader _downloader = SegmentDownloader();
+  late final SegmentDownloader _downloader = SegmentDownloader(dio: _dio);
   final TsMerger _merger = const TsMerger();
   final FfmpegRemuxer _remuxer = const FfmpegRemuxer();
 
@@ -75,7 +78,31 @@ class DownloadEngine {
   void updateConfig(EngineConfig config) {
     _config = config;
     _taskSemaphore.limit = config.taskConcurrency;
+    _applyProxy(config);
   }
+
+  /// Routes all engine HTTP traffic through the configured proxy, or clears
+  /// the proxy when none is set. The segment downloader shares [_dio], so
+  /// playlist, key and segment requests all follow this setting.
+  void _applyProxy(EngineConfig config) {
+    final proxy = config.hasProxy
+        ? '${config.proxyHost!.trim()}:${config.proxyPort ?? 8080}'
+        : null;
+    if (proxy == _appliedProxy) return;
+    _appliedProxy = proxy;
+
+    final previous = _dio.httpClientAdapter;
+    _dio.httpClientAdapter = proxy == null
+        ? IOHttpClientAdapter()
+        : IOHttpClientAdapter(
+            createHttpClient: () => HttpClient()
+              ..findProxy = (_) => 'PROXY $proxy',
+          );
+    // Let in-flight requests on the old adapter finish, then release it.
+    previous.close();
+  }
+
+  String? _appliedProxy;
 
   void _emit(EngineEvent event) {
     if (!_events.isClosed) _events.add(event);
@@ -193,6 +220,7 @@ class DownloadEngine {
       id: id,
       url: request.url,
       sourceUrl: request.sourceUrl ?? request.url,
+      refererUrl: request.refererUrl,
       title: title,
       state: TaskState.queued,
       headers: request.headers,
@@ -309,6 +337,17 @@ class DownloadEngine {
       }
     }
     runtime.totalBytes = await _estimateTotalBytes(playlist, existing);
+    // A byte-range playlist declares every segment's exact length, so the
+    // total is known up front and must not be overwritten by the running
+    // average estimate below.
+    if (playlist.segments.isNotEmpty &&
+        playlist.segments.every((s) => s.byteRange != null)) {
+      runtime.totalBytes = playlist.segments.fold<int>(
+        0,
+        (sum, s) => sum + s.byteRange!.length,
+      );
+      runtime.totalBytesExact = true;
+    }
 
     final pending = playlist.segments
         .where((s) => !doneSeqs.contains(s.seq))
@@ -326,7 +365,10 @@ class DownloadEngine {
         runtime.downloadedBytes += size;
         // Estimate total size from the average of completed segments so the
         // progress bar and speed are meaningful before all sizes are known.
-        if (runtime.doneSegments > 0 && runtime.totalSegments > 0) {
+        // Skip when the total is already exact (byte-range playlist).
+        if (!runtime.totalBytesExact &&
+            runtime.doneSegments > 0 &&
+            runtime.totalSegments > 0) {
           runtime.totalBytes =
               runtime.downloadedBytes *
               runtime.totalSegments ~/
@@ -806,6 +848,7 @@ class DownloadEngine {
       request: DownloadRequest(
         url: record.url,
         sourceUrl: record.sourceUrl,
+        refererUrl: record.refererUrl,
         title: record.title,
         headers: record.headers,
         customKeyHex: record.customKeyHex,

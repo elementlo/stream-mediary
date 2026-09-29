@@ -5,6 +5,10 @@ class Tasks extends Table {
   TextColumn get id => text()();
   TextColumn get url => text()();
   TextColumn get sourceUrl => text().nullable()();
+
+  /// The web page the stream was imported from (browser-extension deep link).
+  /// Null for tasks added manually, so the UI can tell plugin imports apart.
+  TextColumn get refererUrl => text().nullable()();
   TextColumn get title => text()();
   IntColumn get status => integer()();
   TextColumn get headers => text().withDefault(const Constant('{}'))();

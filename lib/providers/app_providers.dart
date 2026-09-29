@@ -64,7 +64,7 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
   ref.onDispose(engine.dispose);
 
   // Apply persisted settings (concurrency, merge preference, ffmpeg path,
-  // default save dir) once the database is readable.
+  // default save dir, download proxy) once the database is readable.
   Future.microtask(() async {
     final (
       taskConcurrency,
@@ -73,6 +73,8 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
       ffmpegPath,
       saveDir,
       sequential,
+      proxyHost,
+      proxyPort,
     ) = await (
       settings.taskConcurrency(),
       settings.segmentConcurrency(),
@@ -80,6 +82,8 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
       settings.ffmpegPath(),
       ref.read(defaultSaveDirProvider.future),
       settings.flag(SettingsRepository.keySequentialQueue),
+      settings.proxyHost(),
+      settings.proxyPort(),
     ).wait;
     engine.updateConfig(
       engine.config.copyWith(
@@ -87,6 +91,8 @@ final downloadEngineProvider = Provider<DownloadEngine>((ref) {
         segmentConcurrency: segmentConcurrency,
         preferMp4: merge == 'prefer_mp4',
         ffmpegPath: ffmpegPath,
+        proxyHost: proxyHost,
+        proxyPort: proxyPort,
       ),
     );
     engine.defaultSaveDir = saveDir;
@@ -127,6 +133,7 @@ class TaskViewModel {
     required this.title,
     required this.url,
     required this.state,
+    this.refererUrl,
     this.doneSegments = 0,
     this.totalSegments = 0,
     this.downloadedBytes = 0,
@@ -145,6 +152,9 @@ class TaskViewModel {
   final String title;
   final String url;
   final TaskState state;
+
+  /// Web page the task was imported from (browser extension); null otherwise.
+  final String? refererUrl;
   final int doneSegments;
   final int totalSegments;
   final int downloadedBytes;
@@ -163,6 +173,7 @@ class TaskViewModel {
 
   TaskViewModel copyWith({
     TaskState? state,
+    String? refererUrl,
     int? doneSegments,
     int? totalSegments,
     int? downloadedBytes,
@@ -179,6 +190,7 @@ class TaskViewModel {
     title: title,
     url: url,
     state: state ?? this.state,
+    refererUrl: refererUrl ?? this.refererUrl,
     doneSegments: doneSegments ?? this.doneSegments,
     totalSegments: totalSegments ?? this.totalSegments,
     downloadedBytes: downloadedBytes ?? this.downloadedBytes,
@@ -220,6 +232,7 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
           title: row.title,
           url: row.url,
           state: TaskState.values[row.status],
+          refererUrl: row.refererUrl,
           doneSegments: row.doneSegments,
           totalSegments: row.totalSegments,
           downloadedBytes: row.downloadedBytes,

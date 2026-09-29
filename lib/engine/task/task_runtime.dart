@@ -33,6 +33,12 @@ class TaskRuntime {
   int downloadedBytes = 0;
   int totalBytes = 0;
 
+  /// True when [totalBytes] is an exact figure (e.g. a byte-range playlist
+  /// whose segment lengths are all known up front). When false, [totalBytes]
+  /// is a running estimate derived from completed segments and must not be
+  /// treated as authoritative.
+  bool totalBytesExact = false;
+
   // Speed tracking.
   int _lastBytes = 0;
   DateTime _lastSample = DateTime.now();
