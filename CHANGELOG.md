@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.12] - 2026-09-29
+
+### Added
+
+- Download proxy: configure a local HTTP proxy (host + port) in Settings and all download traffic — playlists, segments and AES keys — is routed through it. Leaving it empty restores direct connections. The setting takes effect immediately on save (in-flight segments finish on the old connection, the next segment uses the new one) and persists across restarts.
+- Task context menu: right-click a download task on macOS/Windows, or long-press on Android/iOS, to copy the download link. Tasks imported from the browser extension also offer "copy source page", which copies the web page the stream came from.
+- Download cards now show the total file size next to the downloaded amount ("123 MB / 456 MB"). Byte-range playlists report an exact total up front; other playlists show a running estimate, and nothing is shown when the size cannot be determined.
+
+### Fixed
+
+- Default titles no longer collide for image-disguised playlists with generic names (`index.jpg`, `master.jpeg`, …): JPG/JPEG/WebP/GIF disguises are now recognized like PNG, and generic names fall back to a unique `host-timestamp` title instead of every download sharing the same folder name.
+
 ## [0.0.11] - 2026-09-28
 
 ### Fixed
