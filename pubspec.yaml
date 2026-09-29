@@ -2,7 +2,7 @@ name: stream_mediary
 description: "Cross-platform M3U8 media downloader"
 publish_to: 'none'
 
-version: 0.0.12+12
+version: 0.0.13+13
 
 environment:
   sdk: ^3.13.2

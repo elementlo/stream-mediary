@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.13] - 2026-09-29
+
+### Added
+
+- Segment concurrency is now configurable in Settings (2–32, default raised from 8 to 16), so downloads can better saturate fast connections.
+- Adaptive concurrency (AIMD): the download window starts at the configured maximum, grows additively while segments succeed, and halves on congestion signals (timeouts, connection errors, HTTP 429/5xx) — throughput stays high on healthy sources while backing off quickly on slow or rate-limiting ones.
+
+### Changed
+
+- AES decryption and PNG `roUd` unwrapping (zlib) now run on worker isolates instead of the main isolate. Previously these CPU-bound steps blocked the event loop and serialized what was supposed to be concurrent downloading — the main cause of unstable speeds.
+- Retry backoff shortened from 1s/3s/9s to 0.3s/1s/3s so transient blips cost milliseconds instead of seconds.
+- Permanent HTTP errors (400/401/403/404/410) now fail immediately instead of burning three retry rounds, surfacing the real problem (e.g. an expired link) faster.
+
 ## [0.0.12] - 2026-09-29
 
 ### Added
