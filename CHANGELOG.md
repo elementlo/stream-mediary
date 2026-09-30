@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.14] - 2026-09-30
+
+### Added
+
+- Self-healing merge: corrupt or vanished segments are skipped instead of failing the whole merge (TS stays playable with a small gap), and the MP4 remux retries with relaxed error detection. The result card reports how many segments were skipped.
+- Merge result card: "Open containing folder" and "Delete segments" actions (with confirmation), on all platforms.
+- Download task context menu (right-click on desktop, long-press on mobile) adds "Open containing directory", resolving the task folder for both finished and in-progress downloads.
+
+### Fixed
+
+- Windows/macOS no longer show the "MP4 conversion is not supported on mobile" hint when the real reason is a missing or failing ffmpeg; each fallback reason now has its own message.
+- Desktop title-row actions (Batch import, Clear completed, Pause all) are flush right instead of stranded mid-row; flow-page primary buttons are right-aligned on desktop per the design spec.
+- Desktop button height raised from 32px to 36px for better visual balance.
+
 ## [0.0.13] - 2026-09-29
 
 ### Added
