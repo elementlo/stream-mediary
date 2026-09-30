@@ -83,12 +83,6 @@
 
 ## 🚀 快速开始
 
-### Chrome 扩展导入
-
-安装并启动一次桌面版 Mediary，再安装 [Video Stream Link Detector](https://github.com/elementlo/IDM-shell-extension) 扩展。在视频页选择“在 Mediary 中下载”，应用会读取入口地址、来源页和浏览器 User-Agent，预览流媒体并允许选择清晰度后开始下载。扩展也可复制原始 HTTP(S) 入口，粘贴到新版 Mediary 的新建下载页。PNG 包装的入口不适用于未实现 `roUd` 解包的普通 HLS 下载器。
-
-macOS 的协议由 `.app` 注册；Windows 在应用首次启动时写入当前用户的协议注册表项。签名 CDN 地址可能过期，需要重新从网页获取入口。
-
 ### 环境要求
 
 - [Flutter](https://docs.flutter.dev/get-started/install) **3.47+**（Dart SDK ^3.13）
