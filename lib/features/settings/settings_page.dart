@@ -132,6 +132,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     engine.updateConfig(
       engine.config.copyWith(proxyHost: host, proxyPort: port),
     );
+    // Keep update-check/download traffic on the same proxy as the engine.
+    ref.read(updateServiceProvider).updateProxy(host, port);
     messenger.showSnackBar(SnackBar(content: Text(l10n.proxySaved)));
   }
 

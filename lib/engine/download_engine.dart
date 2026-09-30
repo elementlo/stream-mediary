@@ -16,10 +16,10 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
+import '../core/utils/dio_proxy.dart';
 import 'crypto/aes_decryptor.dart';
 import 'engine_config.dart';
 import 'engine_events.dart';
@@ -104,21 +104,10 @@ class DownloadEngine {
   /// the proxy when none is set. The segment downloader shares [_dio], so
   /// playlist, key and segment requests all follow this setting.
   void _applyProxy(EngineConfig config) {
-    final proxy = config.hasProxy
-        ? '${config.proxyHost!.trim()}:${config.proxyPort ?? 8080}'
-        : null;
+    final proxy = normalizeProxy(config.proxyHost, config.proxyPort);
     if (proxy == _appliedProxy) return;
     _appliedProxy = proxy;
-
-    final previous = _dio.httpClientAdapter;
-    _dio.httpClientAdapter = proxy == null
-        ? IOHttpClientAdapter()
-        : IOHttpClientAdapter(
-            createHttpClient: () => HttpClient()
-              ..findProxy = (_) => 'PROXY $proxy',
-          );
-    // Let in-flight requests on the old adapter finish, then release it.
-    previous.close();
+    applyDioProxy(_dio, proxy);
   }
 
   String? _appliedProxy;

@@ -380,7 +380,17 @@ final appVersionProvider = FutureProvider<String>((ref) async {
 });
 
 /// Service that checks GitHub releases and installs updates.
-final updateServiceProvider = Provider<UpdateService>((ref) => UpdateService());
+final updateServiceProvider = Provider<UpdateService>((ref) {
+  final service = UpdateService();
+  final settings = ref.watch(settingsRepositoryProvider);
+  // Route update traffic through the configured proxy once settings load.
+  Future.microtask(() async {
+    final (host, port) =
+        await (settings.proxyHost(), settings.proxyPort()).wait;
+    service.updateProxy(host, port);
+  });
+  return service;
+});
 
 /// Theme mode backed by settings.
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(

@@ -12,6 +12,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pointycastle/digests/sha256.dart';
 
+import '../../core/utils/dio_proxy.dart';
+
 final Logger _log = Logger('UpdateService');
 
 /// GitHub repository (owner/name) whose releases are checked.
@@ -144,6 +146,18 @@ class UpdateService {
   UpdateService({Dio? dio}) : _dio = dio ?? Dio();
 
   final Dio _dio;
+
+  String? _appliedProxy;
+
+  /// Routes update-check and package-download traffic through the configured
+  /// proxy (`host`/`port`), or restores a direct connection when [host] is
+  /// blank. Shares the same semantics as the download engine's proxy.
+  void updateProxy(String? host, int? port) {
+    final proxy = normalizeProxy(host, port);
+    if (proxy == _appliedProxy) return;
+    _appliedProxy = proxy;
+    applyDioProxy(_dio, proxy);
+  }
 
   /// Detects the current platform key and CPU architecture.
   Future<(String, String)> detectPlatformArch() async {
@@ -384,12 +398,14 @@ class UpdateService {
     // Keep the script OUTSIDE sourceRoot so xcopy does not copy it into the
     // install directory.
     final bat = File(p.join(file.parent.path, 'mediary_update.bat'));
+    // `ping` sleeps ~1s without needing an interactive console, unlike
+    // `timeout`, which fails when the script runs detached (no console).
     final script = '''
 @echo off
 :wait
 tasklist /FI "PID eq $pid" 2>nul | find "$pid" >nul
 if not errorlevel 1 (
-  timeout /t 1 /nobreak >nul
+  ping -n 2 127.0.0.1 >nul
   goto wait
 )
 xcopy "${sourceRoot.path}\\*" "$installDir\\" /E /Y /I >nul
@@ -397,13 +413,17 @@ start "" "$installDir\\$exeName"
 del "%~f0"
 ''';
     await bat.writeAsString(script, flush: true);
-    await Process.run(
+    // Launch the script DETACHED: it must not inherit this process's
+    // stdout/stderr pipes. With Process.run the script (which waits for this
+    // PID to exit) would hold the inherited pipe open, so Process.run would
+    // never see EOF and would block forever — the app hangs on "installing"
+    // and a console window lingers. Detached mode also allocates no console,
+    // so no window flashes up.
+    await Process.start(
       'cmd',
-      ['/c', 'start', '/min', '', bat.path],
-      runInShell: true,
+      ['/c', bat.path],
+      mode: ProcessStartMode.detached,
     );
-    // Give the script a moment to spawn before this process exits.
-    await Future<void>.delayed(const Duration(milliseconds: 500));
     exit(0);
   }
 
