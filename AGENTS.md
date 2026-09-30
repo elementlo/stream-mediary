@@ -18,6 +18,8 @@
   - `url` — 流媒体入口地址
   - `referer` — 来源网页地址（Mediary 持久化为 `refererUrl`，用于"复制来源网页"）
   - `userAgent` — 浏览器 UA
+- **检测策略**：完全通用、站点中立——HLS 按后缀/MIME/查询参数识别；PNG 包装流按结构探测（任何 302 到 `.png` 的请求都是候选，解包验证 `roUd` 块后才保留）。扩展代码不含任何站点硬编码。
+- **可选规则（JSON 导入）**：popup ⚙ 面板仅支持导入/导出/清空 JSON 规则（无编辑表单）。规则是通用检测之上的**额外筛选**：页面域名命中规则时只保留 `urlFilter` 匹配的候选；`pagePath`+`entryPath` 可为无法观察到请求的页面构造 fallback 入口。规则字段：`hostname`（必填）、`urlFilter`、`pagePath`、`entryPath`（`$1..$n` 引用分组）、`kind`（`wrapped-hls`/`hls`）。存 `chrome.storage.local`，导入时校验。详见插件仓库的 AGENTS.md 与 README。
 - **协议注册**：macOS 由 `.app` bundle 注册；Windows 在应用首次启动时写入当前用户注册表
 - **说明**：扩展为独立实现，不含任何第三方专有代码；签名 CDN 地址可能过期
 

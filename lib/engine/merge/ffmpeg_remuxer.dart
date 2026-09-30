@@ -78,8 +78,13 @@ class FfmpegRemuxer {
 
   /// Remuxes [inputTs] into a sibling `.mp4` using `-c copy`.
   ///
+  /// Self-healing: when the strict remux fails (corrupt or truncated TS
+  /// data), retries once with error detection relaxed
+  /// (`-err_detect ignore_err`), which lets ffmpeg skip bad packets and
+  /// still produce a playable file.
+  ///
   /// Returns the output `.mp4` file on success, or null when ffmpeg is
-  /// unavailable or the remux fails (caller should keep the `.ts`).
+  /// unavailable or both attempts fail (caller should keep the `.ts`).
   Future<File?> remuxToMp4(
     File inputTs, {
     String? ffmpegPath,
@@ -90,30 +95,43 @@ class FfmpegRemuxer {
     final outputPath = inputTs.path.replaceAll(RegExp(r'\.ts$'), '.mp4');
     final output = File(outputPath);
 
-    try {
-      final process = await Process.run(probeResult.path!, [
+    // Attempt 1: strict lossless copy. Attempt 2: tolerate corrupt packets.
+    final attempts = <List<String>>[
+      [
         '-y',
-        '-i',
-        inputTs.path,
-        '-c',
-        'copy',
-        '-movflags',
-        '+faststart',
+        '-i', inputTs.path,
+        '-c', 'copy',
+        '-movflags', '+faststart',
         outputPath,
-      ]);
-      if (process.exitCode == 0 && output.existsSync() && output.lengthSync() > 0) {
-        return output;
-      }
-    } on ProcessException {
-      // Fall through to null.
-    }
+      ],
+      [
+        '-y',
+        '-err_detect', 'ignore_err',
+        '-i', inputTs.path,
+        '-c', 'copy',
+        '-movflags', '+faststart',
+        outputPath,
+      ],
+    ];
 
-    // Clean up a partial output if any.
-    if (output.existsSync()) {
+    for (final args in attempts) {
       try {
-        await output.delete();
-      } on FileSystemException {
-        // Ignore cleanup failures.
+        final process = await Process.run(probeResult.path!, args);
+        if (process.exitCode == 0 &&
+            output.existsSync() &&
+            output.lengthSync() > 0) {
+          return output;
+        }
+      } on ProcessException {
+        // Fall through to the next attempt / null.
+      }
+      // Clean up a partial output before retrying.
+      if (output.existsSync()) {
+        try {
+          await output.delete();
+        } on FileSystemException {
+          // Ignore cleanup failures.
+        }
       }
     }
     return null;

@@ -32,6 +32,9 @@ abstract final class AppTheme {
     // Desktop settles on 13.5 — readable on both, not chunky on macOS.
     final isDesktop = profile?.isDesktop ?? false;
     final navLabelSize = isDesktop ? 13.5 : 12.0;
+    // Desktop buttons sit at 36px: above the 32px minimum pointer target
+    // (docs/ui-redesign.md §8) and visually balanced against compact density.
+    final buttonHeight = isDesktop ? 36.0 : TapTarget.touch;
 
     return ThemeData(
       useMaterial3: true,
@@ -109,7 +112,7 @@ abstract final class AppTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: Size(0, profile?.minTapTarget ?? TapTarget.touch),
+          minimumSize: Size(0, buttonHeight),
           padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
           shape: RoundedRectangleBorder(borderRadius: Radii.mdAll),
           textStyle: text.labelLarge,
@@ -118,7 +121,7 @@ abstract final class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: Size(0, profile?.minTapTarget ?? TapTarget.touch),
+          minimumSize: Size(0, buttonHeight),
           padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
           foregroundColor: scheme.onSurface,
           side: BorderSide(color: colors.hairline),
@@ -130,7 +133,7 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: scheme.primary,
-          minimumSize: Size(0, profile?.minTapTarget ?? TapTarget.touch),
+          minimumSize: Size(0, buttonHeight),
           padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
           shape: RoundedRectangleBorder(borderRadius: Radii.smAll),
           textStyle: text.labelLarge,

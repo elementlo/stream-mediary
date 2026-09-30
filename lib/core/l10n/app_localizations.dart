@@ -1316,11 +1316,47 @@ abstract class AppLocalizations {
   /// **'未检测到 ffmpeg 或转换失败，已保留 TS 文件'**
   String get mergeRemuxFailedHint;
 
+  /// No description provided for @mergeFfmpegMissingHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'未检测到 ffmpeg，已保留 TS 文件。可在设置中指定 ffmpeg 路径后重试'**
+  String get mergeFfmpegMissingHint;
+
+  /// No description provided for @mergeSkippedSegments.
+  ///
+  /// In zh, this message translates to:
+  /// **'已跳过 {count} 个损坏切片，输出文件可能缺少对应片段'**
+  String mergeSkippedSegments(Object count);
+
   /// No description provided for @mergeOpenOutput.
   ///
   /// In zh, this message translates to:
   /// **'打开文件'**
   String get mergeOpenOutput;
+
+  /// No description provided for @mergeOpenFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开所在文件夹'**
+  String get mergeOpenFolder;
+
+  /// No description provided for @mergeDeleteSegments.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除切片'**
+  String get mergeDeleteSegments;
+
+  /// No description provided for @mergeSegmentsDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已删除 {count} 个切片文件'**
+  String mergeSegmentsDeleted(Object count);
+
+  /// No description provided for @mergeDeleteSegmentsConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并已完成，确定删除源切片文件吗？此操作不可撤销。'**
+  String get mergeDeleteSegmentsConfirm;
 
   /// No description provided for @deleteLocalFiles.
   ///

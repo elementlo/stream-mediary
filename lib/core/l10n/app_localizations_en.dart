@@ -675,7 +675,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'ffmpeg not found or conversion failed; the TS file was kept';
 
   @override
+  String get mergeFfmpegMissingHint =>
+      'ffmpeg was not detected; the TS file was kept. Set an ffmpeg path in Settings and retry';
+
+  @override
+  String mergeSkippedSegments(Object count) {
+    return 'Skipped $count corrupt segment(s); the output may be missing those parts';
+  }
+
+  @override
   String get mergeOpenOutput => 'Open file';
+
+  @override
+  String get mergeOpenFolder => 'Open containing folder';
+
+  @override
+  String get mergeDeleteSegments => 'Delete segments';
+
+  @override
+  String mergeSegmentsDeleted(Object count) {
+    return 'Deleted $count segment file(s)';
+  }
+
+  @override
+  String get mergeDeleteSegmentsConfirm =>
+      'The merge is complete. Delete the source segment files? This cannot be undone.';
 
   @override
   String get deleteLocalFiles => 'Also delete local files';

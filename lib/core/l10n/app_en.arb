@@ -248,7 +248,23 @@
   "mergeSegmentMissing": "Segment file missing: {path}",
   "mergeMobileTsHint": "MP4 conversion is not supported on mobile; a TS file was output",
   "mergeRemuxFailedHint": "ffmpeg not found or conversion failed; the TS file was kept",
+  "mergeFfmpegMissingHint": "ffmpeg was not detected; the TS file was kept. Set an ffmpeg path in Settings and retry",
+  "mergeSkippedSegments": "Skipped {count} corrupt segment(s); the output may be missing those parts",
+  "@mergeSkippedSegments": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "mergeOpenOutput": "Open file",
+  "mergeOpenFolder": "Open containing folder",
+  "mergeDeleteSegments": "Delete segments",
+  "mergeSegmentsDeleted": "Deleted {count} segment file(s)",
+  "@mergeSegmentsDeleted": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "mergeDeleteSegmentsConfirm": "The merge is complete. Delete the source segment files? This cannot be undone.",
   "deleteLocalFiles": "Also delete local files",
   "clearCompleted": "Clear completed",
   "confirmClearCompletedTitle": "Clear completed tasks",

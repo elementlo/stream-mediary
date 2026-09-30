@@ -647,7 +647,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mergeRemuxFailedHint => '未检测到 ffmpeg 或转换失败，已保留 TS 文件';
 
   @override
+  String get mergeFfmpegMissingHint =>
+      '未检测到 ffmpeg，已保留 TS 文件。可在设置中指定 ffmpeg 路径后重试';
+
+  @override
+  String mergeSkippedSegments(Object count) {
+    return '已跳过 $count 个损坏切片，输出文件可能缺少对应片段';
+  }
+
+  @override
   String get mergeOpenOutput => '打开文件';
+
+  @override
+  String get mergeOpenFolder => '打开所在文件夹';
+
+  @override
+  String get mergeDeleteSegments => '删除切片';
+
+  @override
+  String mergeSegmentsDeleted(Object count) {
+    return '已删除 $count 个切片文件';
+  }
+
+  @override
+  String get mergeDeleteSegmentsConfirm => '合并已完成，确定删除源切片文件吗？此操作不可撤销。';
 
   @override
   String get deleteLocalFiles => '同时删除本地文件';

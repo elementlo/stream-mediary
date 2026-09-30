@@ -31,6 +31,20 @@ enum FolderMergeError {
 /// Merge stages, so the UI can switch progress indicator styles.
 enum FolderMergePhase { concatenating, remuxing }
 
+/// Why an MP4-preferred merge ended up as a `.ts`. The UI must not claim
+/// "mobile" on a desktop where ffmpeg is simply missing or failed.
+enum TsFallbackReason {
+  /// Android/iOS: no ffmpeg CLI is available at all.
+  mobile,
+
+  /// Desktop: no usable ffmpeg binary was found.
+  ffmpegMissing,
+
+  /// Desktop: ffmpeg ran but the remux failed even after the error-tolerant
+  /// retry.
+  remuxFailed,
+}
+
 /// Result of scanning a folder for segments.
 class FolderScanResult {
   const FolderScanResult({
@@ -55,8 +69,10 @@ class FolderMergeResult {
   const FolderMergeResult({
     this.outputFile,
     this.downgradedToTs = false,
+    this.tsFallbackReason,
     this.segmentCount = 0,
     this.totalBytes = 0,
+    this.skippedSegments = const [],
     this.error,
     this.errorMessage,
   });
@@ -64,12 +80,19 @@ class FolderMergeResult {
   /// Merged output file on success.
   final File? outputFile;
 
-  /// True when MP4 was requested but a `.ts` was produced instead
-  /// (mobile platform, or ffmpeg missing/remux failed on desktop).
+  /// True when MP4 was requested but a `.ts` was produced instead.
   final bool downgradedToTs;
+
+  /// Why the MP4 remux did not happen; null when it succeeded or MP4 was
+  /// not requested.
+  final TsFallbackReason? tsFallbackReason;
 
   final int segmentCount;
   final int totalBytes;
+
+  /// Unreadable/corrupt segments that were skipped by the self-healing
+  /// merge instead of failing the whole operation.
+  final List<String> skippedSegments;
 
   /// Non-null on failure.
   final FolderMergeError? error;
@@ -168,10 +191,16 @@ class FolderMerger {
   /// Merges all `.ts` files in [folder] into a single video file placed
   /// inside the same folder, named after the folder.
   ///
+  /// Self-healing: segments that disappear or become unreadable mid-merge
+  /// are skipped (and reported in [FolderMergeResult.skippedSegments])
+  /// instead of failing the whole operation — a partially corrupt download
+  /// still yields a playable file.
+  ///
   /// When [preferMp4] is true, desktop platforms remux the concatenated
   /// `.ts` into `.mp4` via ffmpeg; a failed remux degrades to keeping the
-  /// `.ts` (never an error). Mobile platforms always degrade because no
-  /// ffmpeg binary is available there.
+  /// `.ts` (never an error) with the reason recorded in
+  /// [FolderMergeResult.tsFallbackReason]. Mobile platforms always degrade
+  /// because no ffmpeg binary is available there.
   Future<FolderMergeResult> mergeFolder(
     Directory folder, {
     required bool preferMp4,
@@ -195,11 +224,13 @@ class FolderMerger {
     final tsOutput = File(p.join(folder.path, '$base.ts'));
 
     onPhaseChanged?.call(FolderMergePhase.concatenating);
+    final skipped = <String>[];
     try {
       await tsMerger.merge(
         scan.segments,
         outputFile: tsOutput,
         onProgress: onProgress,
+        onSegmentSkipped: skipped.add,
       );
     } on FileSystemException catch (e) {
       await _deleteQuietly(tsOutput);
@@ -211,27 +242,50 @@ class FolderMerger {
         errorMessage: e.message,
         segmentCount: scan.segments.length,
         totalBytes: scan.totalBytes,
+        skippedSegments: skipped,
+      );
+    }
+
+    // Every segment was unreadable: nothing usable was produced.
+    if (skipped.length == scan.segments.length) {
+      await _deleteQuietly(tsOutput);
+      return FolderMergeResult(
+        error: FolderMergeError.segmentMissing,
+        segmentCount: scan.segments.length,
+        totalBytes: scan.totalBytes,
+        skippedSegments: skipped,
       );
     }
 
     var output = tsOutput;
     var downgraded = false;
+    TsFallbackReason? fallbackReason;
 
     if (preferMp4) {
       if (Platform.isAndroid || Platform.isIOS) {
         // No ffmpeg CLI on mobile; the merged .ts is the final output.
         downgraded = true;
+        fallbackReason = TsFallbackReason.mobile;
       } else {
         onPhaseChanged?.call(FolderMergePhase.remuxing);
-        final mp4 =
-            await remuxer.remuxToMp4(tsOutput, ffmpegPath: ffmpegPath);
-        if (mp4 != null) {
-          output = mp4;
-          await _deleteQuietly(tsOutput);
-        } else {
-          // ffmpeg missing or remux failed: keep the .ts, same policy as
-          // the download engine.
+        final probe = await remuxer.probe(userPath: ffmpegPath);
+        if (!probe.available) {
           downgraded = true;
+          fallbackReason = TsFallbackReason.ffmpegMissing;
+        } else {
+          final mp4 = await remuxer.remuxToMp4(
+            tsOutput,
+            ffmpegPath: ffmpegPath,
+          );
+          if (mp4 != null) {
+            output = mp4;
+            await _deleteQuietly(tsOutput);
+          } else {
+            // ffmpeg exists but the remux failed: keep the .ts, same policy
+            // as the download engine.
+            downgraded = true;
+            fallbackReason = TsFallbackReason.remuxFailed;
+          }
         }
       }
     }
@@ -239,8 +293,10 @@ class FolderMerger {
     return FolderMergeResult(
       outputFile: output,
       downgradedToTs: downgraded,
+      tsFallbackReason: fallbackReason,
       segmentCount: scan.segments.length,
       totalBytes: scan.totalBytes,
+      skippedSegments: skipped,
     );
   }
 

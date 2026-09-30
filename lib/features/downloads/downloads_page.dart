@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path/path.dart' as p;
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/platform/file_opener.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
@@ -307,7 +309,8 @@ class TaskCard extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
-    final action = await showMenu<_CopyAction>(
+    final taskDir = _taskDirectory();
+    final action = await showMenu<_MenuAction>(
       context: context,
       position: RelativeRect.fromLTRB(
         position.dx,
@@ -317,30 +320,52 @@ class TaskCard extends ConsumerWidget {
       ),
       items: [
         PopupMenuItem(
-          value: _CopyAction.link,
+          value: _MenuAction.copyLink,
           child: Text(l10n.copyDownloadLink),
         ),
         if (task.refererUrl != null && task.refererUrl!.isNotEmpty)
           PopupMenuItem(
-            value: _CopyAction.sourcePage,
+            value: _MenuAction.copySourcePage,
             child: Text(l10n.copySourcePage),
+          ),
+        if (taskDir != null)
+          PopupMenuItem(
+            value: _MenuAction.openFolder,
+            child: Text(l10n.openFolder),
           ),
       ],
     );
     if (action == null) return;
-    final text = switch (action) {
-      _CopyAction.link => task.url,
-      _CopyAction.sourcePage => task.refererUrl,
-    };
-    if (text == null || text.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: text));
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          action == _CopyAction.link ? l10n.linkCopied : l10n.sourcePageCopied,
-        ),
-      ),
-    );
+    switch (action) {
+      case _MenuAction.copyLink:
+        await Clipboard.setData(ClipboardData(text: task.url));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.linkCopied)),
+        );
+      case _MenuAction.copySourcePage:
+        final referer = task.refererUrl;
+        if (referer == null || referer.isEmpty) return;
+        await Clipboard.setData(ClipboardData(text: referer));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.sourcePageCopied)),
+        );
+      case _MenuAction.openFolder:
+        if (taskDir != null) await revealInFileManager(taskDir);
+    }
+  }
+
+  /// The task's folder on disk: the output file's directory once merged,
+  /// otherwise `saveDir/<sanitized title>` (the engine's layout). Null when
+  /// neither is known yet.
+  String? _taskDirectory() {
+    final output = task.outputPath;
+    if (output != null && output.isNotEmpty) return p.dirname(output);
+    final saveDir = task.saveDir;
+    if (saveDir == null || saveDir.isEmpty) return null;
+    final sanitized = task.title
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
+    return p.join(saveDir, sanitized);
   }
 
   bool _hasActions(TaskState state) => switch (state) {
@@ -577,5 +602,5 @@ class _Action extends StatelessWidget {
   }
 }
 
-/// Which URL the right-click context menu should copy.
-enum _CopyAction { link, sourcePage }
+/// Actions offered by the task context menu.
+enum _MenuAction { copyLink, copySourcePage, openFolder }

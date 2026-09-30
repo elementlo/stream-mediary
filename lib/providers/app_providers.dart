@@ -134,6 +134,7 @@ class TaskViewModel {
     required this.url,
     required this.state,
     this.refererUrl,
+    this.saveDir,
     this.doneSegments = 0,
     this.totalSegments = 0,
     this.downloadedBytes = 0,
@@ -155,6 +156,9 @@ class TaskViewModel {
 
   /// Web page the task was imported from (browser extension); null otherwise.
   final String? refererUrl;
+
+  /// Base directory the task saves into; the task folder is `saveDir/title`.
+  final String? saveDir;
   final int doneSegments;
   final int totalSegments;
   final int downloadedBytes;
@@ -191,6 +195,7 @@ class TaskViewModel {
     url: url,
     state: state ?? this.state,
     refererUrl: refererUrl ?? this.refererUrl,
+    saveDir: saveDir,
     doneSegments: doneSegments ?? this.doneSegments,
     totalSegments: totalSegments ?? this.totalSegments,
     downloadedBytes: downloadedBytes ?? this.downloadedBytes,
@@ -233,6 +238,7 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
           url: row.url,
           state: TaskState.values[row.status],
           refererUrl: row.refererUrl,
+          saveDir: row.saveDir,
           doneSegments: row.doneSegments,
           totalSegments: row.totalSegments,
           downloadedBytes: row.downloadedBytes,

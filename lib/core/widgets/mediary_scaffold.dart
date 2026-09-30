@@ -132,7 +132,10 @@ class _DesktopTitleRow extends StatelessWidget {
           leading!,
           const SizedBox(width: Spacing.sm),
         ],
-        Flexible(
+        // Expanded (tight) so the title column fills all space left over by
+        // the actions. A loose Flexible + Spacer would split the remainder
+        // and leave the actions stranded mid-row instead of flush right.
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -157,7 +160,6 @@ class _DesktopTitleRow extends StatelessWidget {
             ],
           ),
         ),
-        const Spacer(),
         if (actions.isNotEmpty)
           Row(
             mainAxisSize: MainAxisSize.min,

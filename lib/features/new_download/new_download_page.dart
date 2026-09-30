@@ -14,6 +14,7 @@ import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/user_error.dart';
 import '../../core/utils/storage_access.dart';
+import '../../core/widgets/flow_actions.dart';
 import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
 import '../../core/widgets/stat_tile.dart';
@@ -972,13 +973,14 @@ class _PreviewCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.sm),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onStart,
-              icon: const Icon(Icons.download_rounded, size: 18),
-              label: Text(l10n.startDownload),
-            ),
+          FlowActions(
+            children: [
+              FilledButton.icon(
+                onPressed: onStart,
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: Text(l10n.startDownload),
+              ),
+            ],
           ),
         ],
       ),

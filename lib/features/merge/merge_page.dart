@@ -7,12 +7,14 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/l10n/app_localizations.dart';
+import '../../core/platform/file_opener.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/user_error.dart';
 import '../../core/utils/storage_access.dart';
+import '../../core/widgets/flow_actions.dart';
 import '../../core/widgets/mediary_card.dart';
 import '../../core/widgets/mediary_scaffold.dart';
 import '../../core/widgets/section_header.dart';
@@ -169,7 +171,11 @@ class _MergePageState extends ConsumerState<MergePage> {
   String _messageFor(FolderMergeResult result, AppLocalizations l10n) {
     if (result.success) {
       if (result.downgradedToTs) {
-        return l10n.mergeMobileTsHint;
+        return switch (result.tsFallbackReason) {
+          TsFallbackReason.mobile => l10n.mergeMobileTsHint,
+          TsFallbackReason.ffmpegMissing => l10n.mergeFfmpegMissingHint,
+          TsFallbackReason.remuxFailed || null => l10n.mergeRemuxFailedHint,
+        };
       }
       return l10n.mergeSuccess(result.outputFile!.path);
     }
@@ -230,16 +236,20 @@ class _MergePageState extends ConsumerState<MergePage> {
             ),
           ),
           const SizedBox(height: Spacing.xl),
-          FilledButton.icon(
-            onPressed: canMerge ? _startMerge : null,
-            icon: _merging
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.call_merge_rounded, size: 18),
-            label: Text(_merging ? l10n.mergeInProgress : l10n.mergeStart),
+          FlowActions(
+            children: [
+              FilledButton.icon(
+                onPressed: canMerge ? _startMerge : null,
+                icon: _merging
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.call_merge_rounded, size: 18),
+                label: Text(_merging ? l10n.mergeInProgress : l10n.mergeStart),
+              ),
+            ],
           ),
           if (_merging) ...[
             const SizedBox(height: Spacing.lg),
@@ -434,10 +444,69 @@ class _MergeProgress extends StatelessWidget {
   }
 }
 
-class _ResultCard extends StatelessWidget {
+class _ResultCard extends StatefulWidget {
   const _ResultCard({required this.result});
 
   final FolderMergeResult result;
+
+  @override
+  State<_ResultCard> createState() => _ResultCardState();
+}
+
+class _ResultCardState extends State<_ResultCard> {
+  bool _segmentsDeleted = false;
+
+  FolderMergeResult get result => widget.result;
+
+  Future<void> _deleteSegments() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.mergeDeleteSegments),
+        content: Text(l10n.mergeDeleteSegmentsConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    // Delete every .ts segment that was merged, except the output file
+    // itself (which may be a .ts when the MP4 remux was skipped).
+    final output = result.outputFile;
+    final folder = output?.parent;
+    if (folder == null) return;
+    var deleted = 0;
+    try {
+      await for (final entity in folder.list()) {
+        if (entity is! File) continue;
+        if (!entity.path.toLowerCase().endsWith('.ts')) continue;
+        if (output != null && entity.path == output.path) continue;
+        try {
+          await entity.delete();
+          deleted++;
+        } on FileSystemException {
+          // Ignore individual failures.
+        }
+      }
+    } on FileSystemException {
+      // Folder unreadable; nothing to delete.
+    }
+    if (!mounted) return;
+    setState(() => _segmentsDeleted = true);
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.mergeSegmentsDeleted(deleted))),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -477,6 +546,7 @@ class _ResultCard extends StatelessWidget {
     }
 
     final output = result.outputFile!;
+    final skipped = result.skippedSegments.length;
     return MediaryCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,32 +596,49 @@ class _ResultCard extends StatelessWidget {
           ),
           if (result.downgradedToTs) ...[
             const SizedBox(height: Spacing.md),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 15,
-                  color: colors.warning,
-                ),
-                const SizedBox(width: Spacing.sm - 2),
-                Expanded(
-                  child: Text(
-                    l10n.mergeMobileTsHint,
-                    style: text.bodySmall?.copyWith(color: colors.warning),
-                  ),
-                ),
-              ],
+            _HintRow(
+              icon: Icons.info_outline_rounded,
+              color: colors.warning,
+              text: switch (result.tsFallbackReason) {
+                TsFallbackReason.mobile => l10n.mergeMobileTsHint,
+                TsFallbackReason.ffmpegMissing => l10n.mergeFfmpegMissingHint,
+                TsFallbackReason.remuxFailed || null =>
+                  l10n.mergeRemuxFailedHint,
+              },
+            ),
+          ],
+          if (skipped > 0) ...[
+            const SizedBox(height: Spacing.sm),
+            _HintRow(
+              icon: Icons.warning_amber_rounded,
+              color: colors.warning,
+              text: l10n.mergeSkippedSegments(skipped),
             ),
           ],
           const SizedBox(height: Spacing.md),
-          Row(
+          Wrap(
+            spacing: Spacing.sm,
+            runSpacing: Spacing.sm,
             children: [
               OutlinedButton.icon(
                 onPressed: () => OpenFilex.open(output.path),
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
                 label: Text(l10n.mergeOpenOutput),
-                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 36)),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => revealInFileManager(output.path),
+                icon: const Icon(Icons.folder_open_rounded, size: 16),
+                label: Text(l10n.mergeOpenFolder),
+              ),
+              OutlinedButton.icon(
+                onPressed: _segmentsDeleted ? null : _deleteSegments,
+                icon: Icon(
+                  _segmentsDeleted
+                      ? Icons.check_rounded
+                      : Icons.delete_outline_rounded,
+                  size: 16,
+                ),
+                label: Text(l10n.mergeDeleteSegments),
               ),
             ],
           ),
@@ -567,4 +654,31 @@ class _ResultCard extends StatelessWidget {
         FolderMergeError.segmentMissing => l10n.errorMergeSegmentMissing,
         FolderMergeError.writeFailed || null => l10n.errorMergeFailed,
       };
+}
+
+class _HintRow extends StatelessWidget {
+  const _HintRow({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: Spacing.sm - 2),
+        Expanded(
+          child: Text(text, style: textTheme.bodySmall?.copyWith(color: color)),
+        ),
+      ],
+    );
+  }
 }

@@ -8,6 +8,7 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/user_error.dart';
+import '../../core/widgets/flow_actions.dart';
 import '../../core/widgets/mediary_scaffold.dart';
 import '../../engine/engine_config.dart';
 import '../../engine/m3u8/playlist.dart';
@@ -211,10 +212,14 @@ class _BatchDownloadPageState extends ConsumerState<BatchDownloadPage> {
             ),
           ],
           const SizedBox(height: Spacing.md),
-          FilledButton.icon(
-            onPressed: _busy ? null : _preview,
-            icon: const Icon(Icons.preview_rounded),
-            label: Text(l10n.parse),
+          FlowActions(
+            children: [
+              FilledButton.icon(
+                onPressed: _busy ? null : _preview,
+                icon: const Icon(Icons.preview_rounded),
+                label: Text(l10n.parse),
+              ),
+            ],
           ),
           if (_busy) const LinearProgressIndicator(),
           if (_items.isNotEmpty) ...[
@@ -258,10 +263,14 @@ class _BatchDownloadPageState extends ConsumerState<BatchDownloadPage> {
                 ),
               ),
             const SizedBox(height: Spacing.md),
-            FilledButton.icon(
-              onPressed: _busy || ready.isEmpty ? null : _addAll,
-              icon: const Icon(Icons.download_rounded),
-              label: Text(l10n.batchAdd),
+            FlowActions(
+              children: [
+                FilledButton.icon(
+                  onPressed: _busy || ready.isEmpty ? null : _addAll,
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(l10n.batchAdd),
+                ),
+              ],
             ),
           ],
         ],
