@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.15] - 2026-10-01
+
+### Added
+
+- Update traffic (release checks and package downloads) now honors the configured download proxy, matching the download engine. The proxy applies immediately on save and persists across restarts.
+
+### Fixed
+
+- Windows in-app update no longer hangs on "installing" with a lingering console window. The installer script is now launched detached so it does not inherit the app's stdout/stderr pipes (which previously deadlocked against the script waiting for the app to exit), and no console window is allocated.
+
 ## [0.0.14] - 2026-09-30
 
 ### Added
