@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.0] - 2026-10-01
+
+### Added
+
+- In-app language switch: Settings → Language offers System / 中文 / English. The whole UI re-renders in the chosen language immediately, without a restart, and the choice persists across restarts.
+
+### Fixed
+
+- Windows tray icon: the right-click context menu (with "Quit") now opens reliably, including while the main window is hidden. Upgraded the tray implementation so the menu is shown natively instead of through a path that silently failed on a hidden window.
+- Windows Chinese text no longer renders in a serif fallback (SimSun) that clashed with the sans-serif UI; Chinese now uses the platform-native sans-serif (Microsoft YaHei).
+- Download cards: the speed readout is flush right again instead of stranded mid-row when an ETA is shown.
+
 ## [0.0.15] - 2026-10-01
 
 ### Added
