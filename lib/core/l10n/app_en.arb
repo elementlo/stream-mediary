@@ -107,6 +107,8 @@
   "themeSystem": "System",
   "themeLight": "Light",
   "themeDark": "Dark",
+  "language": "Language",
+  "languageSystem": "System",
   "mergePreference": "Merge mode",
   "mergeTsOnly": "TS only",
   "mergePreferMp4": "Prefer MP4",

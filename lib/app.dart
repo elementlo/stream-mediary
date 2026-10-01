@@ -70,6 +70,7 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
     ref.watch(completionNotificationsProvider);
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
     // Resolved once: the platform cannot change while the app is running.
     final profile = PlatformProfile.resolve();
 
@@ -99,7 +100,7 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
         darkTheme: AppTheme.dark(profile: profile),
         themeMode: themeMode,
         routerConfig: router,
-        locale: const Locale('zh'),
+        locale: locale,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,

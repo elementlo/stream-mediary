@@ -734,6 +734,18 @@ abstract class AppLocalizations {
   /// **'暗色'**
   String get themeDark;
 
+  /// No description provided for @language.
+  ///
+  /// In zh, this message translates to:
+  /// **'语言'**
+  String get language;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统'**
+  String get languageSystem;
+
   /// No description provided for @mergePreference.
   ///
   /// In zh, this message translates to:

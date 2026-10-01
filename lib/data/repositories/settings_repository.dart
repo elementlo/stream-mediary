@@ -15,6 +15,7 @@ class SettingsRepository {
   static const String keySegmentConcurrency = 'segment_concurrency';
   static const String keyDefaultSaveDir = 'default_save_dir';
   static const String keyThemeMode = 'theme_mode';
+  static const String keyLocale = 'locale';
   static const String keyMergePreference = 'merge_preference';
   static const String keyFfmpegPath = 'ffmpeg_path';
   static const String keyBoardNick = 'board_nick';
@@ -59,6 +60,11 @@ class SettingsRepository {
       await _db.settingValue(keyThemeMode) ?? 'system';
 
   Future<void> setThemeMode(String mode) => _db.setSetting(keyThemeMode, mode);
+
+  /// Returns 'system', 'zh' or 'en'.
+  Future<String> locale() async => await _db.settingValue(keyLocale) ?? 'system';
+
+  Future<void> setLocale(String locale) => _db.setSetting(keyLocale, locale);
 
   /// Returns 'ts_only' or 'prefer_mp4'.
   Future<String> mergePreference() async =>

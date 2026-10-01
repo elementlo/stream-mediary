@@ -426,3 +426,34 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     });
   }
 }
+
+/// App locale backed by settings. Null means "follow the system locale".
+final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(
+  LocaleNotifier.new,
+);
+
+class LocaleNotifier extends Notifier<Locale?> {
+  @override
+  Locale? build() {
+    _load();
+    return null;
+  }
+
+  Future<void> _load() async {
+    final settings = ref.read(settingsRepositoryProvider);
+    state = _parse(await settings.locale());
+  }
+
+  Locale? _parse(String value) => switch (value) {
+    'zh' => const Locale('zh'),
+    'en' => const Locale('en'),
+    _ => null,
+  };
+
+  /// [languageCode] is 'system', 'zh' or 'en'.
+  Future<void> set(String languageCode) async {
+    state = _parse(languageCode);
+    final settings = ref.read(settingsRepositoryProvider);
+    await settings.setLocale(languageCode);
+  }
+}

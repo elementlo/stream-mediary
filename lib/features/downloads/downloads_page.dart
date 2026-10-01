@@ -491,7 +491,11 @@ class _MetricsRow extends StatelessWidget {
         ),
         if (showEta) ...[
           const SizedBox(width: Spacing.md),
-          Flexible(
+          // Expanded (tight) so the ETA absorbs all slack between the size
+          // and the speed. A loose Flexible here would leave unused space
+          // that mainAxisAlignment pushes past the speed, stranding it
+          // mid-row instead of flush right.
+          Expanded(
             child: Text(
               l10n.remaining(formatEta(task.bytesPerSecond, remainingBytes)),
               maxLines: 1,
@@ -499,8 +503,8 @@ class _MetricsRow extends StatelessWidget {
               style: style,
             ),
           ),
-        ],
-        const Spacer(),
+        ] else
+          const Spacer(),
         if (isDownloading)
           Text(
             l10n.speed(formatSpeed(task.bytesPerSecond)),

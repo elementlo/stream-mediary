@@ -330,6 +330,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeDark => '暗色';
 
   @override
+  String get language => '语言';
+
+  @override
+  String get languageSystem => '跟随系统';
+
+  @override
   String get mergePreference => '合并方式';
 
   @override

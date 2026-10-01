@@ -107,6 +107,8 @@
   "themeSystem": "跟随系统",
   "themeLight": "亮色",
   "themeDark": "暗色",
+  "language": "语言",
+  "languageSystem": "跟随系统",
   "mergePreference": "合并方式",
   "mergeTsOnly": "仅 TS",
   "mergePreferMp4": "优先 MP4",

@@ -170,6 +170,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
+    final localeCode = switch (locale?.languageCode) {
+      'zh' => 'zh',
+      'en' => 'en',
+      _ => 'system',
+    };
     final ffmpeg = ref.watch(ffmpegProbeProvider);
 
     if (!_loaded) {
@@ -333,6 +339,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               showSelectedIcon: false,
               onSelectionChanged: (sel) =>
                   ref.read(themeModeProvider.notifier).set(sel.first),
+            ),
+          ),
+          SectionHeader(l10n.language),
+          MediaryCard(
+            child: SegmentedButton<String>(
+              segments: [
+                ButtonSegment(
+                  value: 'system',
+                  icon: const Icon(Icons.settings_suggest_rounded, size: 16),
+                  label: Text(l10n.languageSystem),
+                ),
+                ButtonSegment(value: 'zh', label: const Text('中文')),
+                ButtonSegment(value: 'en', label: const Text('English')),
+              ],
+              selected: {localeCode},
+              showSelectedIcon: false,
+              onSelectionChanged: (sel) =>
+                  ref.read(localeProvider.notifier).set(sel.first),
             ),
           ),
           SectionHeader(l10n.mergePreference),

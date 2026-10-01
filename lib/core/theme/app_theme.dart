@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../platform/platform_profile.dart';
@@ -377,7 +378,7 @@ abstract final class AppTheme {
   /// Line heights are ~8% taller than Material's defaults so Chinese glyphs
   /// do not feel cramped.
   static TextTheme _textTheme(ColorScheme scheme) {
-    return TextTheme(
+    final theme = TextTheme(
       displaySmall: TextStyle(
         fontSize: 32,
         height: 1.25,
@@ -452,7 +453,22 @@ abstract final class AppTheme {
         fontFeatures: tabularFigures,
       ),
     );
+
+    // Flutter's bundled default font (Roboto) has no CJK glyphs, so Chinese
+    // text falls back to whatever the platform picks — on Windows that is
+    // often SimSun (a serif face) which clashes with the sans-serif Latin
+    // letters. Pin an explicit per-platform CJK fallback so Chinese renders
+    // in the platform's native UI sans-serif.
+    return theme.apply(fontFamilyFallback: _cjkFontFallback);
   }
+
+  /// Platform-native sans-serif CJK fonts, tried in order after the default.
+  static List<String> get _cjkFontFallback => switch (defaultTargetPlatform) {
+    TargetPlatform.windows => const ['Microsoft YaHei', '微软雅黑'],
+    TargetPlatform.macOS || TargetPlatform.iOS => const ['PingFang SC'],
+    TargetPlatform.android => const ['Noto Sans CJK SC', 'Source Han Sans SC'],
+    _ => const ['Noto Sans CJK SC'],
+  };
 }
 
 /// Desktop page transition: a short fade with a small upward rise.
