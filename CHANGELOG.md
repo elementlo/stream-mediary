@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1] - 2026-10-01
+
+### Fixed
+
+- In-app update: a verification failure after the download reached 100% was misreported as "download failed, check your network". It now shows an accurate "file verification failed" message, tolerates a connection teardown error only when all bytes arrived, and retries once from scratch before giving up.
+- Windows update install no longer flashes an endless series of command-prompt windows. The installer batch now runs in a single minimized console that its child commands share.
+- Windows tray "Quit" no longer hangs for a while before exiting; the quit is deferred out of the native menu's modal loop.
+
 ## [0.1.0] - 2026-10-01
 
 ### Added
