@@ -427,6 +427,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Download failed. Check your network and retry';
 
   @override
+  String get updateVerifyFailed =>
+      'File verification failed; the download may be corrupt. Please retry';
+
+  @override
   String get updateInstallFailed => 'Installation failed. Try again later';
 
   @override

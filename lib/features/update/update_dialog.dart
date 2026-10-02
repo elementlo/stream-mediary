@@ -103,6 +103,8 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) return;
       _fail(l10n.updateDownloadFailed);
+    } on UpdateException catch (e) {
+      _fail(e.message == 'checksum' ? l10n.updateVerifyFailed : _errorText());
     } catch (_) {
       _fail(_errorText());
     }

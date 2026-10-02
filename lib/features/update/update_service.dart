@@ -257,9 +257,11 @@ class UpdateService {
   }
 
   /// Downloads [info]'s asset into [destDir], resuming a partial `.part`
-  /// file when present, verifying sha256, and returning the final file.
+  /// file when present, verifying integrity, and returning the final file.
   ///
   /// A previously completed and verified file is returned without re-download.
+  /// Verification failure (a stale partial, or a proxy that mishandles the
+  /// Range request) triggers one clean from-scratch retry before giving up.
   Future<File> downloadUpdate(
     UpdateInfo info, {
     required Directory destDir,
@@ -270,17 +272,40 @@ class UpdateService {
     final finalFile = File(p.join(destDir.path, info.assetName));
 
     if (finalFile.existsSync()) {
-      if (info.sha256 == null || await fileSha256(finalFile) == info.sha256) {
-        return finalFile;
-      }
+      if (await _verify(finalFile, info)) return finalFile;
       // Corrupt complete file: remove and re-download from scratch.
       await finalFile.delete();
     }
 
-    final partFile = File('${finalFile.path}.part');
-    var startByte = 0;
-    if (partFile.existsSync()) startByte = partFile.lengthSync();
+    for (var attempt = 0;; attempt++) {
+      final partFile = File('${finalFile.path}.part');
+      final startByte =
+          (attempt == 0 && partFile.existsSync()) ? partFile.lengthSync() : 0;
 
+      await _transfer(info, partFile, startByte, onProgress, cancelToken);
+
+      if (await _verify(partFile, info)) {
+        await partFile.rename(finalFile.path);
+        return finalFile;
+      }
+      _log.warning('update verification failed (attempt ${attempt + 1})');
+      await _deleteQuietly(partFile);
+      if (attempt >= 1) throw UpdateException('checksum');
+    }
+  }
+
+  /// Streams the asset into [partFile], optionally resuming at [startByte].
+  ///
+  /// A proxy or CDN can error on connection teardown after every byte has
+  /// arrived, so a non-cancel [DioException] from the stream is logged rather
+  /// than thrown — [_verify] decides whether the file is actually usable.
+  Future<void> _transfer(
+    UpdateInfo info,
+    File partFile,
+    int startByte,
+    void Function(int received, int total)? onProgress,
+    CancelToken? cancelToken,
+  ) async {
     final response = await _dio.get<ResponseBody>(
       info.assetUrl,
       options: Options(
@@ -294,8 +319,10 @@ class UpdateService {
 
     final resumed = response.statusCode == 206 && startByte > 0;
     final contentLength =
-        int.tryParse(response.headers.value(Headers.contentLengthHeader) ?? '') ??
-            0;
+        int.tryParse(
+          response.headers.value(Headers.contentLengthHeader) ?? '',
+        ) ??
+        0;
     final total = info.assetSize > 0
         ? info.assetSize
         : (resumed ? startByte + contentLength : contentLength);
@@ -311,19 +338,32 @@ class UpdateService {
         onProgress?.call(received, total);
       }
       await sink.flush();
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) rethrow;
+      // A proxy or CDN can error on connection teardown after every byte has
+      // arrived. Tolerate that only when the full body was received; a stream
+      // that broke early is a real network failure and must surface as one.
+      if (total > 0 && received < total) rethrow;
+      _log.warning('update stream ended with error at $received/$total: $e');
     } finally {
       await sink.close();
     }
+  }
 
-    if (info.sha256 != null) {
-      final actual = await fileSha256(partFile);
-      if (actual != info.sha256) {
-        await partFile.delete();
-        throw UpdateException('checksum mismatch');
-      }
+  /// True when [file] matches the published sha256, or — when the release
+  /// carries no digest — the declared asset size.
+  Future<bool> _verify(File file, UpdateInfo info) async {
+    if (!file.existsSync()) return false;
+    if (info.sha256 != null) return await fileSha256(file) == info.sha256;
+    return info.assetSize <= 0 || await file.length() == info.assetSize;
+  }
+
+  Future<void> _deleteQuietly(File file) async {
+    try {
+      if (file.existsSync()) await file.delete();
+    } on FileSystemException {
+      // Ignore.
     }
-    await partFile.rename(finalFile.path);
-    return finalFile;
   }
 
   /// Installs a downloaded package using the platform-appropriate mechanism.
@@ -413,15 +453,16 @@ start "" "$installDir\\$exeName"
 del "%~f0"
 ''';
     await bat.writeAsString(script, flush: true);
-    // Launch the script DETACHED: it must not inherit this process's
-    // stdout/stderr pipes. With Process.run the script (which waits for this
-    // PID to exit) would hold the inherited pipe open, so Process.run would
-    // never see EOF and would block forever — the app hangs on "installing"
-    // and a console window lingers. Detached mode also allocates no console,
-    // so no window flashes up.
+    // Launch the batch in its own MINIMIZED console via `start /min`. The
+    // outer cmd runs detached (no console, returns immediately — so it cannot
+    // deadlock on inherited stdout/stderr pipes), and `start /min` gives the
+    // batch a single minimized console that its tasklist/ping/xcopy children
+    // share. Launching the batch directly detached (DETACHED_PROCESS) would
+    // leave it with no console, so every console child would allocate its own
+    // window — flashing a new command prompt on each tick of the wait loop.
     await Process.start(
       'cmd',
-      ['/c', bat.path],
+      ['/c', 'start', '/min', '', bat.path],
       mode: ProcessStartMode.detached,
     );
     exit(0);

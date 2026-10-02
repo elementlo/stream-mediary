@@ -416,6 +416,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateDownloadFailed => '下载失败，请检查网络后重试';
 
   @override
+  String get updateVerifyFailed => '文件校验失败，可能已损坏，请重试';
+
+  @override
   String get updateInstallFailed => '安装失败，请稍后重试';
 
   @override

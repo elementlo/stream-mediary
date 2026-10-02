@@ -140,6 +140,7 @@
   "updateRetry": "重试",
   "updateInstalling": "正在安装…",
   "updateDownloadFailed": "下载失败，请检查网络后重试",
+  "updateVerifyFailed": "文件校验失败，可能已损坏，请重试",
   "updateInstallFailed": "安装失败，请稍后重试",
   "updateUpToDate": "当前已是最新版本",
   "updateCheckFailed": "检查更新失败，请稍后重试",

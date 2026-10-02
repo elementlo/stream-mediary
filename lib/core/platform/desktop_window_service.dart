@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:tray_manager/tray_manager.dart';
@@ -60,7 +61,11 @@ class DesktopWindowService with WindowListener {
         MenuItemType.normal,
       );
       quitItem?.addListener((event) {
-        if (event is MenuItemClickedEvent) _quit();
+        // This callback runs synchronously inside the native menu's modal
+        // loop (TrackPopupMenu). Disposing the menu/tray or tearing down the
+        // window here would deadlock against the native side still using
+        // them, so defer the quit until the callback returns.
+        if (event is MenuItemClickedEvent) Timer.run(_quit);
       });
       menu.addItem(quitItem);
       tray.setContextMenu(menu);

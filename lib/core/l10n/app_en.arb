@@ -140,6 +140,7 @@
   "updateRetry": "Retry",
   "updateInstalling": "Installing…",
   "updateDownloadFailed": "Download failed. Check your network and retry",
+  "updateVerifyFailed": "File verification failed; the download may be corrupt. Please retry",
   "updateInstallFailed": "Installation failed. Try again later",
   "updateUpToDate": "You are on the latest version",
   "updateCheckFailed": "Could not check for updates. Try again later",

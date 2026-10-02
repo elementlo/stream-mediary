@@ -902,6 +902,12 @@ abstract class AppLocalizations {
   /// **'下载失败，请检查网络后重试'**
   String get updateDownloadFailed;
 
+  /// No description provided for @updateVerifyFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件校验失败，可能已损坏，请重试'**
+  String get updateVerifyFailed;
+
   /// No description provided for @updateInstallFailed.
   ///
   /// In zh, this message translates to:
