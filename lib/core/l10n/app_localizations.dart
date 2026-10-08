@@ -818,6 +818,30 @@ abstract class AppLocalizations {
   /// **'ffmpeg 路径'**
   String get ffmpegPath;
 
+  /// No description provided for @ffmpegPathHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'留空则自动探测 PATH 及常见安装位置'**
+  String get ffmpegPathHint;
+
+  /// No description provided for @ffmpegBrowse.
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览'**
+  String get ffmpegBrowse;
+
+  /// No description provided for @ffmpegSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'ffmpeg 路径已保存'**
+  String get ffmpegSaved;
+
+  /// No description provided for @ffmpegPathInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'该路径下未找到可用的 ffmpeg'**
+  String get ffmpegPathInvalid;
+
   /// No description provided for @ffmpegDetected.
   ///
   /// In zh, this message translates to:

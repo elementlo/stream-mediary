@@ -25,14 +25,46 @@ class FfmpegRemuxer {
   const FfmpegRemuxer();
 
   /// Common locations probed in addition to the process PATH. GUI apps on
-  /// macOS do not inherit the shell PATH, so explicit probing is required.
-  static const List<String> _candidatePaths = [
+  /// macOS do not inherit the shell PATH, and Windows GUI apps only see the
+  /// system PATH snapshot captured at process creation, so explicit probing of
+  /// well-known install locations is required on both.
+  static const List<String> _unixCandidatePaths = [
     'ffmpeg',
     '/opt/homebrew/bin/ffmpeg',
     '/usr/local/bin/ffmpeg',
     '/usr/bin/ffmpeg',
     '/opt/local/bin/ffmpeg',
   ];
+
+  /// Windows candidates. The bare `ffmpeg` entry resolves `ffmpeg.exe` via
+  /// PATH; the rest cover popular manual-install and package-manager layouts.
+  static const List<String> _windowsCandidatePaths = [
+    'ffmpeg',
+    r'C:\ffmpeg\bin\ffmpeg.exe',
+    r'C:\Program Files\ffmpeg\bin\ffmpeg.exe',
+    r'C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe',
+    r'C:\ProgramData\chocolatey\bin\ffmpeg.exe',
+    r'C:\tools\ffmpeg\bin\ffmpeg.exe',
+  ];
+
+  static List<String> get _candidatePaths =>
+      Platform.isWindows ? _windowsCandidatePaths : _unixCandidatePaths;
+
+  /// Windows paths that live under the user profile and therefore depend on
+  /// environment variables (scoop, winget). Resolved lazily; empty elsewhere.
+  static List<String> _userScopedWindowsPaths() {
+    if (!Platform.isWindows) return const [];
+    final result = <String>[];
+    final userProfile = Platform.environment['USERPROFILE'];
+    if (userProfile != null && userProfile.isNotEmpty) {
+      // scoop installs shims here; winget links land under AppData\Local.
+      result.add('$userProfile\\scoop\\shims\\ffmpeg.exe');
+      result.add(
+        '$userProfile\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffmpeg.exe',
+      );
+    }
+    return result;
+  }
 
   /// Probes for a usable ffmpeg binary.
   ///
@@ -47,6 +79,7 @@ class FfmpegRemuxer {
     final candidates = <String>[
       if (userPath != null && userPath.trim().isNotEmpty) userPath.trim(),
       ..._candidatePaths,
+      ..._userScopedWindowsPaths(),
     ];
 
     for (final candidate in candidates) {

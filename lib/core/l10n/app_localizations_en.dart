@@ -381,6 +381,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ffmpegPath => 'ffmpeg path';
 
   @override
+  String get ffmpegPathHint =>
+      'Leave empty to auto-detect from PATH and common locations';
+
+  @override
+  String get ffmpegBrowse => 'Browse';
+
+  @override
+  String get ffmpegSaved => 'ffmpeg path saved';
+
+  @override
+  String get ffmpegPathInvalid => 'No usable ffmpeg found at this path';
+
+  @override
   String get ffmpegDetected => 'ffmpeg detected';
 
   @override

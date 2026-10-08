@@ -46,6 +46,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _completionNotifications = false;
   final TextEditingController _proxyHostController = TextEditingController();
   final TextEditingController _proxyPortController = TextEditingController();
+  final TextEditingController _ffmpegPathController = TextEditingController();
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void dispose() {
     _proxyHostController.dispose();
     _proxyPortController.dispose();
+    _ffmpegPathController.dispose();
     super.dispose();
   }
 
@@ -76,6 +78,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         notifications,
         proxyHost,
         proxyPort,
+        ffmpegPath,
       ),
     ) = await (
       (
@@ -91,6 +94,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         settings.flag(SettingsRepository.keyCompletionNotifications),
         settings.proxyHost(),
         settings.proxyPort(),
+        settings.ffmpegPath(),
       ).wait,
     ).wait;
     if (mounted) {
@@ -105,6 +109,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _completionNotifications = notifications;
         _proxyHostController.text = proxyHost ?? '';
         _proxyPortController.text = proxyPort == null ? '' : '$proxyPort';
+        _ffmpegPathController.text = ffmpegPath ?? '';
         _loaded = true;
       });
     }
@@ -135,6 +140,44 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     // Keep update-check/download traffic on the same proxy as the engine.
     ref.read(updateServiceProvider).updateProxy(host, port);
     messenger.showSnackBar(SnackBar(content: Text(l10n.proxySaved)));
+  }
+
+  Future<void> _browseFfmpeg() async {
+    try {
+      // No type filter: the ffmpeg binary has no extension on macOS/Linux.
+      final file = await file_selector.openFile();
+      if (file != null) {
+        setState(() => _ffmpegPathController.text = file.path);
+      }
+    } catch (_) {
+      // Platform without a file picker; keep the manual text field.
+    }
+  }
+
+  Future<void> _saveFfmpegPath() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final settings = ref.read(settingsRepositoryProvider);
+    final path = _ffmpegPathController.text.trim();
+
+    // Validate the user-supplied path before persisting so a typo does not
+    // silently disable remuxing. Empty means "auto-detect", which is allowed.
+    if (path.isNotEmpty) {
+      const remuxer = FfmpegRemuxer();
+      final probe = await remuxer.probe(userPath: path);
+      if (!probe.available || probe.path != path) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.ffmpegPathInvalid)),
+        );
+        return;
+      }
+    }
+
+    await settings.setFfmpegPath(path);
+    final engine = ref.read(downloadEngineProvider);
+    engine.updateConfig(engine.config.copyWith(ffmpegPath: path));
+    ref.invalidate(ffmpegProbeProvider);
+    messenger.showSnackBar(SnackBar(content: Text(l10n.ffmpegSaved)));
   }
 
   Future<void> _chooseSaveDir() async {
@@ -440,16 +483,59 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SectionHeader('ffmpeg'),
           MediaryCard(
-            child: ffmpeg.when(
-              data: (probe) => _FfmpegStatus(probe: probe, l10n: l10n),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, st) {
-                logUserError('Check ffmpeg availability', e, st);
-                return Text(
-                  l10n.ffmpegNotFound,
-                  style: TextStyle(color: context.mediaryColors.danger),
-                );
-              },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ffmpeg.when(
+                  data: (probe) => _FfmpegStatus(probe: probe, l10n: l10n),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, st) {
+                    logUserError('Check ffmpeg availability', e, st);
+                    return Text(
+                      l10n.ffmpegNotFound,
+                      style: TextStyle(color: context.mediaryColors.danger),
+                    );
+                  },
+                ),
+                const SizedBox(height: Spacing.md),
+                Text(
+                  l10n.ffmpegPathHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: Spacing.sm),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ffmpegPathController,
+                        decoration: InputDecoration(
+                          labelText: l10n.ffmpegPath,
+                          hintText: Platform.isWindows
+                              ? r'C:\ffmpeg\bin\ffmpeg.exe'
+                              : '/opt/homebrew/bin/ffmpeg',
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    OutlinedButton(
+                      onPressed: _browseFfmpeg,
+                      child: Text(l10n.ffmpegBrowse),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Spacing.md),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: _saveFfmpegPath,
+                    child: Text(l10n.save),
+                  ),
+                ),
+              ],
             ),
           ),
           SectionHeader(l10n.about),

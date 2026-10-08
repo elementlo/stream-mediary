@@ -115,6 +115,35 @@ flutter build windows    # Windows
 flutter build macos      # macOS
 ```
 
+## 🧩 ffmpeg 配置（可选）
+
+检测到 `ffmpeg` 时，合并后的 `.ts` 会无损 remux 为 `.mp4`（`-c copy`，不重新编码）；未检测到则保留 `.ts`，功能不受影响。应用会按以下顺序探测：
+
+1. **设置页手动指定的路径**（设置 → ffmpeg，支持「浏览」选择或手填，保存前会校验可用性）；
+2. **进程 `PATH`** 中的 `ffmpeg`；
+3. **常见安装位置**。
+
+各平台常见位置：
+
+| 平台 | 探测路径 |
+|---|---|
+| macOS | `/opt/homebrew/bin`、`/usr/local/bin`、`/usr/bin`、`/opt/local/bin` |
+| Windows | `C:\ffmpeg\bin`、`C:\Program Files\ffmpeg\bin`、`C:\Program Files (x86)\ffmpeg\bin`、`C:\ProgramData\chocolatey\bin`（choco）、`%USERPROFILE%\scoop\shims`（scoop）、`%USERPROFILE%\AppData\Local\Microsoft\WinGet\Links`（winget） |
+
+安装方式：
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Windows（任选其一）
+winget install Gyan.FFmpeg
+choco install ffmpeg
+scoop install ffmpeg
+```
+
+> **提示**：Windows 上从开始菜单 / 资源管理器启动的 GUI 进程只读取进程创建时的系统 PATH 快照。若刚装完 ffmpeg 探测不到，请注销重登或重启；或直接在设置页手填 `ffmpeg.exe` 的完整路径。macOS 需关闭 App Sandbox 才能执行 bundle 外的 ffmpeg（本仓库默认已关闭）。
+
 ## 🏗️ 架构设计
 
 Mediary 采用分层、单向依赖的架构。下载**引擎为纯 Dart，零 Flutter 依赖**，运行在独立 isolate 中，可完整单元测试。

@@ -114,6 +114,35 @@ flutter build windows    # Windows
 flutter build macos      # macOS
 ```
 
+## 🧩 ffmpeg Setup (optional)
+
+When `ffmpeg` is detected, the merged `.ts` is losslessly remuxed to `.mp4` (`-c copy`, no re-encode); otherwise the `.ts` is kept and nothing breaks. The app probes in this order:
+
+1. **A path set manually in Settings** (Settings → ffmpeg, with a "Browse" picker or manual entry; validated before saving);
+2. **`ffmpeg` on the process `PATH`**;
+3. **Common install locations**.
+
+Probed locations per platform:
+
+| Platform | Paths |
+|---|---|
+| macOS | `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`, `/opt/local/bin` |
+| Windows | `C:\ffmpeg\bin`, `C:\Program Files\ffmpeg\bin`, `C:\Program Files (x86)\ffmpeg\bin`, `C:\ProgramData\chocolatey\bin` (choco), `%USERPROFILE%\scoop\shims` (scoop), `%USERPROFILE%\AppData\Local\Microsoft\WinGet\Links` (winget) |
+
+Installing:
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Windows (pick one)
+winget install Gyan.FFmpeg
+choco install ffmpeg
+scoop install ffmpeg
+```
+
+> **Note**: On Windows, a GUI process launched from the Start menu / Explorer only sees the system PATH snapshot captured at process creation. If ffmpeg was just installed and isn't detected, sign out and back in (or reboot); or set the full path to `ffmpeg.exe` in Settings. On macOS the App Sandbox must be disabled to run ffmpeg outside the bundle (already disabled in this repo).
+
 ## 🏗️ Architecture
 
 Mediary follows a layered, unidirectional architecture. The download **engine is pure Dart with zero Flutter dependencies**, so it runs in a dedicated isolate and is fully unit-testable.

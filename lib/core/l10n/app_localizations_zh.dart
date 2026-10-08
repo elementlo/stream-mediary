@@ -372,6 +372,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ffmpegPath => 'ffmpeg 路径';
 
   @override
+  String get ffmpegPathHint => '留空则自动探测 PATH 及常见安装位置';
+
+  @override
+  String get ffmpegBrowse => '浏览';
+
+  @override
+  String get ffmpegSaved => 'ffmpeg 路径已保存';
+
+  @override
+  String get ffmpegPathInvalid => '该路径下未找到可用的 ffmpeg';
+
+  @override
   String get ffmpegDetected => '已检测到 ffmpeg';
 
   @override
