@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0] - 2026-10-08
+
+### Added
+
+- Disk-full handling: when a download or merge runs out of disk space, the task now pauses (keeping its progress) instead of failing with a generic error. The downloads list shows a "disk full — free up space then resume" banner, a system notification fires for background downloads, and the merge pre-flights available space so it stops before writing a truncated file. Resuming after freeing space continues from where it left off.
+- ffmpeg path can now be set manually in Settings (Browse or type a path, validated before saving). Desktop ffmpeg detection also probes common Windows install locations (Program Files, chocolatey, scoop, winget) in addition to PATH.
+
+### Fixed
+
+- Windows tray "Quit" no longer leaves the main window hanging for several seconds after the tray icon disappears. In-flight downloads and timers are stopped first and the process exits promptly.
+- macOS: the App Sandbox is disabled so the app can run an ffmpeg binary outside its bundle (previously ffmpeg detection always failed on macOS).
+
 ## [0.1.1] - 2026-10-01
 
 ### Fixed
