@@ -28,6 +28,11 @@ class TaskRuntime {
 
   TaskState state = TaskState.created;
 
+  /// Set when a segment download or the merge failed because the disk is
+  /// full. The engine uses it to pause (not fail) the task and to surface a
+  /// "free up space" hint in the UI. Cleared on resume.
+  bool diskFull = false;
+
   int doneSegments = 0;
   int totalSegments = 0;
   int downloadedBytes = 0;

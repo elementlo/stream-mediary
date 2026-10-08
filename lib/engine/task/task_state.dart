@@ -66,7 +66,7 @@ const Map<TaskState, Set<TaskState>> _transitions = {
     TaskState.downloading,
     TaskState.canceled,
   },
-  TaskState.merging: {TaskState.completed, TaskState.failed},
+  TaskState.merging: {TaskState.completed, TaskState.failed, TaskState.paused},
   TaskState.failed: {TaskState.queued, TaskState.canceled},
   TaskState.canceled: {TaskState.queued},
   TaskState.completed: {},

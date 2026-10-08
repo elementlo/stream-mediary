@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:disk_usage/disk_usage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -60,7 +61,19 @@ final defaultSaveDirProvider = FutureProvider<String>((ref) async {
 final downloadEngineProvider = Provider<DownloadEngine>((ref) {
   final store = ref.watch(engineTaskStoreProvider);
   final settings = ref.watch(settingsRepositoryProvider);
-  final engine = DownloadEngine(store: store);
+  final engine = DownloadEngine(
+    store: store,
+    // Free-space lookup for the merge pre-flight. disk_usage returns null on
+    // platforms it cannot answer for; the engine then skips the pre-flight
+    // and relies on write-failure detection.
+    freeSpaceQuery: (path) async {
+      try {
+        return await DiskUsage.freeSpace(path);
+      } catch (_) {
+        return null;
+      }
+    },
+  );
   ref.onDispose(engine.dispose);
 
   // Apply persisted settings (concurrency, merge preference, ffmpeg path,
@@ -146,6 +159,7 @@ class TaskViewModel {
     this.playbackMs = 0,
     this.durationMs = 0,
     this.queueOrder = 0,
+    this.diskFull = false,
     required this.createdAt,
   });
 
@@ -172,6 +186,10 @@ class TaskViewModel {
   final int queueOrder;
   final int createdAt;
 
+  /// True when the task is paused because the disk filled up. Drives the
+  /// "free up space then resume" hint in the downloads list.
+  final bool diskFull;
+
   double get downloadFraction =>
       totalBytes <= 0 ? 0 : downloadedBytes / totalBytes;
 
@@ -189,6 +207,7 @@ class TaskViewModel {
     int? playbackMs,
     int? durationMs,
     int? queueOrder,
+    bool? diskFull,
   }) => TaskViewModel(
     id: id,
     title: title,
@@ -207,6 +226,7 @@ class TaskViewModel {
     playbackMs: playbackMs ?? this.playbackMs,
     durationMs: durationMs ?? this.durationMs,
     queueOrder: queueOrder ?? this.queueOrder,
+    diskFull: diskFull ?? this.diskFull,
     createdAt: createdAt,
   );
 }
@@ -275,6 +295,10 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
               : 0,
           // copyWith assigns errorMsg unconditionally; keep the DB value.
           errorMsg: dbModel.errorMsg,
+          // diskFull is a runtime flag (not persisted); the engine event
+          // stream is authoritative, so carry the previous value across a
+          // DB rebuild instead of resetting it to false.
+          diskFull: prev.diskFull,
         );
       }
       state = next;
@@ -307,6 +331,7 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
           event.taskId: current.copyWith(
             state: event.state,
             errorMsg: event.error,
+            diskFull: event.diskFull,
           ),
         };
       case ProgressEvent():

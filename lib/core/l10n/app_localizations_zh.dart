@@ -482,6 +482,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorMergeFailed => '合并失败，请检查保存目录和剩余空间后重试';
 
   @override
+  String get diskFullPaused => '磁盘空间不足，已暂停';
+
+  @override
+  String get diskFullPausedHint => '请清理磁盘或更换保存目录后，点击「恢复」继续下载';
+
+  @override
   String errorParseFailed(Object message) {
     return '解析失败：$message';
   }

@@ -11,6 +11,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:logging/logging.dart';
 
+import '../disk_space.dart';
 import '../m3u8/playlist.dart';
 import 'roud_decoder.dart';
 
@@ -23,6 +24,7 @@ class SegmentDownloadResult {
     this.bytes = 0,
     this.error,
     this.congested = false,
+    this.diskFull = false,
   });
 
   final bool success;
@@ -33,6 +35,11 @@ class SegmentDownloadResult {
   /// connection errors, 429/5xx) rather than a permanent problem. Consumers
   /// use it to throttle adaptive concurrency.
   final bool congested;
+
+  /// True when the write failed because the disk is full. This is not
+  /// retryable and not congestion: the caller pauses the task so the user
+  /// can free space and resume.
+  final bool diskFull;
 }
 
 /// HTTP statuses that will not change by retrying: fail fast instead of
@@ -217,6 +224,15 @@ class SegmentDownloader {
         }
       } catch (e) {
         await _cleanup(partFile);
+        // A full disk is not retryable and not congestion: surface it so the
+        // caller can pause the task instead of burning backoff rounds.
+        if (isDiskFull(e)) {
+          return SegmentDownloadResult(
+            success: false,
+            error: '$e',
+            diskFull: true,
+          );
+        }
         return SegmentDownloadResult(success: false, error: '$e');
       }
     }

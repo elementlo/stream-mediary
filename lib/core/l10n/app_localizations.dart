@@ -1034,6 +1034,18 @@ abstract class AppLocalizations {
   /// **'合并失败，请检查保存目录和剩余空间后重试'**
   String get errorMergeFailed;
 
+  /// No description provided for @diskFullPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'磁盘空间不足，已暂停'**
+  String get diskFullPaused;
+
+  /// No description provided for @diskFullPausedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请清理磁盘或更换保存目录后，点击「恢复」继续下载'**
+  String get diskFullPausedHint;
+
   /// No description provided for @errorParseFailed.
   ///
   /// In zh, this message translates to:

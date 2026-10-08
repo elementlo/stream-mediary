@@ -162,6 +162,8 @@
   "errorCommunityUnavailable": "留言服务暂时不可用，请稍后重试",
   "errorMergeSegmentMissing": "合并所需的切片文件缺失，请重新下载后再试",
   "errorMergeFailed": "合并失败，请检查保存目录和剩余空间后重试",
+  "diskFullPaused": "磁盘空间不足，已暂停",
+  "diskFullPausedHint": "请清理磁盘或更换保存目录后，点击「恢复」继续下载",
   "errorParseFailed": "解析失败：{message}",
   "@errorParseFailed": {
     "placeholders": {

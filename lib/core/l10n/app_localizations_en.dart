@@ -506,6 +506,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not merge the video. Check the save folder and free space, then retry';
 
   @override
+  String get diskFullPaused => 'Paused: disk is full';
+
+  @override
+  String get diskFullPausedHint =>
+      'Free up space or choose another save folder, then tap Resume to continue';
+
+  @override
   String errorParseFailed(Object message) {
     return 'Parse failed: $message';
   }

@@ -191,6 +191,35 @@ class TaskCard extends ConsumerWidget {
             hintColor: scheme.onSurfaceVariant,
             accentColor: style.color,
           ),
+          if (task.state == TaskState.paused && task.diskFull) ...[
+            const SizedBox(height: Spacing.md),
+            Container(
+              padding: const EdgeInsets.all(Spacing.md - 2),
+              decoration: BoxDecoration(
+                color: colors.warningContainer.withValues(alpha: 0.5),
+                borderRadius: Radii.smAll,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.storage_rounded,
+                    size: 15,
+                    color: colors.warning,
+                  ),
+                  const SizedBox(width: Spacing.sm - 2),
+                  Expanded(
+                    child: Text(
+                      '${l10n.diskFullPaused}。${l10n.diskFullPausedHint}',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodySmall?.copyWith(color: colors.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (task.errorMsg != null && task.state == TaskState.failed) ...[
             const SizedBox(height: Spacing.md),
             Container(

@@ -16,6 +16,9 @@ void main() {
       expect(canTransition(TaskState.downloading, TaskState.paused), isTrue);
       expect(canTransition(TaskState.paused, TaskState.downloading), isTrue);
       expect(canTransition(TaskState.paused, TaskState.queued), isTrue);
+      // A disk-full merge pauses rather than fails, so merging -> paused is
+      // a legal recovery transition.
+      expect(canTransition(TaskState.merging, TaskState.paused), isTrue);
     });
 
     test('retry from failed and canceled is legal', () {
@@ -33,7 +36,6 @@ void main() {
     test('illegal transitions are rejected', () {
       expect(canTransition(TaskState.created, TaskState.completed), isFalse);
       expect(canTransition(TaskState.parsing, TaskState.merging), isFalse);
-      expect(canTransition(TaskState.merging, TaskState.paused), isFalse);
       expect(canTransition(TaskState.queued, TaskState.completed), isFalse);
     });
 

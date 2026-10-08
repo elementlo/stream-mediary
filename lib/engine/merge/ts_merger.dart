@@ -12,6 +12,8 @@ library;
 
 import 'dart:io';
 
+import '../disk_space.dart';
+
 /// Progress callback: [writtenBytes] of [totalBytes].
 typedef MergeProgressCallback = void Function(
     int writtenBytes, int totalBytes);
@@ -60,7 +62,10 @@ class TsMerger {
             written += chunk.length;
             onProgress?.call(written, totalBytes);
           }
-        } on FileSystemException {
+        } on FileSystemException catch (e) {
+          // A full disk must abort the merge, not be mistaken for a vanished
+          // segment: skipping it would silently truncate the output.
+          if (isDiskFull(e)) rethrow;
           // Unreadable/vanished mid-merge: skip it and keep going. The
           // partially written bytes of this segment stay in the output —
           // for TS this is at worst a small glitch, far better than losing

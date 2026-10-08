@@ -13,10 +13,15 @@ class TaskStateChangedEvent extends EngineEvent {
     required super.taskId,
     required this.state,
     this.error,
+    this.diskFull = false,
   });
 
   final TaskState state;
   final String? error;
+
+  /// True when the task was paused because the disk is full. The UI shows a
+  /// "free up space then resume" hint instead of a generic pause.
+  final bool diskFull;
 }
 
 class ProgressEvent extends EngineEvent {

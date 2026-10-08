@@ -9,6 +9,7 @@ import '../data/repositories/settings_repository.dart';
 import '../engine/download_engine.dart';
 import '../engine/engine_events.dart';
 import '../engine/engine_store.dart';
+import '../engine/task/task_state.dart';
 
 class CompletionNotifications {
   CompletionNotifications(this.engine, this.store, this.settings, this.router);
@@ -20,6 +21,11 @@ class CompletionNotifications {
       FlutterLocalNotificationsPlugin();
   StreamSubscription<EngineEvent>? _subscription;
   bool _ready = false;
+
+  /// Task ids already notified about a disk-full pause, so a task that
+  /// pauses/resumes/pauses again does not spam the user. Cleared when the
+  /// task leaves the disk-full paused state.
+  final Set<String> _diskFullNotified = {};
 
   Future<void> start() async {
     try {
@@ -86,8 +92,25 @@ class CompletionNotifications {
       _ready = false;
     }
     _subscription = engine.events.listen((event) {
-      if (event is TaskCompletedEvent) unawaited(_notify(event));
+      if (event is TaskCompletedEvent) {
+        unawaited(_notify(event));
+      } else if (event is TaskStateChangedEvent) {
+        _onStateChanged(event);
+      }
     });
+  }
+
+  void _onStateChanged(TaskStateChangedEvent event) {
+    final diskFullPaused =
+        event.diskFull && event.state == TaskState.paused;
+    if (diskFullPaused) {
+      if (_diskFullNotified.add(event.taskId)) {
+        unawaited(_notifyDiskFull(event.taskId));
+      }
+    } else {
+      // Task resumed or moved on: allow a future disk-full pause to notify.
+      _diskFullNotified.remove(event.taskId);
+    }
   }
 
   Future<void> _share(String id) async {
@@ -170,6 +193,34 @@ class CompletionNotifications {
           windows: WindowsNotificationDetails(),
         ),
         payload: event.taskId,
+      );
+    } catch (_) {
+      /* platform may not support notifications */
+    }
+  }
+
+  Future<void> _notifyDiskFull(String taskId) async {
+    if (!_ready) return;
+    final task = await store.loadTask(taskId);
+    if (task == null) return;
+    try {
+      await _plugin.show(
+        taskId.hashCode & 0x7fffffff,
+        'Mediary · 磁盘空间不足',
+        '${task.title}：下载已暂停，清理磁盘后可恢复',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'download_paused',
+            '下载暂停',
+            channelDescription: '需要用户处理的下载暂停',
+            importance: Importance.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+          macOS: DarwinNotificationDetails(),
+          linux: LinuxNotificationDetails(),
+          windows: WindowsNotificationDetails(),
+        ),
+        payload: taskId,
       );
     } catch (_) {
       /* platform may not support notifications */

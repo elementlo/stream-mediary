@@ -162,6 +162,8 @@
   "errorCommunityUnavailable": "The message board is unavailable. Try again later",
   "errorMergeSegmentMissing": "A segment needed for merging is missing. Download it again and retry",
   "errorMergeFailed": "Could not merge the video. Check the save folder and free space, then retry",
+  "diskFullPaused": "Paused: disk is full",
+  "diskFullPausedHint": "Free up space or choose another save folder, then tap Resume to continue",
   "errorParseFailed": "Parse failed: {message}",
   "@errorParseFailed": {
     "placeholders": {

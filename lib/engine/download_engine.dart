@@ -21,6 +21,7 @@ import 'package:path/path.dart' as p;
 
 import '../core/utils/dio_proxy.dart';
 import 'crypto/aes_decryptor.dart';
+import 'disk_space.dart';
 import 'engine_config.dart';
 import 'engine_events.dart';
 import 'engine_store.dart';
@@ -60,6 +61,7 @@ class DownloadEngine {
     EngineConfig config = const EngineConfig(),
     Dio? dio,
     this.defaultSaveDir,
+    this.freeSpaceQuery,
   }) : _store = store,
        _config = config,
        _dio = dio ?? Dio() {
@@ -72,6 +74,11 @@ class DownloadEngine {
 
   /// Directory used when a request does not specify one.
   String? defaultSaveDir;
+
+  /// Injected free-space lookup (bytes) used to pre-flight the merge. Null on
+  /// platforms/tests without a provider, in which case the pre-flight is
+  /// skipped and disk-full is detected only from write failures.
+  final FreeSpaceQuery? freeSpaceQuery;
 
   final M3u8Parser _parser = const M3u8Parser();
   late final SegmentDownloader _downloader = SegmentDownloader(dio: _dio);
@@ -285,6 +292,13 @@ class DownloadEngine {
       record.outputPath = output.path;
       await _setState(record, runtime, TaskState.completed);
       _emit(TaskCompletedEvent(taskId: record.id, outputPath: output.path));
+    } on DiskFullException catch (e) {
+      // Disk full is recoverable: pause (keeping progress) instead of failing
+      // so the user can free space and resume from where it stopped.
+      _log.warning('Task ${record.id} paused: disk full ($e)');
+      runtime.diskFull = true;
+      record.errorMsg = e.message;
+      await _setState(record, runtime, TaskState.paused, diskFull: true);
     } catch (e, st) {
       _log.severe('Task ${record.id} failed', e, st);
       record.errorMsg = '$e';
@@ -300,6 +314,7 @@ class DownloadEngine {
     TaskRuntime runtime,
     TaskState to, {
     String? error,
+    bool diskFull = false,
   }) async {
     if (!canTransition(runtime.state, to)) {
       _log.warning('Illegal transition ${runtime.state} -> $to (ignored)');
@@ -315,7 +330,14 @@ class DownloadEngine {
     record.totalBytes = runtime.totalBytes;
     record.updatedAt = DateTime.now().millisecondsSinceEpoch;
     await _store.saveTask(record);
-    _emit(TaskStateChangedEvent(taskId: record.id, state: to, error: error));
+    _emit(
+      TaskStateChangedEvent(
+        taskId: record.id,
+        state: to,
+        error: error,
+        diskFull: diskFull,
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -405,6 +427,10 @@ class DownloadEngine {
             onCongestion: scheduler.reportCongestion,
           );
           if (!result.success) {
+            // A full disk is not a per-segment failure to retry: flag it so
+            // the task pauses after the scheduler drains, instead of being
+            // reported as a generic download error.
+            if (result.diskFull) runtime.diskFull = true;
             failures[segment.seq] = result.error ?? 'download failed';
             return false;
           }
@@ -433,6 +459,12 @@ class DownloadEngine {
         runtime.state == TaskState.paused ||
         runtime.state == TaskState.canceled) {
       return;
+    }
+
+    // A segment write hit a full disk: pause the task so the user can free
+    // space and resume, rather than reporting a generic download failure.
+    if (runtime.diskFull) {
+      throw const DiskFullException();
     }
 
     // Verify all segments present.
@@ -665,19 +697,32 @@ class DownloadEngine {
       ),
     );
 
-    await _merger.merge(
-      segmentFiles,
-      outputFile: tsOutput,
-      onProgress: (written, total) {
-        _emit(
-          MergeProgressEvent(
-            taskId: record.id,
-            writtenBytes: written,
-            totalBytes: total,
-          ),
-        );
-      },
-    );
+    // Pre-flight: merging needs room for the output on top of the segments
+    // already on disk (and, when remuxing to MP4, briefly both the .ts and
+    // the .mp4). Bail out before writing a truncated file.
+    await _ensureMergeSpace(taskDir, segmentFiles);
+
+    try {
+      await _merger.merge(
+        segmentFiles,
+        outputFile: tsOutput,
+        onProgress: (written, total) {
+          _emit(
+            MergeProgressEvent(
+              taskId: record.id,
+              writtenBytes: written,
+              totalBytes: total,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (isDiskFull(e)) {
+        await _deleteQuietly(tsOutput);
+        throw const DiskFullException();
+      }
+      rethrow;
+    }
 
     File finalOutput = tsOutput;
     if (_config.preferMp4 && init == null) {
@@ -704,6 +749,53 @@ class DownloadEngine {
     }
 
     return finalOutput;
+  }
+
+  /// Safety margin added on top of the estimated output size, so a merge is
+  /// not attempted when the volume has only just enough room (filesystem
+  /// overhead, the temporary `.ts` during remux, etc.).
+  static const int _mergeSpaceMargin = 64 * 1024 * 1024;
+
+  /// Pre-flight free-space check before merging.
+  ///
+  /// The output roughly equals the sum of the segment sizes; when remuxing to
+  /// MP4 the `.ts` and `.mp4` briefly coexist, so require 2x in that case.
+  /// Skipped when no [freeSpaceQuery] is available or it reports null (the
+  /// platform cannot answer), in which case a write failure is the fallback.
+  Future<void> _ensureMergeSpace(String taskDir, List<File> segmentFiles) async {
+    final query = freeSpaceQuery;
+    if (query == null) return;
+    final int? free;
+    try {
+      free = await query(taskDir);
+    } catch (_) {
+      return; // Cannot determine free space; rely on write-failure detection.
+    }
+    if (free == null) return;
+
+    var segmentsBytes = 0;
+    for (final f in segmentFiles) {
+      try {
+        if (f.existsSync()) segmentsBytes += f.lengthSync();
+      } on FileSystemException {
+        // Ignore unreadable segments; the merge itself will report them.
+      }
+    }
+    final multiplier = _config.preferMp4 ? 2 : 1;
+    final required = segmentsBytes * multiplier + _mergeSpaceMargin;
+    if (free < required) {
+      throw const DiskFullException(
+        'Not enough free space to merge the download',
+      );
+    }
+  }
+
+  Future<void> _deleteQuietly(File file) async {
+    try {
+      if (file.existsSync()) await file.delete();
+    } on FileSystemException {
+      // Ignore cleanup failures.
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1144,6 +1236,9 @@ class DownloadEngine {
     _runtimes[record.id] = runtime;
 
     record.state = TaskState.queued;
+    // Clear any stale error (e.g. a previous disk-full pause) so the UI does
+    // not keep showing it once the task is running again.
+    record.errorMsg = null;
     await _store.saveTask(record);
     _emit(TaskStateChangedEvent(taskId: record.id, state: TaskState.queued));
     unawaited(_runTask(record, runtime));
