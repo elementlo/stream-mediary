@@ -47,12 +47,14 @@
 ## ✨ Features
 
 - **🔗 HLS parsing** — Paste an `.m3u8` URL and preview segment count, duration, encryption and estimated size. Master playlists expose every quality/bandwidth variant for selection.
+- **🖼️ PNG-wrapped HLS** — Parses manifests, segments and keys inside `roUd` PNG containers directly; on macOS / Windows the `stream-mediary://download` protocol opens the download UI from the Chrome extension, with no local proxy needed.
 - **⚡ Concurrent downloads** — Two-level scheduling: task-level concurrency (default 3) and per-task segment concurrency (default 8).
 - **🔐 AES decryption** — Pure-Dart streaming AES-128/192/256-CBC decryption, with support for custom HTTP headers and user-supplied KEY / IV overrides.
 - **🧩 Smart merging** — Segments are concatenated into a single `.ts`; when `ffmpeg` is detected it is losslessly remuxed to `.mp4` (`-c copy`), falling back to `.ts` on failure.
 - **⏯️ Resume & retry** — Interrupted downloads resume automatically after restart; completed segments are never re-fetched. Per-segment exponential-backoff retry.
 - **🎬 Built-in player** — Play downloaded `.ts` / `.mp4` files in-app with full controls and desktop keyboard shortcuts.
 - **🕘 History** — Persistent task history with replay, re-download, "open containing folder" and delete.
+- **💬 Community board** — Share resources, exchange tips and report issues right inside the app.
 - **🎨 Material 3** — Light / dark / system theme, adaptive navigation (bottom bar on mobile, rail on desktop).
 - **🌍 Internationalization** — Chinese (default) and English.
 
