@@ -81,6 +81,7 @@ class DownloadEngine {
   final Map<String, TaskRuntime> _runtimes = {};
   final StreamController<EngineEvent> _events =
       StreamController<EngineEvent>.broadcast();
+  bool _disposed = false;
 
   /// Task-level concurrency limiter.
   final _TaskSemaphore _taskSemaphore = _TaskSemaphore(3);
@@ -1149,7 +1150,13 @@ class DownloadEngine {
   }
 
   /// Disposes the engine, canceling all in-flight work.
+  ///
+  /// Idempotent: the app-exit path disposes the engine directly to stop
+  /// downloads before quitting, and the Riverpod provider also disposes it on
+  /// teardown. Closing [_events] twice would throw, so guard against re-entry.
   Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
     for (final runtime in _runtimes.values) {
       runtime.scheduler?.cancel();
       runtime.cancelToken.cancel('disposed');

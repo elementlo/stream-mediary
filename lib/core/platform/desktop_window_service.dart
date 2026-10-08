@@ -19,6 +19,11 @@ class DesktopWindowService with WindowListener {
   /// handler lets the window through instead of hiding it again.
   bool _quitting = false;
 
+  /// Optional hook run before the process exits, used to cancel in-flight
+  /// engine work (downloads, decrypt isolates) so teardown is not blocked
+  /// waiting on them. Registered by the app layer, which owns the engine.
+  Future<void> Function()? onBeforeQuit;
+
   TrayIcon? _trayIcon;
 
   // The nativeapi Image/Menu/MenuItem objects release their native handles
@@ -88,7 +93,18 @@ class DesktopWindowService with WindowListener {
   }
 
   Future<void> _quit() async {
+    if (_quitting) return;
     _quitting = true;
+
+    // Stop in-flight engine work first (downloads, decrypt isolates, timers).
+    // Without this the native teardown below blocks on those futures and the
+    // window appears to hang for seconds after the tray icon is already gone.
+    // Bounded so a stuck cancel can never wedge the exit path.
+    final hook = onBeforeQuit;
+    if (hook != null) {
+      await hook().timeout(const Duration(seconds: 2), onTimeout: () {});
+    }
+
     _trayIcon?.dispose();
     _trayIcon = null;
     _trayMenu?.dispose();
@@ -97,8 +113,21 @@ class DesktopWindowService with WindowListener {
     _quitItem = null;
     _trayImage?.dispose();
     _trayImage = null;
-    // destroy() bypasses the close interception and terminates the app.
-    await windowManager.destroy();
+
+    // Kick off the native window teardown, but do not await it: destroy()
+    // resolves over a MethodChannel whose engine may already be tearing down,
+    // so the future can hang indefinitely. Instead race it against a hard
+    // process exit — whichever lands first wins, and exit(0) guarantees the
+    // process actually terminates. Downloads use .part + atomic rename and
+    // sqlite runs in WAL mode, so a hard exit here is crash-safe.
+    unawaited(
+      windowManager.destroy().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {},
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    exit(0);
   }
 
   @override

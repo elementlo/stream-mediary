@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/l10n/app_localizations.dart';
 import 'core/platform/platform_profile.dart';
+import 'core/platform/desktop_window_service.dart';
 import 'core/platform/download_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -32,6 +33,13 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
     super.initState();
     DownloadLinkService.instance.addListener(_openDownloadLink);
     WidgetsBinding.instance.addPostFrameCallback((_) => _openDownloadLink());
+    // Before the desktop tray "quit" tears the process down, cancel in-flight
+    // downloads and the queue-policy timer so native teardown is not blocked
+    // waiting on them (which made the window hang after the icon disappeared).
+    DesktopWindowService.instance.onBeforeQuit = () async {
+      ref.read(queuePolicyProvider).dispose();
+      await ref.read(downloadEngineProvider).dispose();
+    };
   }
 
   @override
