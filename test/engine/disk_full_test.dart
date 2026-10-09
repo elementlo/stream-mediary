@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stream_mediary/engine/download_engine.dart';
 import 'package:stream_mediary/engine/engine_config.dart';
 import 'package:stream_mediary/engine/engine_events.dart';
+import 'package:stream_mediary/engine/engine_store.dart';
 import 'package:stream_mediary/engine/m3u8/playlist.dart';
 import 'package:stream_mediary/engine/task/task_state.dart';
 
@@ -157,5 +159,58 @@ void main() {
         .timeout(const Duration(seconds: 30));
     expect(done, isA<TaskCompletedEvent>());
     await engine.dispose();
+  });
+
+  // Regression: an older build with no disk-full detection hung the merge on a
+  // full disk, leaving the task persisted as `merging`. After a restart it had
+  // no runtime, stayed in the download list forever and offered no action.
+  // restoreUnfinished must now cold-resume such a stale `merging` record.
+  test('restoreUnfinished cold-resumes a stale merging task', () async {
+    final store = InMemoryTaskStore();
+    final engine = DownloadEngine(
+      store: store,
+      config: const EngineConfig(preferMp4: false),
+      defaultSaveDir: tempDir.path,
+    );
+    try {
+      final media = (await engine.parseForPreview(
+        '${server.baseUrl}/index.m3u8',
+      ) as MediaParseResult).media;
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await store.saveTask(
+        EngineTaskRecord(
+          id: 'stuck-merge',
+          url: '${server.baseUrl}/index.m3u8',
+          sourceUrl: '${server.baseUrl}/index.m3u8',
+          title: 'clip',
+          // The zombie state left behind by the interrupted old-version merge.
+          state: TaskState.merging,
+          saveDir: tempDir.path,
+          playlistSnapshot: jsonEncode(media.toJson()),
+          totalSegments: media.segmentCount,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await store.saveSegments([
+        for (final s in media.segments)
+          EngineSegmentRecord(taskId: 'stuck-merge', seq: s.seq, url: s.url),
+      ]);
+
+      final done = engine.events
+          .where((e) => e is TaskCompletedEvent && e.taskId == 'stuck-merge')
+          .cast<TaskCompletedEvent>()
+          .first
+          .timeout(const Duration(seconds: 30));
+      await engine.restoreUnfinished();
+      final completed = await done;
+      expect(completed.outputPath, endsWith('.ts'));
+
+      final after = await store.loadTask('stuck-merge');
+      expect(after!.state, TaskState.completed);
+    } finally {
+      await engine.dispose();
+    }
   });
 }

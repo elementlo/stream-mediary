@@ -1206,12 +1206,22 @@ class DownloadEngine {
   }
 
   /// Restores unfinished tasks after app restart (cold resume).
+  ///
+  /// A task persisted as [TaskState.merging] is included: no merge can be
+  /// running at startup, so such a record is always a stale remnant of an
+  /// interrupted session. Older builds had no disk-full detection, so a full
+  /// disk hung the merge and left the task stuck in `merging` — after a
+  /// restart it had no runtime, stayed in the download list forever and
+  /// offered no cancel/delete action. Cold-resuming reuses the already
+  /// downloaded segments and retries the merge; if the disk is still full the
+  /// current detection pauses it into a recoverable, actionable state.
   Future<void> restoreUnfinished() async {
     final all = await _store.loadAllTasks();
     for (final record in all) {
       final resumable =
           record.state == TaskState.downloading ||
-          record.state == TaskState.queued;
+          record.state == TaskState.queued ||
+          record.state == TaskState.merging;
       if (resumable) {
         await _coldResume(record);
       }
