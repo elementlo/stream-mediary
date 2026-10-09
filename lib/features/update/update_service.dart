@@ -448,6 +448,13 @@ class UpdateService {
     // so closing the lingering window kills the app too. `(goto)` (no label)
     // ends the batch context first; cmd exits cleanly and the already-parsed
     // `del` on the same line still removes the script.
+    //
+    // The wait label must be `:wait` (single colon). `::wait` is only a comment,
+    // so `goto wait` would fail with "system cannot find the batch label" and
+    // abort the script before `xcopy` whenever the old process has not exited
+    // yet — the update would silently not be applied, and the console would
+    // linger as the parent of the relaunched app. A trailing `exit` makes cmd
+    // leave as soon as the script finishes, so no window survives to be closed.
     final script = '''
 @echo off
 :wait
@@ -458,7 +465,7 @@ if not errorlevel 1 (
 )
 xcopy "${sourceRoot.path}\\*" "$installDir\\" /E /Y /I >nul
 start "" "$installDir\\$exeName"
-(goto) 2>nul & del "%~f0"
+(goto) 2>nul & del "%~f0" & exit
 ''';
     await bat.writeAsString(script, flush: true);
     // Launch the batch in its own MINIMIZED console via `start /min`. The
