@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-10-09
+
+### Fixed
+
+- Windows in-app update no longer leaves a lingering command-prompt window after installing. The installer batch used to delete itself with a bare `del`, which made cmd fail to read the next line ("找不到批处理文件") and keep the minimized console open; because the relaunched app was a child of that console, closing the window also quit the app. The script now ends the batch context cleanly before deleting itself.
+- A download stuck in the "merging" state by an older build (which had no disk-full detection and hung the merge on a full disk) is now recovered on startup instead of lingering in the downloads list with no way to cancel or delete it. Such stale records are cold-resumed: the merge retries using the already-downloaded segments, and if the disk is still full the task pauses into a recoverable, actionable state.
+
 ## [0.2.0] - 2026-10-08
 
 ### Added
