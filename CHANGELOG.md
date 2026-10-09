@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2] - 2026-10-09
+
+### Fixed
+
+- Windows tray "Quit" now makes the main window disappear immediately instead of leaving it frozen on screen for up to ~2 seconds. The window is hidden before shutdown starts, and the teardown that stops in-flight downloads is bounded to 400 ms (was 2 s) — a hard exit is already crash-safe, since downloads use `.part` files with atomic renames and sqlite runs in WAL mode.
+- Quitting no longer floods the UI with cancellation events. The task list unsubscribes from the database and engine event feeds before the engine is disposed, so cancelling every in-flight download cannot trigger a rebuild storm on a window that is going away (the other cause of the apparent freeze).
+- `DownloadEngine.dispose()` no longer awaits closing its broadcast event stream, which could block on listeners that were mid-handler during shutdown.
+
 ## [0.2.1] - 2026-10-09
 
 ### Fixed
