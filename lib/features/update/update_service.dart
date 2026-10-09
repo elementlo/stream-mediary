@@ -440,6 +440,14 @@ class UpdateService {
     final bat = File(p.join(file.parent.path, 'mediary_update.bat'));
     // `ping` sleeps ~1s without needing an interactive console, unlike
     // `timeout`, which fails when the script runs detached (no console).
+    //
+    // Self-deletion must use the `(goto) 2>nul & del "%~f0"` idiom, not a bare
+    // `del "%~f0"`: cmd reads a batch file line-by-line, so deleting it mid-run
+    // makes cmd fail on the "next" line — it prints "找不到批处理文件" and leaves
+    // the minimized console open. The relaunched app is a child of that console,
+    // so closing the lingering window kills the app too. `(goto)` (no label)
+    // ends the batch context first; cmd exits cleanly and the already-parsed
+    // `del` on the same line still removes the script.
     final script = '''
 @echo off
 :wait
@@ -450,7 +458,7 @@ if not errorlevel 1 (
 )
 xcopy "${sourceRoot.path}\\*" "$installDir\\" /E /Y /I >nul
 start "" "$installDir\\$exeName"
-del "%~f0"
+(goto) 2>nul & del "%~f0"
 ''';
     await bat.writeAsString(script, flush: true);
     // Launch the batch in its own MINIMIZED console via `start /min`. The
