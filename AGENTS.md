@@ -193,6 +193,16 @@ release-notes/                  各版本 GitHub Release 文案
 4. 在版本提交上打 tag `vX.Y.Z`，推送 `main` 与 tag。
 5. tag 推送触发 `release.yml`：构建 Android/macOS/iOS/Windows 产物，生成 `SHA256SUMS.txt`，自动发布 GitHub Release（正文取 `release-notes/<tag>.md`）。
 
+### Release 文案约定（强制）
+
+每次发版撰写 `release-notes/vX.Y.Z.md` 时必须遵守以下约定（无论由谁/哪个 agent 执行）：
+
+- **必须中文**：面向中文用户，与 `CHANGELOG.md` 的中文条目保持一致。
+- **必须精简**：只写"一句话概述 + 更新要点"几句话，面向终端用户；**不展开故障根因、不写实现细节、不贴代码**。详细技术说明放在 `CHANGELOG.md`。
+- **禁止写下载说明**：正文中不要出现 Downloads 表格、"如何下载/解压/校验 SHA256SUMS"之类的段落。CI 会自动把各平台安装包与 `SHA256SUMS.txt` 附到 Release，正文无需重复。
+- **格式照模板**：复制 `release-notes/TEMPLATE.md` 后改名为 `release-notes/vX.Y.Z.md` 填写，保持同样的标题层级（`# Mediary X.Y.Z` → 一句话概述 → `## 更新要点` 要点列表）。
+- **文件名与 tag 一致**：`release-notes/vX.Y.Z.md`，因为 CI 用 `release-notes/${tag}.md` 作为 Release 正文。
+
 ## 免责声明
 
 本项目仅供个人、学习与合法用途。使用者需自行确保拥有所下载内容的合法权利，不得用于侵犯版权或违反服务条款。DRM 保护的流不受支持。
