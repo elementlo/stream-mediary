@@ -1266,7 +1266,10 @@ class DownloadEngine {
       runtime.scheduler?.cancel();
       runtime.cancelToken.cancel('disposed');
     }
-    await _events.close();
+    // Do not await: closing the broadcast stream can wait on listeners that
+    // are mid-handler during shutdown. The exit path is time-bounded and a
+    // hard exit is crash-safe (.part + WAL), so just kick the close off.
+    unawaited(_events.close());
   }
 }
 

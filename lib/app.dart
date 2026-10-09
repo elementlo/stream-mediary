@@ -37,6 +37,10 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
     // downloads and the queue-policy timer so native teardown is not blocked
     // waiting on them (which made the window hang after the icon disappeared).
     DesktopWindowService.instance.onBeforeQuit = () async {
+      // Unsubscribe the task list first: disposing the engine cancels every
+      // in-flight download, which fires a burst of events the UI must not try
+      // to render while the window is being torn down.
+      ref.read(taskListProvider.notifier).detach();
       ref.read(queuePolicyProvider).dispose();
       await ref.read(downloadEngineProvider).dispose();
     };

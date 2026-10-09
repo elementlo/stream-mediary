@@ -96,13 +96,22 @@ class DesktopWindowService with WindowListener {
     if (_quitting) return;
     _quitting = true;
 
+    // Hide the window immediately so the UI disappears the moment the user
+    // clicks quit; the bounded teardown below then runs invisibly instead of
+    // freezing a still-visible window.
+    await windowManager.hide();
+
     // Stop in-flight engine work first (downloads, decrypt isolates, timers).
     // Without this the native teardown below blocks on those futures and the
     // window appears to hang for seconds after the tray icon is already gone.
-    // Bounded so a stuck cancel can never wedge the exit path.
+    // Kept short: a hard exit is crash-safe (.part + atomic rename, sqlite
+    // WAL), so there is no need to wait long for cancels to settle.
     final hook = onBeforeQuit;
     if (hook != null) {
-      await hook().timeout(const Duration(seconds: 2), onTimeout: () {});
+      await hook().timeout(
+        const Duration(milliseconds: 400),
+        onTimeout: () {},
+      );
     }
 
     _trayIcon?.dispose();
@@ -126,7 +135,7 @@ class DesktopWindowService with WindowListener {
         onTimeout: () {},
       ),
     );
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
     exit(0);
   }
 

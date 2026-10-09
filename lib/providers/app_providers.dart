@@ -365,6 +365,18 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
         };
     }
   }
+
+  /// Detaches the live feeds (database stream and engine events).
+  ///
+  /// Quitting cancels every in-flight download, which emits a burst of engine
+  /// events; the UI must not rebuild from them while the window is going away.
+  /// Called from the tray quit hook before the engine is disposed. Idempotent.
+  void detach() {
+    _dbSub?.cancel();
+    _dbSub = null;
+    _eventSub?.cancel();
+    _eventSub = null;
+  }
 }
 
 final taskListProvider =
