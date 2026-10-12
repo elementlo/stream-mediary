@@ -35,6 +35,7 @@
 
 <p align="center">
   <a href="#-features">Features</a> •
+  <a href="#-browser-extension">Browser Extension</a> •
   <a href="#-screenshots">Screenshots</a> •
   <a href="#-download">Download</a> •
   <a href="#-getting-started">Getting Started</a> •
@@ -57,6 +58,16 @@
 - **💬 Community board** — Share resources, exchange tips and report issues right inside the app.
 - **🎨 Material 3** — Light / dark / system theme, adaptive navigation (bottom bar on mobile, rail on desktop).
 - **🌍 Internationalization** — Chinese (default) and English.
+
+## 🧩 Browser Extension
+
+Mediary works on its own (paste an `.m3u8` URL manually), but it pairs greatly with the official Chrome extension **[Video Stream Link Detector](https://github.com/elementlo/Mediary-Chrome-extension)**: it sniffs HLS / PNG-wrapped stream entries on video pages, shows a "Video Link" button when you hover over a video, and hands the stream URL (along with the source page and browser UA) to Mediary through the `stream-mediary://` deep link — no copy-pasting, no local proxy.
+
+- **Automatic detection** — Generic, site-agnostic recognition of `.m3u8` / HLS MIME / direct video files, plus `roUd` PNG-wrapped streams; no per-site rules needed.
+- **One-click launch** — On macOS / Windows, "Mediary Download" opens the desktop app with the URL and headers pre-filled.
+- **Selectable specs** — The popup lists every quality/bandwidth variant as a card (with estimated size); pick one, then copy or download.
+
+> The extension is a separate project. See its repository for install and usage instructions: **[elementlo/Mediary-Chrome-extension](https://github.com/elementlo/Mediary-Chrome-extension)**.
 
 ## 📱 Screenshots
 

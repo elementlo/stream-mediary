@@ -35,6 +35,7 @@
 
 <p align="center">
   <a href="#-功能特性">功能特性</a> •
+  <a href="#-搭配浏览器扩展">浏览器扩展</a> •
   <a href="#-产品截图">产品截图</a> •
   <a href="#-下载安装">下载安装</a> •
   <a href="#-快速开始">快速开始</a> •
@@ -57,6 +58,16 @@
 - **💬 社区留言板** — 应用内分享资源、交流经验与反馈问题。
 - **🎨 Material 3** — 亮色 / 暗色 / 跟随系统主题，自适应导航（移动端底部栏，桌面端侧边栏）。
 - **🌍 国际化** — 中文（默认）与英文。
+
+## 🧩 搭配浏览器扩展
+
+Mediary 可以独立使用（手动粘贴 `.m3u8` 地址），但配合官方 Chrome 扩展 **[Video Stream Link Detector](https://github.com/elementlo/Mediary-Chrome-extension)** 体验更佳：在视频网页上自动嗅探 HLS / PNG 包装流入口，鼠标悬停视频即出现「视频链接」按钮，一键把流地址（连同来源网页与浏览器 UA）通过 `stream-mediary://` 深链唤起 Mediary 下载，无需手动复制粘贴、也无需本地代理。
+
+- **自动检测** — 通用、站点中立地识别 `.m3u8` / HLS MIME / 直链视频，以及 `roUd` PNG 包装流；无需为每个网站写规则。
+- **一键唤起** — macOS / Windows 上点击「Mediary 下载」直接拉起桌面应用并填好地址与请求头。
+- **规格可选** — 弹窗把每个清晰度/带宽列成卡片（含估算大小），选中后再复制或下载。
+
+> 扩展为独立项目，安装与使用说明见其仓库主页：**[elementlo/Mediary-Chrome-extension](https://github.com/elementlo/Mediary-Chrome-extension)**。
 
 ## 📱 产品截图
 
