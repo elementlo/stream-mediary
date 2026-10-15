@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0] - 2026-10-15
+
+### Added
+
+- Message board emoji picker: the compose/reply sheet now has an emoji button that opens a self-contained picker (6 curated categories, no external dependency). Emoji insert at the caret and can be added consecutively. On touch platforms the soft keyboard is dismissed first so the panel takes its place and never pushes the sheet off-screen; on desktop the panel is width-capped and centered. Tapping back into the text field dismisses it.
+- Project website (`website/`): a bilingual (Chinese/English) static site built with Astro, styled with the new Soft Iris palette. Includes hero, features, screenshots, download, browser-extension and FAQ sections, with full SEO (per-page title/description, canonical, hreflang, Open Graph/Twitter cards, SoftwareApplication + WebSite + FAQPage JSON-LD, sitemap, robots) and zero runtime JavaScript. Deployed to GitHub Pages via a dedicated workflow.
+
+### Changed
+
+- Visual redesign to the "Soft Iris" palette: a low-saturation purple (hue ~265°, chroma ~22-31%) replaces the previous indigo across the color scheme and semantic colors. The "data flowing" accent is a slate teal kept far enough in perceptual distance (ΔE > 29) from the purple primary that the downloading and merging states stay distinguishable by color alone. Launcher and tray icons are redrawn as a matching gradient, and the Android adaptive-icon background is updated to `#6F5B97`.
+
+### Fixed
+
+- `MediaryCard` no longer triggers the Flutter "ListTile background color or ink splashes may be invisible" assertion: a transparent `Material` inside the card background gives descendant tiles (ListTile/SwitchListTile) an ink surface within the card, so their splashes are no longer painted on the page-level Material and hidden by the card.
+
 ## [0.2.2] - 2026-10-09
 
 ### Fixed
