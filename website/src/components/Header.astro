@@ -1,0 +1,131 @@
+---
+import { getLangFromUrl, useTranslations, altLang } from '../i18n/ui';
+import { GITHUB_REPO } from '../i18n/site';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const base = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '');
+
+// Language switch target: same page, other locale.
+const pathNoBase = Astro.url.pathname.replace(base, '') || '/';
+const barePath = pathNoBase.replace(/^\/en(?=\/|$)/, '') || '/';
+const langHref =
+  lang === 'en' ? `${base}${barePath}` : `${base}${barePath === '/' ? '/en/' : `/en${barePath}`}`;
+
+const nav = [
+  { href: '#features', label: t('nav.features') },
+  { href: '#screenshots', label: t('nav.screenshots') },
+  { href: '#download', label: t('nav.download') },
+  { href: '#extension', label: t('nav.extension') },
+  { href: '#faq', label: t('nav.faq') },
+];
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href={`${base}/`} aria-label="Mediary">
+      <img src={`${base}/icon.png`} alt="" width="28" height="28" />
+      <span>Mediary</span>
+    </a>
+    <nav class="nav" aria-label={lang === 'en' ? 'Main' : '主导航'}>
+      {nav.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+    <div class="header-actions">
+      <a class="lang-switch" href={langHref} hreflang={altLang[lang]} lang={altLang[lang]}>
+        {t('nav.lang')}
+      </a>
+      <a class="btn btn-ghost" href={GITHUB_REPO} rel="noopener">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+        </svg>
+        <span class="hide-sm">{t('nav.github')}</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--header-height);
+    background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--color-hairline-soft);
+  }
+  .header-inner {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: 700;
+    font-size: var(--text-lg);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+  }
+  .brand:hover {
+    text-decoration: none;
+  }
+  .nav {
+    display: flex;
+    gap: var(--space-3);
+    margin-left: auto;
+  }
+  .nav a {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    padding: var(--space-1) 0;
+  }
+  .nav a:hover {
+    color: var(--color-primary-strong);
+    text-decoration: none;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .lang-switch {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+  .lang-switch:hover {
+    color: var(--color-primary-strong);
+  }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    padding: 6px 12px;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-raised);
+  }
+  .btn-ghost:hover {
+    text-decoration: none;
+    border-color: var(--color-primary);
+    color: var(--color-primary-strong);
+  }
+  @media (max-width: 860px) {
+    .nav {
+      display: none;
+    }
+    .hide-sm {
+      display: none;
+    }
+    .header-actions {
+      margin-left: auto;
+    }
+  }
+</style>

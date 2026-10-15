@@ -1,0 +1,12 @@
+# Astro / Node
+node_modules/
+dist/
+.astro/
+
+# Environment
+.env
+.env.production
+
+# Misc
+.DS_Store
+npm-debug.log*

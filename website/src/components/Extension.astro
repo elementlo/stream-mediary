@@ -1,0 +1,222 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/ui';
+import { EXTENSION_REPO } from '../i18n/site';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const points = [
+  {
+    key: 'f1',
+    icon: 'M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z',
+  },
+  {
+    key: 'f2',
+    icon: 'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+  },
+  {
+    key: 'f3',
+    icon: 'M4 6h16M4 12h16M4 18h10',
+  },
+] as const;
+---
+
+<section id="extension" class="section ext-section">
+  <div class="container ext-grid">
+    <div class="ext-copy reveal">
+      <p class="eyebrow">Chrome Extension</p>
+      <h2>{t('extension.title')}</h2>
+      <p class="lead">{t('extension.subtitle')}</p>
+      <p class="desc">{t('extension.desc')}</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href={EXTENSION_REPO} rel="noopener">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          {t('extension.cta')}
+        </a>
+      </div>
+      <p class="note">{t('extension.note')}</p>
+    </div>
+    <ul class="ext-points">
+      {
+        points.map((p, i) => (
+          <li class="point reveal" style={`--d:${i * 90}ms`}>
+            <span class="dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d={p.icon} />
+              </svg>
+            </span>
+            <div>
+              <h3>{t(`extension.${p.key}.title` as never)}</h3>
+              <p>{t(`extension.${p.key}.desc` as never)}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .ext-section {
+    background:
+      radial-gradient(
+        ellipse 70% 60% at 85% 20%,
+        var(--color-accent-soft),
+        transparent
+      ),
+      var(--color-surface);
+  }
+  .ext-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: var(--space-8);
+    align-items: center;
+  }
+  .ext-copy h2 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-1);
+  }
+  .lead {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+  .desc {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-3);
+  }
+  .cta-row {
+    margin-bottom: var(--space-2);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-base);
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    min-height: 44px;
+    transition: background 0.15s ease;
+  }
+  .btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-strong);
+    text-decoration: none;
+  }
+  .note {
+    font-size: var(--text-sm);
+    color: var(--color-text-tertiary);
+  }
+
+  .ext-points {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .point {
+    display: flex;
+    gap: var(--space-2);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-hairline-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .point:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-hairline));
+    transform: translateX(4px);
+  }
+  .dot {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+  .point h3 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .point p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Scroll reveal: keyframe animation (see Screenshots.astro for why a
+     transition is unreliable when the section is already in view on load).
+     JS-gated via html.js so no-JS users and crawlers always see content. */
+  @keyframes ext-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  :global(html.js) .reveal:not(.in) {
+    opacity: 0;
+  }
+  :global(html.js) .reveal.in {
+    animation: ext-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+  }
+
+  @media (max-width: 860px) {
+    .ext-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .reveal:not(.in) {
+      opacity: 1;
+    }
+    :global(html.js) .reveal.in {
+      animation: none;
+    }
+    .point {
+      transition: none;
+    }
+    .point:hover {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const items = document.querySelectorAll<HTMLElement>('#extension .reveal');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+    );
+    items.forEach((el) => io.observe(el));
+  } else {
+    items.forEach((el) => el.classList.add('in'));
+  }
+</script>

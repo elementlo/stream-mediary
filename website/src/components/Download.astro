@@ -1,0 +1,127 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/ui';
+import { RELEASES_URL } from '../i18n/site';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const platforms = [
+  {
+    key: 'windows',
+    icon: 'M3 5.5 10.5 4.4v7.1H3V5.5zm0 13 7.5 1.1v-7H3v5.9zm8.5 1.2L21 21V12.6h-9.5v7.1zm0-15.4v7.2H21V3l-9.5 1.3z',
+  },
+  {
+    key: 'macos',
+    icon: 'M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.8-3-.8-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 2.9-.7 1.4 0 1.8.7 3 .7 1.2 0 2-1.1 2.7-2.2.9-1.3 1.3-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.3 5.6c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.8-1.3z',
+  },
+  {
+    key: 'android',
+    icon: 'M6 18a1 1 0 0 0 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1a1 1 0 0 0 1-1v-7H6v7zM3.5 10A1.5 1.5 0 0 0 2 11.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 3.5 10zm17 0a1.5 1.5 0 0 0-1.5 1.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 20.5 10zM15.5 2.6l1-1.7a.4.4 0 0 0-.7-.4l-1.1 1.8a6.4 6.4 0 0 0-5.4 0L8.2.5a.4.4 0 0 0-.7.4l1 1.7A5.7 5.7 0 0 0 5 7.4h14a5.7 5.7 0 0 0-3.5-4.8zM9 5.6a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6zm6 0a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6z',
+  },
+  {
+    key: 'ios',
+    icon: 'M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.8-3-.8-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 2.9-.7 1.4 0 1.8.7 3 .7 1.2 0 2-1.1 2.7-2.2.9-1.3 1.3-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.3 5.6c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.8-1.3z',
+  },
+] as const;
+---
+
+<section id="download" class="section">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Download</p>
+      <h2>{t('download.title')}</h2>
+      <p>{t('download.subtitle')}</p>
+    </div>
+    <div class="grid">
+      {
+        platforms.map((p) => (
+          <a class="card" href={RELEASES_URL} rel="noopener">
+            <svg class="os-icon" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
+              <path d={p.icon} />
+            </svg>
+            <h3>{t(`download.${p.key}` as never)}</h3>
+            <p>{t(`download.${p.key}.note` as never)}</p>
+          </a>
+        ))
+      }
+    </div>
+    <p class="note">{t('download.unsigned')}</p>
+    <div class="cta-center">
+      <a class="btn btn-primary" href={RELEASES_URL} rel="noopener">
+        {t('download.releases')}
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+  }
+  .card {
+    display: block;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-hairline-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    color: var(--color-text);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover {
+    text-decoration: none;
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+  .os-icon {
+    color: var(--color-primary);
+    margin-bottom: var(--space-2);
+  }
+  .card h3 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+  .note {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-tertiary);
+    text-align: center;
+  }
+  .cta-center {
+    margin-top: var(--space-4);
+    text-align: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--text-base);
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: var(--radius-md);
+    min-height: 44px;
+  }
+  .btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-strong);
+    text-decoration: none;
+  }
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 480px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,91 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/ui';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const features = [
+  { key: 'hls', icon: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' },
+  { key: 'png', icon: 'M21 15V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9 M8.5 10a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0 M21 15l-3.09-3.09a2 2 0 0 0-2.82 0L6 21 M17 21h4v-4' },
+  { key: 'concurrent', icon: 'M13 2 3 14h9l-1 8 10-12h-9l1-8z' },
+  { key: 'aes', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  { key: 'merge', icon: 'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01' },
+  { key: 'resume', icon: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5' },
+  { key: 'player', icon: 'M5 3l14 9-14 9V3z' },
+  { key: 'history', icon: 'M12 8v4l3 3 M3.05 11a9 9 0 1 1 .5 4 M3 11V6 M3 11h5' },
+] as const;
+---
+
+<section id="features" class="section">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Features</p>
+      <h2>{t('features.title')}</h2>
+      <p>{t('features.subtitle')}</p>
+    </div>
+    <div class="grid">
+      {
+        features.map((f) => (
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d={f.icon} />
+              </svg>
+            </div>
+            <h3>{t(`features.${f.key}.title` as never)}</h3>
+            <p>{t(`features.${f.key}.desc` as never)}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+  }
+  .card {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-hairline-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-hairline));
+    transform: translateY(-2px);
+  }
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-strong);
+    margin-bottom: var(--space-2);
+  }
+  .card h3 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .card p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+  @media (max-width: 1020px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 560px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

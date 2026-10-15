@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Hero from '../components/Hero.astro';
+import Features from '../components/Features.astro';
+import Screenshots from '../components/Screenshots.astro';
+import Download from '../components/Download.astro';
+import Extension from '../components/Extension.astro';
+import FAQ from '../components/FAQ.astro';
+import { getLangFromUrl } from '../i18n/ui';
+
+const lang = getLangFromUrl(Astro.url);
+const isEn = lang === 'en';
+
+const title = isEn
+  ? 'Mediary — Cross-platform M3U8 / HLS media downloader'
+  : 'Mediary — 跨平台 M3U8 / HLS 媒体下载器';
+const description = isEn
+  ? 'Mediary parses, downloads, decrypts and merges HLS streaming segments into a single playable video. Free, open source (MIT), available for Android, iOS, Windows and macOS.'
+  : 'Mediary 解析、下载、解密并合并 HLS 流媒体分片，输出单个可播放的视频文件。免费开源（MIT），支持 Android、iOS、Windows 与 macOS。';
+---
+
+<BaseLayout title={title} description={description}>
+  <Header />
+  <main id="main">
+    <Hero />
+    <Features />
+    <Screenshots />
+    <Download />
+    <Extension />
+    <FAQ />
+  </main>
+  <Footer />
+</BaseLayout>

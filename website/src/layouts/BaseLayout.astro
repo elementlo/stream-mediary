@@ -1,0 +1,117 @@
+---
+import '../styles/global.css';
+import { getLangFromUrl, useTranslations, altLang, type Lang } from '../i18n/ui';
+import { SITE_NAME, GITHUB_REPO, RELEASES_URL, absoluteUrl } from '../i18n/site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Optional OG image override; defaults to /og-image.jpg */
+  ogImage?: string;
+}
+
+const { title, description, ogImage = '/og-image.jpg' } = Astro.props;
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+// Canonical + hreflang: strip the locale prefix to get the bare page path,
+// then build the absolute URL for each locale. zh-CN is the default (no
+// prefix); en lives under /en/.
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const base = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '');
+const pathNoBase = Astro.url.pathname.replace(base, '') || '/';
+const barePath = pathNoBase.replace(/^\/en(?=\/|$)/, '') || '/';
+const canonical = absoluteUrl(site, base, pathNoBase);
+const zhUrl = absoluteUrl(site, base, barePath);
+const enUrl = absoluteUrl(site, base, barePath === '/' ? '/en/' : `/en${barePath}`);
+// ogImage lives in public/ and is served under the site base, so it must
+// carry the same base prefix as every other asset.
+const ogImg = absoluteUrl(site, base, ogImage);
+
+// JSON-LD: SoftwareApplication + WebSite + BreadcrumbList.
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Android, iOS, Windows, macOS',
+      description,
+      url: canonical,
+      downloadUrl: RELEASES_URL,
+      softwareVersion: '0.2.1',
+      license: 'https://opensource.org/licenses/MIT',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      image: ogImg,
+      inLanguage: lang === 'en' ? 'en' : 'zh-CN',
+    },
+    {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: site + base + '/',
+      inLanguage: lang === 'en' ? 'en' : 'zh-CN',
+    },
+  ],
+};
+---
+
+<!doctype html>
+<html lang={lang} dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary meta -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <!-- Language alternates (hreflang) -->
+    <link rel="alternate" hreflang="zh-CN" href={zhUrl} />
+    <link rel="alternate" hreflang="en" href={enUrl} />
+    <link rel="alternate" hreflang="x-default" href={zhUrl} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImg} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${SITE_NAME} — ${t('hero.subtitle')}`} />
+    <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'zh_CN'} />
+    <meta property="og:locale:alternate" content={lang === 'en' ? 'zh_CN' : 'en_US'} />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImg} />
+
+    <!-- Theme + icons -->
+    <meta name="theme-color" content="#6f5b97" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" type="image/png" href={`${base}/icon.png`} />
+    <link rel="apple-touch-icon" href={`${base}/icon.png`} />
+
+    <!-- Structured data -->
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+    <!-- Marks JS availability so scroll-reveal styles only hide content
+         when the enhancing script can actually run (no-JS users and
+         crawlers always see it). -->
+    <script is:inline>document.documentElement.classList.add('js');</script>
+
+    <slot name="head" />
+  </head>
+  <body>
+    <a href="#main" class="skip-link">{lang === 'en' ? 'Skip to content' : '跳到主内容'}</a>
+    <slot />
+  </body>
+</html>

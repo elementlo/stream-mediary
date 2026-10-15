@@ -1,0 +1,206 @@
+---
+import { Image } from 'astro:assets';
+import { getLangFromUrl, useTranslations } from '../i18n/ui';
+import androidShot from '../assets/screenshots/android-home.png';
+import iosShot from '../assets/screenshots/ios-home.png';
+import macosShot from '../assets/screenshots/macos-home.png';
+import windowsShot from '../assets/screenshots/windows-home.png';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+// Deliberate desktop/mobile pairing per row: wide shots get the large
+// column, phone shots a narrow one (capped to a phone-like width so they
+// read as devices, not stretched banners). Rows alternate sides for rhythm.
+const shots = [
+  { img: macosShot, label: t('screenshots.macos'), kind: 'desktop', side: 'left' },
+  { img: androidShot, label: t('screenshots.android'), kind: 'mobile', side: 'right' },
+  { img: iosShot, label: t('screenshots.ios'), kind: 'mobile', side: 'left' },
+  { img: windowsShot, label: t('screenshots.windows'), kind: 'desktop', side: 'right' },
+];
+---
+
+<section id="screenshots" class="section shots-section">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Screenshots</p>
+      <h2>{t('screenshots.title')}</h2>
+      <p>{t('screenshots.subtitle')}</p>
+    </div>
+    <div class="grid">
+      {
+        shots.map((s, i) => (
+          <figure
+            class={`shot ${s.kind} ${s.side} reveal`}
+            style={`--d:${i * 120}ms`}
+          >
+            <div class="frame">
+              <Image
+                src={s.img}
+                alt={`Mediary — ${s.label}`}
+                widths={[400, 800, 1200]}
+                sizes={s.kind === 'desktop' ? '(max-width: 900px) 92vw, 640px' : '(max-width: 900px) 70vw, 300px'}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <figcaption>{s.label}</figcaption>
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .shots-section {
+    background: var(--color-surface-sunken);
+    border-block: 1px solid var(--color-hairline-soft);
+  }
+
+  /* 12-column grid: each row pairs one wide desktop shot (7-8 cols) with
+     one narrow phone shot (4-5 cols), alternating sides. */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--space-4) var(--space-3);
+    align-items: center;
+  }
+  .shot {
+    margin: 0;
+    min-width: 0;
+  }
+  .shot.desktop.left {
+    grid-column: 1 / span 8;
+  }
+  .shot.mobile.right {
+    grid-column: 10 / span 3;
+    justify-self: center;
+  }
+  .shot.mobile.left {
+    grid-column: 1 / span 3;
+    justify-self: center;
+  }
+  .shot.desktop.right {
+    grid-column: 5 / span 8;
+  }
+
+  /* Phone shots are capped so they read as devices at a natural size. */
+  .shot.mobile .frame {
+    max-width: 300px;
+    margin-inline: auto;
+  }
+
+  .frame {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-hairline);
+    overflow: hidden;
+    background: var(--color-surface-raised);
+    box-shadow: 0 8px 24px rgb(29 26 36 / 0.08);
+    transition:
+      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.3s ease;
+  }
+  .shot:hover .frame {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+  .frame img {
+    width: 100%;
+  }
+
+  .shot figcaption {
+    margin-top: var(--space-1);
+    text-align: center;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  /* Entrance: fade + rise + slight scale, staggered via --d. Uses a
+     keyframe animation (not a transition) so it plays from its first frame
+     even when the section is already in view on load — e.g. after the
+     browser restores scroll position on refresh, a transition would have no
+     starting frame and would silently skip. Hidden state is JS-gated
+     (html.js) so no-JS users and crawlers always see the shots. */
+  @keyframes shot-in {
+    from {
+      opacity: 0;
+      transform: translateY(28px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  :global(html.js) .reveal:not(.in) {
+    opacity: 0;
+  }
+  :global(html.js) .reveal.in {
+    animation: shot-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+  }
+
+  /* Tablet: two per row, desktop shots full width of their half. */
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-3);
+      align-items: start;
+    }
+    .shot.desktop.left,
+    .shot.desktop.right,
+    .shot.mobile.left,
+    .shot.mobile.right {
+      grid-column: auto;
+      justify-self: stretch;
+    }
+    .shot.mobile .frame {
+      max-width: 260px;
+    }
+  }
+
+  /* Phone: single column; mobile shots stay device-sized and centered. */
+  @media (max-width: 560px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .shot.mobile .frame {
+      max-width: 240px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .reveal:not(.in) {
+      opacity: 1;
+    }
+    :global(html.js) .reveal.in {
+      animation: none;
+    }
+    .frame {
+      transition: none;
+    }
+    .shot:hover .frame {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const shots = document.querySelectorAll<HTMLElement>('#screenshots .reveal');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.2, rootMargin: '0px 0px -60px 0px' },
+    );
+    shots.forEach((el) => io.observe(el));
+  } else {
+    shots.forEach((el) => el.classList.add('in'));
+  }
+</script>

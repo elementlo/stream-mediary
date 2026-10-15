@@ -1,0 +1,106 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/ui';
+import { GITHUB_REPO, EXTENSION_REPO, RELEASES_URL, LICENSE_URL } from '../i18n/site';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const base = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '');
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href={`${base}/`}>
+        <img src={`${base}/icon.png`} alt="" width="24" height="24" />
+        <span>Mediary</span>
+      </a>
+      <p>{t('footer.tagline')}</p>
+    </div>
+    <nav class="footer-col" aria-label={t('footer.links')}>
+      <h3>{t('footer.links')}</h3>
+      <a href={GITHUB_REPO} rel="noopener">{t('nav.github')}</a>
+      <a href={RELEASES_URL} rel="noopener">{t('download.releases')}</a>
+      <a href={EXTENSION_REPO} rel="noopener">{lang === 'en' ? 'Browser extension' : '浏览器扩展'}</a>
+    </nav>
+    <nav class="footer-col" aria-label={t('footer.resources')}>
+      <h3>{t('footer.resources')}</h3>
+      <a href="#features">{t('nav.features')}</a>
+      <a href="#download">{t('nav.download')}</a>
+      <a href="#faq">{t('nav.faq')}</a>
+    </nav>
+    <div class="footer-col">
+      <h3>{t('footer.license')}</h3>
+      <a href={LICENSE_URL} rel="noopener">MIT License</a>
+      <p class="rights">{t('footer.rights')}</p>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>© {year} Mediary · {t('footer.rights')}</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--color-ink);
+    color: var(--color-on-ink);
+    padding-block: var(--space-8) var(--space-4);
+    margin-top: var(--space-12);
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: var(--space-6);
+  }
+  .footer-brand .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: 700;
+    font-size: var(--text-lg);
+    color: var(--color-on-ink);
+    margin-bottom: var(--space-2);
+  }
+  .footer-brand p {
+    color: var(--color-on-ink-secondary);
+    font-size: var(--text-sm);
+    max-width: 280px;
+  }
+  .footer-col h3 {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-on-ink);
+    margin-bottom: var(--space-2);
+  }
+  .footer-col a {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-on-ink-secondary);
+    padding-block: 4px;
+  }
+  .footer-col a:hover {
+    color: #fff;
+    text-decoration: none;
+  }
+  .rights {
+    font-size: var(--text-xs);
+    color: var(--color-on-ink-secondary);
+    margin-top: var(--space-1);
+  }
+  .footer-bottom {
+    margin-top: var(--space-8);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-ink-soft);
+    font-size: var(--text-xs);
+    color: var(--color-on-ink-secondary);
+  }
+  @media (max-width: 760px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+    .footer-brand {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

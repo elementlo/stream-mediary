@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Sitemap URL is injected at build time via the SITE/BASE env vars used in
+# astro.config.mjs; the GitHub Pages workflow exports them before building.
+Sitemap: https://elementlo.github.io/stream-mediary/sitemap-index.xml
