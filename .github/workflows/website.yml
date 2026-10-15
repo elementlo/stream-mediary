@@ -40,12 +40,16 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
-        # `npm install` (not `npm ci`): rolldown ships platform-specific
-        # native bindings as optionalDependencies, and npm ci has a known bug
-        # (npm/cli#4828) that skips the runner's binding when the lockfile was
-        # generated on a different platform. `npm install` resolves them
-        # correctly for the current OS/arch.
-        run: npm install
+        # rolldown (Astro's bundler) ships platform-specific native bindings as
+        # optionalDependencies. npm has a known bug (npm/cli#4828): when the
+        # committed lockfile was generated on a different OS, npm skips the
+        # runner's binding, so the Linux build fails with "Cannot find native
+        # binding". Removing the lockfile forces a fresh resolve for this
+        # runner's OS/arch — exactly what the error message recommends. The
+        # npm cache (keyed off the committed lockfile above) still speeds this up.
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Build with Astro
         run: npm run build
