@@ -82,10 +82,10 @@ void main() {
   group('color scheme', () {
     test('light and dark schemes are hand-authored, not seeded', () {
       // A seed-derived scheme would place primaryContainer at a desaturated
-      // tint. Assert the exact authored brand values instead.
-      expect(MediaryPalette.light.primary, const Color(0xFF4F46E5));
-      expect(MediaryPalette.dark.primary, const Color(0xFF7C8CFF));
-      expect(MediaryPalette.light.primaryContainer, const Color(0xFFE8E9FE));
+      // tint. Assert the exact authored Soft Iris brand values instead.
+      expect(MediaryPalette.light.primary, const Color(0xFF6F5B97));
+      expect(MediaryPalette.dark.primary, const Color(0xFFB4A3D8));
+      expect(MediaryPalette.light.primaryContainer, const Color(0xFFEBE6F4));
     });
 
     test('surface layering is distinct at every step', () {

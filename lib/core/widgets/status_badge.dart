@@ -42,8 +42,9 @@ class TaskStateStyle {
           container: scheme.surfaceContainerHigh,
           icon: Icons.hourglass_empty_rounded,
         ),
-      // Accent (cyan) = data flowing. Distinct from primary so "downloading"
-      // and "merging" are distinguishable by color alone.
+      // Accent (slate teal) = data flowing. Its hue is kept well away from the
+      // purple primary so "downloading" and "merging" stay distinguishable by
+      // color alone even at low saturation.
       TaskState.downloading => TaskStateStyle(
           color: colors.accent,
           container: colors.accentContainer,
@@ -54,7 +55,7 @@ class TaskStateStyle {
           container: colors.warningContainer,
           icon: Icons.pause_rounded,
         ),
-      // Primary (indigo) = work settling into a finished artifact.
+      // Primary (soft purple) = work settling into a finished artifact.
       TaskState.merging => TaskStateStyle(
           color: scheme.primary,
           container: scheme.primaryContainer,

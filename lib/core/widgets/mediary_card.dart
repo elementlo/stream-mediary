@@ -94,17 +94,22 @@ class _MediaryCardState extends State<MediaryCard> {
           border: Border.all(color: colors.hairline),
         ),
         clipBehavior: Clip.antiAlias,
-        child: widget.onTap == null
-            ? body
-            : Material(
-                color: Colors.transparent,
-                child: InkWell(
+        // The transparent Material gives descendants that paint ink on their
+        // nearest Material ancestor (ListTile, SwitchListTile) a surface
+        // *inside* the card's DecoratedBox. Without it their splashes would
+        // be painted on the page-level Material and hidden by the card
+        // background (Flutter asserts this in debug).
+        child: Material(
+          color: Colors.transparent,
+          child: widget.onTap == null
+              ? body
+              : InkWell(
                   onTap: widget.onTap,
                   splashColor: scheme.primary.withValues(alpha: 0.06),
                   highlightColor: scheme.primary.withValues(alpha: 0.04),
                   child: body,
                 ),
-              ),
+        ),
       ),
     );
   }
