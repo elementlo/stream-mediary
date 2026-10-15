@@ -345,6 +345,8 @@
   },
   "communityEmpty": "还没有留言",
   "communityEmptyHint": "来发布第一条留言吧",
+  "emojiButton": "表情",
+  "emojiHide": "收起表情",
   "timeJustNow": "刚刚",
   "timeMinutesAgo": "{count} 分钟前",
   "@timeMinutesAgo": {

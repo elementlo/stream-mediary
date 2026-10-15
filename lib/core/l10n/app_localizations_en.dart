@@ -818,6 +818,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityEmptyHint => 'Be the first to post';
 
   @override
+  String get emojiButton => 'Emoji';
+
+  @override
+  String get emojiHide => 'Hide emoji';
+
+  @override
   String get timeJustNow => 'just now';
 
   @override

@@ -299,6 +299,8 @@
   "communityPageInfo": "Page {page} of {total}",
   "communityEmpty": "No messages yet",
   "communityEmptyHint": "Be the first to post",
+  "emojiButton": "Emoji",
+  "emojiHide": "Hide emoji",
   "timeJustNow": "just now",
   "timeMinutesAgo": "{count} min ago",
   "timeHoursAgo": "{count} h ago",

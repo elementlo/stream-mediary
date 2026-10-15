@@ -1562,6 +1562,18 @@ abstract class AppLocalizations {
   /// **'来发布第一条留言吧'**
   String get communityEmptyHint;
 
+  /// No description provided for @emojiButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'表情'**
+  String get emojiButton;
+
+  /// No description provided for @emojiHide.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起表情'**
+  String get emojiHide;
+
   /// No description provided for @timeJustNow.
   ///
   /// In zh, this message translates to:

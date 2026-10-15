@@ -12,6 +12,7 @@ import '../../core/widgets/mediary_scaffold.dart';
 import '../../data/remote/waline_client.dart';
 import '../../data/repositories/board_cache.dart';
 import '../../providers/app_providers.dart';
+import 'emoji_picker.dart';
 
 /// Message board backed by the project's Waline deployment.
 ///
@@ -415,8 +416,16 @@ class _ComposerSheet extends StatefulWidget {
 }
 
 class _ComposerSheetState extends State<_ComposerSheet> {
+  final _contentFocus = FocusNode();
   bool _posting = false;
+  bool _emojiOpen = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _contentFocus.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (_posting) return;
@@ -433,9 +442,57 @@ class _ComposerSheetState extends State<_ComposerSheet> {
     }
   }
 
+  /// Toggles the emoji panel. On touch platforms the soft keyboard is
+  /// dismissed first so the panel takes its place instead of stacking on top
+  /// and pushing the sheet (and its fields) off-screen.
+  void _toggleEmoji() {
+    if (_emojiOpen) {
+      setState(() => _emojiOpen = false);
+      // Restore the keyboard where the panel was.
+      _contentFocus.requestFocus();
+    } else {
+      if (context.platformProfile.isTouch) {
+        _contentFocus.unfocus();
+      }
+      setState(() => _emojiOpen = true);
+    }
+  }
+
+  /// Inserts [emoji] at the caret (or appends when there is no selection),
+  /// keeping focus in the content field so more emoji can be added.
+  void _insertEmoji(String emoji) {
+    final controller = widget.contentController;
+    final selection = controller.selection;
+    final text = controller.text;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+    final updated = text.replaceRange(start, end, emoji);
+    controller.value = TextEditingValue(
+      text: updated,
+      selection: TextSelection.collapsed(offset: start + emoji.length),
+    );
+    // Keep the caret visible after insertion.
+    _contentFocus.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final profile = context.platformProfile;
+
+    // Desktop sheets stretch full-width, so cap the panel to keep the grid
+    // from sprawling; touch platforms use the sheet width as-is. On touch the
+    // panel height scales with the screen so it never overflows a short
+    // viewport once the keyboard is dismissed.
+    final emojiHeight = profile.isDesktop
+        ? 240.0
+        : (MediaQuery.sizeOf(context).height * 0.32).clamp(200.0, 260.0);
+    final picker = EmojiPicker(
+      onSelected: _insertEmoji,
+      height: emojiHeight,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -444,57 +501,94 @@ class _ComposerSheetState extends State<_ComposerSheet> {
         Spacing.xl,
         Spacing.xl,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(widget.title, style: text.titleMedium),
-          const SizedBox(height: Spacing.md),
-          TextField(
-            controller: widget.nickController,
-            maxLength: 24,
-            decoration: InputDecoration(
-              hintText: widget.nickHint,
-              counterText: '',
-              isDense: true,
-              prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+      // Scrollable so the form + open emoji panel never overflow a short
+      // viewport (the panel's fixed height stays bounded inside the scroll).
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.title, style: text.titleMedium),
+            const SizedBox(height: Spacing.md),
+            TextField(
+              controller: widget.nickController,
+              maxLength: 24,
+              decoration: InputDecoration(
+                hintText: widget.nickHint,
+                counterText: '',
+                isDense: true,
+                prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+              ),
             ),
-          ),
-          const SizedBox(height: Spacing.sm),
-          TextField(
-            controller: widget.contentController,
-            minLines: 3,
-            maxLines: 6,
-            maxLength: 1000,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: widget.contentHint,
-              alignLabelWithHint: true,
+            const SizedBox(height: Spacing.sm),
+            TextField(
+              controller: widget.contentController,
+              focusNode: _contentFocus,
+              minLines: 3,
+              maxLines: 6,
+              maxLength: 1000,
+              autofocus: true,
+              // Typing in the field dismisses the panel so it never covers the
+              // caret the user just returned to.
+              onTap: () {
+                if (_emojiOpen) setState(() => _emojiOpen = false);
+              },
+              decoration: InputDecoration(
+                hintText: widget.contentHint,
+                alignLabelWithHint: true,
+              ),
             ),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: Spacing.xs),
-              child: Text(
-                _error!,
-                style: text.bodySmall?.copyWith(
-                  color: context.mediaryColors.danger,
+            // Emoji toggle sits on the field's action row, right-aligned.
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                onPressed: _toggleEmoji,
+                tooltip: _emojiOpen ? l10n.emojiHide : l10n.emojiButton,
+                isSelected: _emojiOpen,
+                icon: const Icon(Icons.emoji_emotions_outlined),
+                selectedIcon: Icon(
+                  Icons.emoji_emotions_rounded,
+                  color: scheme.primary,
                 ),
               ),
             ),
-          const SizedBox(height: Spacing.md),
-          FilledButton.icon(
-            onPressed: _posting ? null : _submit,
-            icon: _posting
-                ? const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send_rounded, size: 17),
-            label: Text(widget.submitLabel),
-          ),
-        ],
+            if (_emojiOpen) ...[
+              const SizedBox(height: Spacing.xs),
+              // Desktop: constrain width and center so the panel does not span
+              // the whole (wide) sheet. Touch: full sheet width.
+              profile.isDesktop
+                  ? Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: picker,
+                      ),
+                    )
+                  : picker,
+            ],
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: Spacing.xs),
+                child: Text(
+                  _error!,
+                  style: text.bodySmall?.copyWith(
+                    color: context.mediaryColors.danger,
+                  ),
+                ),
+              ),
+            const SizedBox(height: Spacing.md),
+            FilledButton.icon(
+              onPressed: _posting ? null : _submit,
+              icon: _posting
+                  ? const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded, size: 17),
+              label: Text(widget.submitLabel),
+            ),
+          ],
+        ),
       ),
     );
   }

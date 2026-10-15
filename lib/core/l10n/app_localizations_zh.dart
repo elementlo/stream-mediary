@@ -783,6 +783,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityEmptyHint => '来发布第一条留言吧';
 
   @override
+  String get emojiButton => '表情';
+
+  @override
+  String get emojiHide => '收起表情';
+
+  @override
   String get timeJustNow => '刚刚';
 
   @override
