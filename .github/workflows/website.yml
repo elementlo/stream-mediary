@@ -40,7 +40,12 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
-        run: npm ci
+        # `npm install` (not `npm ci`): rolldown ships platform-specific
+        # native bindings as optionalDependencies, and npm ci has a known bug
+        # (npm/cli#4828) that skips the runner's binding when the lockfile was
+        # generated on a different platform. `npm install` resolves them
+        # correctly for the current OS/arch.
+        run: npm install
 
       - name: Build with Astro
         run: npm run build
