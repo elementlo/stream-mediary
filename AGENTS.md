@@ -188,10 +188,21 @@ release-notes/                  各版本 GitHub Release 文案
 ## 发布流程
 
 1. 升级 `pubspec.yaml` 的 `version`（`x.y.z+n`）。
-2. 更新 `CHANGELOG.md`，新增 `release-notes/vX.Y.Z.md`。
+2. 更新 `CHANGELOG.md`（遵守下方「CHANGELOG 双语约定」），新增 `release-notes/vX.Y.Z.md`。
 3. 两个提交：功能提交 + `chore: bump version to ...`。
 4. 在版本提交上打 tag `vX.Y.Z`，推送 `main` 与 tag。
 5. tag 推送触发 `release.yml`：构建 Android/macOS/iOS/Windows 产物，生成 `SHA256SUMS.txt`，自动发布 GitHub Release（正文取 `release-notes/<tag>.md`）。
+6. 改动 `CHANGELOG.md` 或 `website/**` 会触发 `website.yml`：校验 changelog 格式后构建并部署官网到 GitHub Pages。
+
+### CHANGELOG 双语约定（强制）
+
+`CHANGELOG.md` 是官网「最近更新」模块的**唯一数据源**，构建时由 `website/src/i18n/changelog.ts` 解析。撰写时必须遵守（无论由谁/哪个 agent 执行）：
+
+- **双语条目**：每条改动第一行中文（顶格 `- `），紧接一行**缩进 2+ 空格**的英文翻译。缺英文行会回退成中文，但校验会报错。
+- **分类小节**：用 `### 新增 / Added`、`### 改进 / Changed`、`### 修复 / Fixed`，标题须含 Added/Changed/Fixed 或对应中文之一。
+- **版本标题**：`## [x.y.z] - YYYY-MM-DD`，版本号符合 `x.y.z`、日期符合 `YYYY-MM-DD`，且**按新→旧排列**。
+- **必须精简**：每条一句话，面向终端用户；不展开根因、不写实现细节、不贴代码。
+- **格式校验**：提交前运行 `cd website && npm run check:changelog`（CI 在部署官网前也会跑，不合规直接失败）。格式说明亦见 `CHANGELOG.md` 顶部注释。
 
 ### Release 文案约定（强制）
 
