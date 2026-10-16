@@ -1,159 +1,212 @@
-# Changelog
+# 更新日志 / Changelog
+
+精简的双语更新日志。官网「最近更新」模块在构建时自动解析本文件。
+Concise bilingual changelog. The website's "What's New" section parses this file at build time.
+
+<!-- 格式 / Format:
+  ## [版本 / version] - 日期 / date
+  ### 新增 / Added   (或 Changed / Fixed)
+  - 中文一行
+    English on the next (indented) line
+每条第一行为中文，缩进的第二行为英文。分类标题需含 Added/Changed/Fixed 之一。
+First line of each bullet is Chinese, the indented second line is English.
+Kind headings must contain one of Added/Changed/Fixed. -->
 
 ## [0.3.0] - 2026-10-15
 
-### Added
+### 新增 / Added
 
-- Message board emoji picker: the compose/reply sheet now has an emoji button that opens a self-contained picker (6 curated categories, no external dependency). Emoji insert at the caret and can be added consecutively. On touch platforms the soft keyboard is dismissed first so the panel takes its place and never pushes the sheet off-screen; on desktop the panel is width-capped and centered. Tapping back into the text field dismisses it.
-- Project website (`website/`): a bilingual (Chinese/English) static site built with Astro, styled with the new Soft Iris palette. Includes hero, features, screenshots, download, browser-extension and FAQ sections, with full SEO (per-page title/description, canonical, hreflang, Open Graph/Twitter cards, SoftwareApplication + WebSite + FAQPage JSON-LD, sitemap, robots) and zero runtime JavaScript. Deployed to GitHub Pages via a dedicated workflow.
+- 留言板新增 emoji 表情面板（6 分类，光标处插入）。
+  Emoji picker on the message board (6 categories, inserts at the caret).
+- 上线官方网站：中英双语，含功能、截图、下载与更新日志。
+  Launched the official website: bilingual, with features, screenshots, downloads and changelog.
 
-### Changed
+### 改进 / Changed
 
-- Visual redesign to the "Soft Iris" palette: a low-saturation purple (hue ~265°, chroma ~22-31%) replaces the previous indigo across the color scheme and semantic colors. The "data flowing" accent is a slate teal kept far enough in perceptual distance (ΔE > 29) from the purple primary that the downloading and merging states stay distinguishable by color alone. Launcher and tray icons are redrawn as a matching gradient, and the Android adaptive-icon background is updated to `#6F5B97`.
+- 全新「Soft Iris」低饱和紫配色，覆盖主色、语义色与启动图标。
+  New "Soft Iris" low-saturation purple palette across primary, semantic colors and launcher icons.
 
-### Fixed
+### 修复 / Fixed
 
-- `MediaryCard` no longer triggers the Flutter "ListTile background color or ink splashes may be invisible" assertion: a transparent `Material` inside the card background gives descendant tiles (ListTile/SwitchListTile) an ink surface within the card, so their splashes are no longer painted on the page-level Material and hidden by the card.
+- 修复卡片内列表项水波纹被卡片背景遮挡。
+  Fixed ink splashes on list rows inside cards being hidden by the card background.
 
 ## [0.2.2] - 2026-10-09
 
-### Fixed
+### 修复 / Fixed
 
-- Windows tray "Quit" now makes the main window disappear immediately instead of leaving it frozen on screen for up to ~2 seconds. The window is hidden before shutdown starts, and the teardown that stops in-flight downloads is bounded to 400 ms (was 2 s) — a hard exit is already crash-safe, since downloads use `.part` files with atomic renames and sqlite runs in WAL mode.
-- Quitting no longer floods the UI with cancellation events. The task list unsubscribes from the database and engine event feeds before the engine is disposed, so cancelling every in-flight download cannot trigger a rebuild storm on a window that is going away (the other cause of the apparent freeze).
-- `DownloadEngine.dispose()` no longer awaits closing its broadcast event stream, which could block on listeners that were mid-handler during shutdown.
+- Windows 托盘「退出」立即生效，不再卡顿约 2 秒。
+  Windows tray "Quit" is now instant instead of freezing for ~2 seconds.
+- 退出时不再因大量取消事件导致界面假死。
+  Quitting no longer floods the UI with cancellation events that appeared to freeze it.
 
 ## [0.2.1] - 2026-10-09
 
-### Fixed
+### 修复 / Fixed
 
-- Windows in-app update no longer leaves a lingering command-prompt window after installing. The installer batch used to delete itself with a bare `del`, which made cmd fail to read the next line ("找不到批处理文件") and keep the minimized console open; because the relaunched app was a child of that console, closing the window also quit the app. The script now ends the batch context cleanly before deleting itself.
-- A download stuck in the "merging" state by an older build (which had no disk-full detection and hung the merge on a full disk) is now recovered on startup instead of lingering in the downloads list with no way to cancel or delete it. Such stale records are cold-resumed: the merge retries using the already-downloaded segments, and if the disk is still full the task pauses into a recoverable, actionable state.
+- Windows 更新后不再残留命令行窗口，关闭它也不会误杀应用。
+  Windows update no longer leaves a lingering console window; closing it no longer kills the app.
+- 旧版本因磁盘满卡在「合并中」的任务，升级后启动时自动恢复。
+  Tasks stuck in "merging" from older builds (disk-full hang) are recovered on startup after upgrading.
 
 ## [0.2.0] - 2026-10-08
 
-### Added
+### 新增 / Added
 
-- Disk-full handling: when a download or merge runs out of disk space, the task now pauses (keeping its progress) instead of failing with a generic error. The downloads list shows a "disk full — free up space then resume" banner, a system notification fires for background downloads, and the merge pre-flights available space so it stops before writing a truncated file. Resuming after freeing space continues from where it left off.
-- ffmpeg path can now be set manually in Settings (Browse or type a path, validated before saving). Desktop ffmpeg detection also probes common Windows install locations (Program Files, chocolatey, scoop, winget) in addition to PATH.
+- 磁盘满处理：空间不足时暂停并保留进度，清理后可断点续传。
+  Disk-full handling: tasks pause and keep progress when space runs out, resuming after you free space.
+- ffmpeg 路径可在设置中手动指定，并探测常见安装位置。
+  The ffmpeg path can be set manually in Settings, with detection of common install locations.
 
-### Fixed
+### 修复 / Fixed
 
-- Windows tray "Quit" no longer leaves the main window hanging for several seconds after the tray icon disappears. In-flight downloads and timers are stopped first and the process exits promptly.
-- macOS: the App Sandbox is disabled so the app can run an ffmpeg binary outside its bundle (previously ffmpeg detection always failed on macOS).
+- Windows 托盘「退出」不再让主窗口滞留数秒。
+  Windows tray "Quit" no longer leaves the main window hanging for seconds.
+- macOS 关闭 App Sandbox，使应用可调用 bundle 外的 ffmpeg。
+  macOS App Sandbox disabled so the app can run an ffmpeg binary outside its bundle.
 
 ## [0.1.1] - 2026-10-01
 
-### Fixed
+### 修复 / Fixed
 
-- In-app update: a verification failure after the download reached 100% was misreported as "download failed, check your network". It now shows an accurate "file verification failed" message, tolerates a connection teardown error only when all bytes arrived, and retries once from scratch before giving up.
-- Windows update install no longer flashes an endless series of command-prompt windows. The installer batch now runs in a single minimized console that its child commands share.
-- Windows tray "Quit" no longer hangs for a while before exiting; the quit is deferred out of the native menu's modal loop.
+- 更新下载校验失败时给出准确提示，并在必要时整体重试一次。
+  Update verification failures now show an accurate message and retry once from scratch.
+- Windows 更新安装不再连续闪现多个命令行窗口。
+  Windows update install no longer flashes a series of console windows.
+- Windows 托盘「退出」不再延迟。
+  Windows tray "Quit" no longer hangs before exiting.
 
 ## [0.1.0] - 2026-10-01
 
-### Added
+### 新增 / Added
 
-- In-app language switch: Settings → Language offers System / 中文 / English. The whole UI re-renders in the chosen language immediately, without a restart, and the choice persists across restarts.
+- 应用内语言切换（跟随系统 / 中文 / English），即时生效并持久化。
+  In-app language switch (System / 中文 / English), applied instantly and persisted.
 
-### Fixed
+### 修复 / Fixed
 
-- Windows tray icon: the right-click context menu (with "Quit") now opens reliably, including while the main window is hidden. Upgraded the tray implementation so the menu is shown natively instead of through a path that silently failed on a hidden window.
-- Windows Chinese text no longer renders in a serif fallback (SimSun) that clashed with the sans-serif UI; Chinese now uses the platform-native sans-serif (Microsoft YaHei).
-- Download cards: the speed readout is flush right again instead of stranded mid-row when an ETA is shown.
+- Windows 托盘右键菜单在主窗口隐藏时也能可靠弹出。
+  The Windows tray context menu opens reliably even while the main window is hidden.
+- Windows 中文改用平台原生无衬线字体（微软雅黑）。
+  Chinese text on Windows now uses the native sans-serif (Microsoft YaHei).
+- 下载卡片速度显示重新右对齐。
+  Download card speed readout is flush right again.
 
 ## [0.0.15] - 2026-10-01
 
-### Added
+### 新增 / Added
 
-- Update traffic (release checks and package downloads) now honors the configured download proxy, matching the download engine. The proxy applies immediately on save and persists across restarts.
+- 更新检查与下载也走配置的代理。
+  Update checks and downloads now honor the configured proxy.
 
-### Fixed
+### 修复 / Fixed
 
-- Windows in-app update no longer hangs on "installing" with a lingering console window. The installer script is now launched detached so it does not inherit the app's stdout/stderr pipes (which previously deadlocked against the script waiting for the app to exit), and no console window is allocated.
+- Windows 更新不再卡在「安装中」并残留控制台窗口。
+  Windows update no longer hangs on "installing" with a lingering console window.
 
 ## [0.0.14] - 2026-09-30
 
-### Added
+### 新增 / Added
 
-- Self-healing merge: corrupt or vanished segments are skipped instead of failing the whole merge (TS stays playable with a small gap), and the MP4 remux retries with relaxed error detection. The result card reports how many segments were skipped.
-- Merge result card: "Open containing folder" and "Delete segments" actions (with confirmation), on all platforms.
-- Download task context menu (right-click on desktop, long-press on mobile) adds "Open containing directory", resolving the task folder for both finished and in-progress downloads.
+- 自愈合并：损坏/丢失分片自动跳过，MP4 remux 失败时放宽重试。
+  Self-healing merge: corrupt/vanished segments are skipped and MP4 remux retries with relaxed detection.
+- 合并结果卡片支持「打开所在目录」「删除分片」。
+  Merge result card adds "Open containing folder" and "Delete segments".
+- 任务右键/长按菜单新增「打开所在目录」。
+  Task context menu adds "Open containing directory".
 
-### Fixed
+### 修复 / Fixed
 
-- Windows/macOS no longer show the "MP4 conversion is not supported on mobile" hint when the real reason is a missing or failing ffmpeg; each fallback reason now has its own message.
-- Desktop title-row actions (Batch import, Clear completed, Pause all) are flush right instead of stranded mid-row; flow-page primary buttons are right-aligned on desktop per the design spec.
-- Desktop button height raised from 32px to 36px for better visual balance.
+- ffmpeg 缺失/失败时给出对应提示，不再误报「移动端不支持」。
+  Missing/failing ffmpeg now shows its own message instead of the wrong "mobile" hint.
+- 桌面端标题栏操作按钮右对齐，按钮高度提升至 36px。
+  Desktop title-row actions are flush right; button height raised to 36px.
 
 ## [0.0.13] - 2026-09-29
 
-### Added
+### 新增 / Added
 
-- Segment concurrency is now configurable in Settings (2–32, default raised from 8 to 16), so downloads can better saturate fast connections.
-- Adaptive concurrency (AIMD): the download window starts at the configured maximum, grows additively while segments succeed, and halves on congestion signals (timeouts, connection errors, HTTP 429/5xx) — throughput stays high on healthy sources while backing off quickly on slow or rate-limiting ones.
+- 分片并发可在设置中配置（2–32，默认 16）。
+  Segment concurrency is configurable in Settings (2–32, default 16).
+- AIMD 自适应并发：成功加性增、拥塞乘性减。
+  Adaptive concurrency (AIMD): additive increase on success, multiplicative decrease on congestion.
 
-### Changed
+### 改进 / Changed
 
-- AES decryption and PNG `roUd` unwrapping (zlib) now run on worker isolates instead of the main isolate. Previously these CPU-bound steps blocked the event loop and serialized what was supposed to be concurrent downloading — the main cause of unstable speeds.
-- Retry backoff shortened from 1s/3s/9s to 0.3s/1s/3s so transient blips cost milliseconds instead of seconds.
-- Permanent HTTP errors (400/401/403/404/410) now fail immediately instead of burning three retry rounds, surfacing the real problem (e.g. an expired link) faster.
+- AES 解密与 PNG roUd 解包移至 worker isolate，不再阻塞主线程。
+  AES decryption and PNG roUd unwrapping moved to worker isolates, no longer blocking the main thread.
+- 重试退避缩短为 0.3s/1s/3s；永久错误（4xx）立即失败。
+  Retry backoff shortened to 0.3s/1s/3s; permanent errors (4xx) fail immediately.
 
 ## [0.0.12] - 2026-09-29
 
-### Added
+### 新增 / Added
 
-- Download proxy: configure a local HTTP proxy (host + port) in Settings and all download traffic — playlists, segments and AES keys — is routed through it. Leaving it empty restores direct connections. The setting takes effect immediately on save (in-flight segments finish on the old connection, the next segment uses the new one) and persists across restarts.
-- Task context menu: right-click a download task on macOS/Windows, or long-press on Android/iOS, to copy the download link. Tasks that carry a source web page also offer "copy source page", which copies the web page the stream came from.
-- Download cards now show the total file size next to the downloaded amount ("123 MB / 456 MB"). Byte-range playlists report an exact total up front; other playlists show a running estimate, and nothing is shown when the size cannot be determined.
+- 下载代理：设置本地 HTTP 代理后所有下载流量经其转发。
+  Download proxy: route all download traffic through a local HTTP proxy.
+- 任务菜单支持复制下载链接与来源网页。
+  Task menu can copy the download link and source web page.
+- 下载卡片显示总大小（「已下载 / 总计」）。
+  Download cards show total size ("downloaded / total").
 
-### Fixed
+### 修复 / Fixed
 
-- Default titles no longer collide for image-disguised playlists with generic names (`index.jpg`, `master.jpeg`, …): JPG/JPEG/WebP/GIF disguises are now recognized like PNG, and generic names fall back to a unique `host-timestamp` title instead of every download sharing the same folder name.
+- 图片伪装且通用名的播放列表不再产生重名标题。
+  Image-disguised playlists with generic names no longer collide on title.
 
 ## [0.0.11] - 2026-09-28
 
-### Fixed
+### 修复 / Fixed
 
-- Downloads no longer freeze when a server stalls mid-transfer: segment, key and playlist requests now carry connect (30s) and idle-receive (60s) timeouts, so a hung connection fails and retries instead of blocking its scheduler slot forever.
-- Pausing a task now also cancels an in-flight AES key fetch (it previously used a token that pause never cancelled), so resume starts cleanly instead of waiting on a dead connection.
+- 服务器中途卡住时不再冻结：请求带连接/接收超时。
+  Downloads no longer freeze on a stalled server: requests carry connect/receive timeouts.
+- 暂停任务会同时取消进行中的密钥请求。
+  Pausing also cancels an in-flight AES key fetch.
 
 ## [0.0.10] - 2026-09-28
 
-### Added
+### 新增 / Added
 
-- In-app update check: the app looks for new GitHub releases at startup (once per version) and from Settings → About, shows the changelog in a dialog, downloads the platform installer with resume support and SHA-256 verification, then hands off to the system installer (Android), reveals the new app in Finder (macOS), or replaces the install directory and relaunches (Windows).
-- Closing the main window on Windows and macOS now hides it instead of quitting, so downloads keep running in the background. Windows shows a tray icon with "show" and "quit" actions; macOS keeps the app in the Dock and clicking it reopens the window.
+- 应用内更新：检查 GitHub 新版本、下载校验并安装。
+  In-app update: check GitHub releases, download with verification, and install.
+- Windows/macOS 关闭主窗口改为隐藏，下载在后台继续。
+  Closing the main window on Windows/macOS hides it so downloads keep running.
 
-### Fixed
+### 修复 / Fixed
 
-- Pausing or retrying a PNG-disguised download no longer fails on expired signed URLs: the engine re-parses the source and refreshes playlist, segment and key URLs while reusing already-downloaded segments. "Redownload" also re-parses the source instead of replaying the stale snapshot.
-- Pausing a task no longer resets its progress to zero in the UI or the database; progress is persisted periodically so it also survives an app kill mid-download.
-- Disguised sources whose URLs carry no meaningful name (e.g. `.../cdn/master.png`) now get unique default titles (`host-timestamp`) instead of all sharing the same folder name.
+- 暂停/重试 PNG 伪装下载时自动刷新过期签名链接。
+  Pausing/retrying PNG-disguised downloads refreshes expired signed URLs.
+- 暂停不再把进度重置为零，进度定期持久化。
+  Pausing no longer resets progress to zero; progress is persisted periodically.
 
 ## [0.0.9] - 2026-09-26
 
-### Fixed
+### 修复 / Fixed
 
-- Reuse the running Windows downloader when a `stream-mediary://` link opens another video.
-- Show the configured default download directory on the parse preview and keep the parsed playlist when choosing a different directory.
-- Refresh available disk space for a changed directory without refetching the media playlist.
+- stream-mediary:// 链接复用正在运行的 Windows 下载器。
+  A stream-mediary:// link reuses the running Windows downloader.
+- 解析预览显示默认下载目录，切换目录保留已解析列表。
+  Parse preview shows the default download dir and keeps the playlist when changing it.
 
 ## [0.0.8] - 2026-09-25
 
-### Added
+### 新增 / Added
 
-- Download HLS playlists, segments, initialization sections, and keys wrapped in PNG `roUd` chunks without a local proxy.
-- Open the new download screen from a `stream-mediary://` link on macOS and Windows with the source URL, Referer, and User-Agent filled in.
-- Save technical errors and stack traces to a rotating local `mediary.log`; show concise, actionable messages in the UI.
-- Publish an unsigned iOS app archive for developers who can sign and sideload it.
+- 支持下载 PNG roUd 包装的 HLS（清单/分片/密钥），无需本地代理。
+  Download HLS playlists, segments and keys wrapped in PNG roUd chunks, no local proxy.
+- macOS/Windows 通过 stream-mediary:// 链接打开新建下载并填充来源信息。
+  Open the new-download screen from a stream-mediary:// link with source info filled in.
+- 技术错误写入本地滚动日志，界面只显示简洁可操作信息。
+  Technical errors go to a rotating local log; the UI shows concise, actionable messages.
 
-### Fixed
+### 修复 / Fixed
 
-- Resolve relative redirect locations before resolving nested playlist and segment URLs, including signed CDN query parameters.
-- Prevent a missing macOS deep-link bridge from stopping the app before its UI appears.
-- Keep raw parser, network, player, merge, and message-board exceptions out of user-facing error messages.
+- 先解析相对重定向再解析嵌套地址（含签名 CDN 参数）。
+  Resolve relative redirects before nested playlist/segment URLs, including signed CDN params.
 
 ## [0.0.7] - 2026-09-24
 
-- Improved the visibility of the off-state switch thumb in high-contrast themes.
+### 修复 / Fixed
+
+- 提升高对比主题下关闭态开关滑块的可见性。
+  Improved the off-state switch thumb visibility in high-contrast themes.

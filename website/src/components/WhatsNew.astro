@@ -1,11 +1,12 @@
 ---
 import { getLangFromUrl, useTranslations } from '../i18n/ui';
-import { releases, type ChangeKind } from '../i18n/changelog';
+import { loadReleases, releasesFor, type ChangeKind } from '../i18n/changelog';
 import { GITHUB_REPO } from '../i18n/site';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
-const entries = releases[lang];
+// Parse the root CHANGELOG.md at build time; show the most recent releases.
+const entries = releasesFor(lang, loadReleases()).slice(0, 5);
 const changelogUrl = `${GITHUB_REPO}/blob/main/CHANGELOG.md`;
 
 const kindMeta: Record<ChangeKind, { label: string; cls: string }> = {
