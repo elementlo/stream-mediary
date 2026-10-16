@@ -18,6 +18,9 @@
 </p>
 
 <p align="center">
+  <a href="https://elementlo.github.io/stream-mediary/">
+    <img src="https://img.shields.io/badge/Website-Official-6F5B97" alt="Website" />
+  </a>
   <a href="https://github.com/elementlo/stream-mediary/releases">
     <img src="https://img.shields.io/github/v/release/elementlo/stream-mediary?label=release" alt="Release" />
   </a>
@@ -84,7 +87,7 @@ Mediary works on its own (paste an `.m3u8` URL manually), but it pairs greatly w
 
 ## ⬇️ Download
 
-Grab the latest pre-built binaries for your platform from the **[Releases](https://github.com/elementlo/stream-mediary/releases)** page.
+Grab the latest pre-built binaries for your platform from the **[Releases](https://github.com/elementlo/stream-mediary/releases)** page. You can also visit the **[official website](https://elementlo.github.io/stream-mediary/)** for features, screenshots and recent updates.
 
 | Platform | Artifact |
 |---|---|

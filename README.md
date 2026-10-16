@@ -18,6 +18,9 @@
 </p>
 
 <p align="center">
+  <a href="https://elementlo.github.io/stream-mediary/">
+    <img src="https://img.shields.io/badge/官网-Website-6F5B97" alt="Website" />
+  </a>
   <a href="https://github.com/elementlo/stream-mediary/releases">
     <img src="https://img.shields.io/github/v/release/elementlo/stream-mediary?label=release" alt="Release" />
   </a>
@@ -84,7 +87,7 @@ Mediary 可以独立使用（手动粘贴 `.m3u8` 地址），但配合官方 Ch
 
 ## ⬇️ 下载安装
 
-前往 **[Releases](https://github.com/elementlo/stream-mediary/releases)** 页面获取对应平台的预编译安装包。
+前往 **[Releases](https://github.com/elementlo/stream-mediary/releases)** 页面获取对应平台的预编译安装包。也可访问 **[官方网站](https://elementlo.github.io/stream-mediary/)** 了解功能特性、查看截图与最近更新。
 
 | 平台 | 安装包 |
 |---|---|
