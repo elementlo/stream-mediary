@@ -12,6 +12,18 @@ Concise bilingual changelog. The website's "What's New" section parses this file
 First line of each bullet is Chinese, the indented second line is English.
 Kind headings must contain one of Added/Changed/Fixed. -->
 
+## [0.4.0] - 2026-10-16
+
+### 新增 / Added
+
+- macOS / Windows 沉浸式标题栏：内容延伸到窗口顶部，顶部空白可拖动窗口、双击最大化。
+  Immersive title bar on macOS / Windows: content extends to the window top; drag the empty strip to move, double-click to maximize.
+
+### 改进 / Changed
+
+- macOS 交通灯悬浮于内容之上，Windows 自绘最小化/最大化/关闭按钮；Linux 保持原生标题栏。
+  macOS traffic lights float over the content; Windows draws its own minimize/maximize/close buttons; Linux keeps the native title bar.
+
 ## [0.3.0] - 2026-10-15
 
 ### 新增 / Added
