@@ -6,6 +6,7 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/platform/platform_profile.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/mediary_colors.dart';
+import '../../core/widgets/desktop_window_frame.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../engine/task/task_state.dart';
 import '../../providers/app_providers.dart';
@@ -215,7 +216,13 @@ class _RailLayout extends StatelessWidget {
                 right: BorderSide(color: colors.hairline, width: 1),
               ),
             ),
-            child: NavigationRail(
+            // Push the rail content below the immersive title bar so the
+            // brand header clears the macOS traffic lights / drag strip.
+            // The Container background still fills the strip, so the rail
+            // color runs flush to the window top (no seam).
+            child: Padding(
+              padding: EdgeInsets.only(top: immersiveTitleBarHeight()),
+              child: NavigationRail(
               selectedIndex: selectedIndex,
               extended: extended,
               labelType: extended
@@ -253,6 +260,7 @@ class _RailLayout extends StatelessWidget {
                       ),
                     )
                   : null,
+            ),
             ),
           ),
           Expanded(child: child),

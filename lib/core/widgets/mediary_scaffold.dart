@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../platform/platform_profile.dart';
 import '../theme/design_tokens.dart';
+import 'desktop_window_frame.dart';
 
 /// Page scaffold that adapts its chrome to the platform.
 ///
@@ -84,7 +85,9 @@ class MediaryScaffold extends StatelessWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(
               horizontal,
-              Spacing.xl,
+              // Clear the immersive title bar (drag strip / traffic lights)
+              // so the page title and actions sit below it. Zero on Linux.
+              Spacing.xl + immersiveTitleBarHeight(),
               horizontal,
               Spacing.lg,
             ),

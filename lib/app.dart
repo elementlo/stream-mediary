@@ -10,6 +10,7 @@ import 'core/platform/desktop_window_service.dart';
 import 'core/platform/download_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/desktop_window_frame.dart';
 import 'features/update/update_dialog.dart';
 import 'providers/app_providers.dart';
 
@@ -127,7 +128,9 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
               .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.4);
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: scale),
-            child: child ?? const SizedBox.shrink(),
+            // Inside the textScaler MediaQuery so the frame's own padding
+            // injection is not clobbered by the copyWith above.
+            child: DesktopWindowFrame(child: child ?? const SizedBox.shrink()),
           );
         },
       ),

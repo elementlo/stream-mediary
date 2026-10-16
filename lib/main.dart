@@ -20,11 +20,18 @@ Future<void> main([List<String> arguments = const []]) async {
   // Desktop window configuration.
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     await windowManager.ensureInitialized();
+    // Immersive title bar on macOS/Windows: hide the native title bar and let
+    // the app draw its own draggable strip (see DesktopWindowFrame). macOS
+    // keeps its traffic lights floating over the content; Windows removes the
+    // caption buttons too, so the frame re-draws them. Linux keeps the native
+    // title bar (window_manager's hidden style is not implemented there).
+    final immersive = Platform.isMacOS || Platform.isWindows;
     await windowManager.waitUntilReadyToShow(
-      const WindowOptions(
-        minimumSize: Size(960, 600),
-        size: Size(1120, 720),
+      WindowOptions(
+        minimumSize: const Size(960, 600),
+        size: const Size(1120, 720),
         title: 'Mediary',
+        titleBarStyle: immersive ? TitleBarStyle.hidden : TitleBarStyle.normal,
       ),
       () async {
         await windowManager.show();
