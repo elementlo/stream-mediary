@@ -7,6 +7,7 @@ export const ui = {
     'nav.screenshots': '截图',
     'nav.download': '下载',
     'nav.extension': '浏览器扩展',
+    'nav.whatsnew': '更新日志',
     'nav.faq': '常见问题',
     'nav.github': 'GitHub',
     'nav.lang': 'English',
@@ -83,6 +84,13 @@ export const ui = {
     'extension.cta': '查看扩展仓库',
     'extension.note': '扩展为独立项目，安装与使用说明见其仓库主页。',
 
+    'whatsnew.title': '最近更新',
+    'whatsnew.subtitle': '各版本的新功能、改进与修复',
+    'whatsnew.full': '查看完整更新日志',
+    'whatsnew.added': '新增',
+    'whatsnew.changed': '改进',
+    'whatsnew.fixed': '修复',
+
     'faq.title': '常见问题',
     'faq.q1': 'Mediary 是免费的吗？',
     'faq.a1':
@@ -111,6 +119,7 @@ export const ui = {
     'nav.screenshots': 'Screenshots',
     'nav.download': 'Download',
     'nav.extension': 'Extension',
+    'nav.whatsnew': "What's New",
     'nav.faq': 'FAQ',
     'nav.github': 'GitHub',
     'nav.lang': '简体中文',
@@ -188,6 +197,13 @@ export const ui = {
     'extension.cta': 'View extension repo',
     'extension.note':
       'The extension is a separate project; see its repository for install and usage instructions.',
+
+    'whatsnew.title': "What's New",
+    'whatsnew.subtitle': 'Features, improvements and fixes by release',
+    'whatsnew.full': 'View full changelog',
+    'whatsnew.added': 'New',
+    'whatsnew.changed': 'Improved',
+    'whatsnew.fixed': 'Fixed',
 
     'faq.title': 'FAQ',
     'faq.q1': 'Is Mediary free?',
