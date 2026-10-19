@@ -228,14 +228,21 @@ class _RailLayout extends StatelessWidget {
               labelType: extended
                   ? NavigationRailLabelType.none
                   : NavigationRailLabelType.all,
-              groupAlignment: -0.85,
+              // -1.0 pins the destinations right below the leading brand
+              // header. The previous -0.85 offset them by ~7.5% of the
+              // remaining height, which read as a large empty band in the
+              // rail on tall windows.
+              groupAlignment: -1.0,
               onDestinationSelected: onSelect,
               minWidth: 76,
               minExtendedWidth: _extendedRailWidth,
               leading: Padding(
                 padding: EdgeInsets.fromLTRB(
                   extended ? Spacing.md : Spacing.sm,
-                  Spacing.lg,
+                  // Immersive: the outer Padding already clears the title bar,
+                  // so use a small gap here to align the brand header with the
+                  // page title row. Linux (native title bar) keeps Spacing.lg.
+                  isImmersiveDesktop ? Spacing.sm : Spacing.lg,
                   extended ? Spacing.md : Spacing.sm,
                   Spacing.sm,
                 ),
@@ -287,7 +294,7 @@ class _BrandHeader extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(
             left: Spacing.xs,
-            bottom: Spacing.lg,
+            bottom: Spacing.md,
           ),
           child: Row(
             children: [

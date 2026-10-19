@@ -77,6 +77,15 @@ class MediaryScaffold extends StatelessWidget {
       );
     }
 
+    // Immersive desktop: the title bar is a transparent overlay strip, so
+    // content only needs to start just below it with a small breathing gap —
+    // not the full strip height stacked on top of the usual page padding
+    // (which left a large empty band at the top). Linux keeps the native
+    // title bar and the original Spacing.xl gap.
+    final titleTopPadding = isImmersiveDesktop
+        ? immersiveTitleBarHeight() + Spacing.sm
+        : Spacing.xl;
+
     return Scaffold(
       floatingActionButton: floatingActionButton,
       body: Column(
@@ -85,9 +94,7 @@ class MediaryScaffold extends StatelessWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(
               horizontal,
-              // Clear the immersive title bar (drag strip / traffic lights)
-              // so the page title and actions sit below it. Zero on Linux.
-              Spacing.xl + immersiveTitleBarHeight(),
+              titleTopPadding,
               horizontal,
               Spacing.lg,
             ),
