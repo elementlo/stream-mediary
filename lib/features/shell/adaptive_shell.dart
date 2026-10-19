@@ -285,7 +285,6 @@ class _BrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     return Column(
@@ -298,18 +297,12 @@ class _BrandHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
+              // Flat app icon (rounded, transparent corners) as the brand mark.
+              Image.asset(
+                'assets/icon_flat.png',
                 width: 30,
                 height: 30,
-                decoration: BoxDecoration(
-                  color: scheme.primary,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(
-                  Icons.arrow_downward_rounded,
-                  size: 17,
-                  color: scheme.onPrimary,
-                ),
+                filterQuality: FilterQuality.medium,
               ),
               const SizedBox(width: Spacing.sm + 1),
               Text('Mediary', style: text.titleMedium),
