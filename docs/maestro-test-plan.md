@@ -71,73 +71,53 @@
 
 ## 3. 执行步骤
 
-### 准备（一次性）
+完整运行手册见 [`maestro/README.md`](../maestro/README.md)（agent 按序执行命令即可）。
+概要：
 
 ```bash
-# 1. 安装 Maestro
+# 0. 安装 Maestro（一次性）
 curl -Ls "https://get.maestro.mobile.dev" | bash
 export PATH="$PATH:$HOME/.maestro/bin"
 
-# 2. 构建并安装
-flutter build apk --debug && adb -s 10CFCG0PPD001YM install -r build/app/outputs/flutter-apk/app-debug.apk
-flutter build ios --debug --simulator
+# 1. 启动两台模拟器（系统语言英文；iOS 改语言后需重启模拟器）
+~/Library/Android/sdk/emulator/emulator -avd Pixel_9a -no-snapshot-save -no-boot-anim &
 xcrun simctl boot D1D7CA22-82C5-4906-87CE-BEC46EF72CF6
+
+# 2. 构建并安装
+flutter build apk --debug
+adb -s emulator-5554 install -r build/app/outputs/flutter-apk/app-debug.apk
+flutter build ios --debug --simulator
 xcrun simctl install D1D7CA22-82C5-4906-87CE-BEC46EF72CF6 build/ios/iphonesimulator/Runner.app
 
-# 3. 启动本地 HLS 测试源（保持后台运行）
-./maestro/serve_test_hls.sh          # 生成 testsrc HLS 并监听 :8099
-```
+# 3. 启动本地 HLS 测试源（后台）
+./maestro/serve_test_hls.sh &
 
-### Android 模拟器（分步骤）
+# 4. 执行（全量；单 flow 把 maestro/ 换成 maestro/<flow>.yaml）
+maestro test maestro/ --device emulator-5554 \
+  -e APP_ID=com.element.stream_mediary -e HLS_URL=http://10.0.2.2:8099/index.m3u8
+maestro test maestro/ --device D1D7CA22-82C5-4906-87CE-BEC46EF72CF6 \
+  -e APP_ID=com.element.streamMediary -e HLS_URL=http://127.0.0.1:8099/index.m3u8
 
-```bash
-export ANDROID_DEVICE=emulator-5554
-export APP_ID=com.element.stream_mediary
-export HLS_URL=http://10.0.2.2:8099/index.m3u8   # 模拟器经 10.0.2.2 访问主机
-
-# 逐模块执行（便于定位失败）
-maestro test maestro/app_launch.yaml         --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/navigation.yaml         --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/new_download_parse.yaml --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/download_flow.yaml      --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/history.yaml            --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/community.yaml          --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/settings.yaml           --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/merge_page.yaml         --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-maestro test maestro/player.yaml             --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-
-# 或一次性全量
-maestro test maestro/ --device $ANDROID_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-```
-
-### iOS 模拟器（分步骤）
-
-```bash
-export IOS_DEVICE=D1D7CA22-82C5-4906-87CE-BEC46EF72CF6
-export APP_ID=com.element.streamMediary
-export HLS_URL=http://127.0.0.1:8099/index.m3u8
-
-maestro test maestro/app_launch.yaml --device $IOS_DEVICE -e APP_ID=$APP_ID -e HLS_URL=$HLS_URL
-# ……其余同上，替换 --device 与 -e
+# 5. 清理：杀掉 serve_test_hls.sh
 ```
 
 ### 结果判读
 
-- 每个 flow 输出 `PASSED/FAILED`；失败时 Maestro 打印失败步骤与截图路径。
-- 全量执行汇总在终端末尾（`X flows passed, Y failed`）。
+- 末尾汇总 `N/10 Flows Passed`。
+- 失败时调试产物（截图 + UI 层级 JSON）在 `~/.maestro/tests/<时间戳>/<flow>/`；
+  选择器失败照 `screen-hierarchy/*.json` 里的真实节点文本修正。
 - 失败分类：**用例问题**（选择器/时序）→ 修 YAML；**应用缺陷** → 记录并单独修复。
 
 ## 4. 用例编写约定
 
-- 选择器优先级：可见英文文案 > 正则（组合多行节点/导航后缀）> `id` > 坐标（最后手段）。
-- 每个 flow 自包含：`launchApp`（含 `clearState` 视需要）→ 操作 → 断言。
-  依赖前置数据的 flow（history/player）直接 `runFlow: download_flow.yaml`，
-  不依赖执行顺序。
-- 等待用 `assertVisible` 自带超时（默认 5s），长任务（下载/合并）显式
-  `extendedWaitUntil`；页面过渡用 `waitForAnimationToEnd` 消除竞态。
-- 下载类用例依赖本地 HLS 源，执行前必须确认 `serve_test_hls.sh` 在跑。
-- 不在用例里写死设备分辨率相关的绝对坐标，滑动用相对方向（`swipe`/`scroll`）。
-- 关闭 modal sheet 用 `hideKeyboard` + 点 `Scrim`（barrier），不用系统 back。
+完整规范见 [`maestro/CONVENTIONS.md`](../maestro/CONVENTIONS.md)（选择器规则、
+平台陷阱清单、flow 结构、新增用例步骤）。要点：
+
+- 选择器优先级：可见英文文案 > 正则（组合多行节点/导航后缀）> `id` > 坐标（禁用）。
+- 每个 flow 自包含；依赖前置数据的直接 `runFlow: download_flow.yaml`。
+- 长任务用 `extendedWaitUntil`，页面过渡用 `waitForAnimationToEnd`。
+- 关闭 modal sheet 用 `hideKeyboard` + 点 `Scrim`，不用系统 back。
+- 新增用例：复制 `maestro/_template.yaml.example` → 填写 → 单跑 → 全量回归 → 登记矩阵。
 
 ## 5. 执行结果（2026-10-19）
 
@@ -148,7 +128,10 @@ maestro test maestro/app_launch.yaml --device $IOS_DEVICE -e APP_ID=$APP_ID -e H
 
 ## 6. 维护
 
-- 新增页面/功能时同步补 flow，并在本计划矩阵登记。
+- **新增功能 → 只补一个 flow**：复制 `maestro/_template.yaml.example`，按
+  `maestro/CONVENTIONS.md` 编写，放进 `maestro/` 即被全量执行自动收录，
+  再在本计划矩阵登记一行。运行手册无需改动。
 - 文案改动（arb）需同步更新用例断言字符串。
+- 新增平台弹窗文案 → 改 `dismiss_permissions.yaml` 一处即可。
 - CI 集成（可选后续）：GitHub Actions macOS runner 可跑 iOS 模拟器 flow；
-  Android 真机需 self-hosted runner，暂不纳入 CI。
+  Android 模拟器也可在 macOS runner 上跑（按 README 运行手册执行）。

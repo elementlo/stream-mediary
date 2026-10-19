@@ -1,0 +1,60 @@
+# TEMPLATE — copy to maestro/<feature>.yaml and fill in.
+# (Kept as .yaml.example so the suite runner does not execute it as a flow.)
+#
+# Conventions: see maestro/CONVENTIONS.md. Key points:
+#   - appId comes from ${APP_ID}; never hardcode.
+#   - Self-contained: launch, dismiss permissions, wait for first screen.
+#   - Selectors: exact string for single-line text; '[\s\S]*' regex for nav
+#     labels (Android adds "Tab N of 5") and combined multi-line nodes.
+#   - Close modal sheets with hideKeyboard + tap "Scrim" (not back, not "Dismiss").
+#   - Navigate back with the AppBar "Back" button, not a system gesture.
+appId: ${APP_ID}
+---
+# Start clean when the flow must not see prior data; omit clearState when the
+# flow depends on existing state (e.g. a completed download).
+- launchApp:
+    clearState: true
+- runFlow: dismiss_permissions.yaml
+
+# Wait for the initial screen before interacting.
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+# --- navigate (bottom nav labels carry the Android "Tab N of 5" suffix) ---
+- tapOn: 'Settings[\s\S]*'
+- extendedWaitUntil:
+    visible: "Download policy"
+    timeout: 10000
+
+# --- example: open a page from a button ---
+# - tapOn: "New Download"
+# - extendedWaitUntil:
+#     visible: 'M3U8 URL[\s\S]*'      # label+hint are one combined node
+#     timeout: 10000
+
+# --- example: type into a field (match by label prefix) ---
+# - tapOn: 'M3U8 URL[\s\S]*'
+# - inputText: ${HLS_URL}
+
+# --- example: scroll to an off-screen element then assert ---
+# - scrollUntilVisible:
+#     element: "Start download"
+#     direction: DOWN
+#     timeout: 15000
+
+# --- example: wait out a page transition before asserting ---
+# - waitForAnimationToEnd:
+#     timeout: 10000
+
+# --- example: close a modal bottom sheet (iOS-safe) ---
+# - hideKeyboard
+# - tapOn:
+#     text: "Scrim"
+#     optional: true
+
+# --- assertions: prefer stable titles/section headers over dynamic values ---
+- assertVisible: "Download policy"
+
+# If this flow changes global state (theme, language, a toggle), restore it
+# before the flow ends so later flows are unaffected.
