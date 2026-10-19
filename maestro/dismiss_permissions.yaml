@@ -1,0 +1,31 @@
+# Dismisses common first-run permission dialogs on Android and iOS.
+# Each tap is optional so a missing dialog is a no-op.
+# Devices run in English, so labels are the English system strings.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: "Allow"
+          optional: true
+      - tapOn:
+          text: "While using the app"
+          optional: true
+      - tapOn:
+          text: "Only this time"
+          optional: true
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: "Allow"
+          optional: true
+      - tapOn:
+          text: "OK"
+          optional: true
+      - tapOn:
+          text: "Allow Once"
+          optional: true

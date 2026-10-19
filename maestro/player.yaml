@@ -1,0 +1,28 @@
+# Flow 9: Built-in player — open a completed task from history, verify the
+# player surface renders, then navigate back.
+# Self-contained: runs the full download first (ends on History with the task
+# listed), so it does not depend on execution order.
+#
+# The player is pushed OUTSIDE the navigation shell, so the bottom nav (and
+# its "History" label) disappears while the AppBar title stays the task name.
+# That contrast is the assertion; waitForAnimationToEnd avoids the
+# page-transition race.
+appId: ${APP_ID}
+---
+- runFlow: download_flow.yaml
+
+# We are on History with the completed task visible.
+- tapOn: 'MaestroTest[\s\S]*'
+- waitForAnimationToEnd:
+    timeout: 10000
+# Player mounted: bottom nav gone, AppBar title is the task name.
+- assertNotVisible: 'History[\s\S]*'
+- assertVisible: "MaestroTest"
+
+# Back returns to history (nav label reappears). Use the AppBar back button
+# (localized tooltip "Back") rather than a system back gesture, which is
+# unreliable on iOS.
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: 'History[\s\S]*'
+    timeout: 10000

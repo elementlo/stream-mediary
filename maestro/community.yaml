@@ -1,0 +1,54 @@
+# Flow 6: Community board — list loads, composer sheet opens, emoji panel
+# toggles and inserts, sheet closes without posting.
+appId: ${APP_ID}
+---
+- launchApp
+- runFlow: dismiss_permissions.yaml
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+- tapOn: 'Board[\s\S]*'
+- extendedWaitUntil:
+    visible: "Message Board"
+    timeout: 15000
+# The board shows either comments or the empty state; both mean it loaded.
+
+# Open the composer via the FAB (label "Post").
+- tapOn: "Post"
+- extendedWaitUntil:
+    visible: "New message"
+    timeout: 10000
+- assertVisible: "Nickname"
+- assertVisible: "Say something…"
+
+# Open the emoji panel via the emoji button (icon-only; tooltip/semantic
+# label "Emoji").
+- tapOn: "Emoji"
+- extendedWaitUntil:
+    visible: "😀"
+    timeout: 5000
+# Insert one emoji into the content field (panel stays open).
+- tapOn: "😀"
+# While open the toggle's label flips to "Hide emoji"; tap it to close.
+- tapOn: "Hide emoji"
+# A panel-only emoji is gone; the field holds only the inserted 😀.
+- assertNotVisible: "🤣"
+
+# Close the sheet without posting. The soft keyboard (open after emoji
+# insertion refocuses the field) absorbs the first barrier tap, so hide it
+# first. Then tap the modal barrier — its semantic label is "Scrim" (the
+# region above the sheet); "Dismiss" is the sheet's drag handle, which does
+# NOT close on tap. An iOS back-swipe also does not close a modal sheet.
+- hideKeyboard
+- tapOn:
+    text: "Scrim"
+    optional: true
+- runFlow:
+    when:
+      visible: "New message"
+    commands:
+      - tapOn:
+          text: "Scrim"
+          optional: true
+- assertNotVisible: "New message"

@@ -1,0 +1,16 @@
+# Flow 1: Cold launch and first-screen render.
+# Devices run in English, so assertions use English strings.
+# NOTE: Android accessibility appends "Tab N of 5" to nav labels, so nav
+# elements are matched with a cross-newline regex; page titles are exact.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: dismiss_permissions.yaml
+# The downloads page is the initial route; it shows either the empty state
+# or the task list, plus the bottom navigation.
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+- assertVisible: 'Board[\s\S]*'
+- assertVisible: 'Settings[\s\S]*'

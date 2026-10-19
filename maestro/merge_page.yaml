@@ -1,0 +1,26 @@
+# Flow 8: Merge page — entry renders and the merge-preference segmented
+# control toggles. The system folder picker is intentionally NOT opened:
+# it is cross-app UI that differs per platform and is flaky to automate.
+appId: ${APP_ID}
+---
+- launchApp
+- runFlow: dismiss_permissions.yaml
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+- tapOn: 'Merge[\s\S]*'
+- extendedWaitUntil:
+    visible: "Choose folder"
+    timeout: 10000
+
+# Section header and the merge action are present.
+- assertVisible: "Segment folder"
+- assertVisible: "Start merge"
+
+# Merge preference segmented control is visible and switchable.
+- assertVisible: "Merge mode"
+- tapOn: "Prefer MP4"
+- assertVisible: "Merge mode"
+- tapOn: "TS only"
+- assertVisible: "Merge mode"

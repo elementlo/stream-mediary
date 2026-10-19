@@ -1,0 +1,9 @@
+# Flow 5: History page renders a completed download.
+# Self-contained: runs the full download first (which ends on the History page
+# with the task listed), so it does not depend on execution order.
+appId: ${APP_ID}
+---
+- runFlow: download_flow.yaml
+
+# download_flow leaves us on History with the completed task visible.
+- assertVisible: 'MaestroTest[\s\S]*'

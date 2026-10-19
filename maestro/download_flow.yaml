@@ -1,0 +1,45 @@
+# Flow 4: Full download lifecycle — parse, start, complete.
+# Requires the local HLS server (maestro/serve_test_hls.sh) to be running.
+#
+# The test stream is a single ~1 MB segment over LAN, so it completes almost
+# instantly; the transient "Downloading" state on the Downloads page is too
+# fast to observe reliably. Completion is therefore asserted by the task
+# appearing in History (the Downloads page only lists non-terminal tasks).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: dismiss_permissions.yaml
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+- tapOn: "New Download"
+- extendedWaitUntil:
+    visible: 'M3U8 URL[\s\S]*'
+    timeout: 10000
+
+- tapOn: 'M3U8 URL[\s\S]*'
+- inputText: ${HLS_URL}
+# Give the task a deterministic title so later flows (history/player) can
+# assert on it. The title field's node text is its label ("Video title").
+- tapOn: "Video title"
+- inputText: "MaestroTest"
+- tapOn: "Parse"
+# Preview node text is combined multi-line; match by prefix regex.
+- extendedWaitUntil:
+    visible: 'Parse result[\s\S]*'
+    timeout: 20000
+# The start button sits at the bottom of the preview card, below the fold on
+# small screens — scroll it into view before tapping.
+- scrollUntilVisible:
+    element: "Start download"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "Start download"
+
+# The task completes and moves to History. Verify it landed there.
+- tapOn: 'History[\s\S]*'
+- extendedWaitUntil:
+    visible: 'MaestroTest[\s\S]*'
+    timeout: 60000

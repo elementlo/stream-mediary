@@ -234,6 +234,9 @@ class _PlayerBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back_rounded),
+      // Localized tooltip ("Back" / "返回") so the control is discoverable
+      // and gives automation a stable accessibility label.
+      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
       onPressed: () {
         final navigator = Navigator.of(context);
         if (navigator.canPop()) {

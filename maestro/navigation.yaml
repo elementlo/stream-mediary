@@ -1,0 +1,36 @@
+# Flow 2: Bottom navigation switches between all 5 tabs.
+# Uses clearState so the empty-state assertions are deterministic.
+# NOTE: Android accessibility appends "Tab N of 5" to nav labels, so nav taps
+# use a cross-newline regex; page titles/section text are exact strings.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: dismiss_permissions.yaml
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+# History
+- tapOn: 'History[\s\S]*'
+- extendedWaitUntil:
+    visible: "No history yet"
+    timeout: 10000
+# Merge
+- tapOn: 'Merge[\s\S]*'
+- extendedWaitUntil:
+    visible: "Choose folder"
+    timeout: 10000
+# Board
+- tapOn: 'Board[\s\S]*'
+- extendedWaitUntil:
+    visible: "Message Board"
+    timeout: 10000
+# Settings
+- tapOn: 'Settings[\s\S]*'
+- extendedWaitUntil:
+    visible: "Download policy"
+    timeout: 10000
+# Back to downloads
+- tapOn: 'Downloads[\s\S]*'
+- assertVisible: "No downloads yet"

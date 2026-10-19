@@ -48,3 +48,4 @@ app.*.map.json
 # Agent tooling
 .workbuddy/
 .codebuddy/skills/
+maestro/test_hls/

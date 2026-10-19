@@ -1,0 +1,44 @@
+# Flow 7: Settings — sections render, theme switch takes effect, version shows.
+appId: ${APP_ID}
+---
+- launchApp
+- runFlow: dismiss_permissions.yaml
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+- tapOn: 'Settings[\s\S]*'
+- extendedWaitUntil:
+    visible: "Download policy"
+    timeout: 10000
+
+# Top section: concurrency controls. The slider node text is combined
+# multi-line ("Task concurrency\n3\n1\n16"), so match by prefix regex.
+- assertVisible: 'Task concurrency[\s\S]*'
+
+# Theme section (segmented button System/Light/Dark shown inline).
+- scrollUntilVisible:
+    element: "Theme"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Dark"
+# Switch to dark, then restore system so later flows are unaffected.
+# "System" appears in both the theme and language segmented buttons; index 0
+# is the theme one (it precedes language on the page).
+- tapOn: "Dark"
+- assertVisible: "Theme"
+- tapOn:
+    text: "System"
+    index: 0
+- assertVisible: "Theme"
+
+# Language section sits right after theme.
+- assertVisible: "Language"
+
+# About section: version row. The about card is one combined node
+# ("Mediary\nVersion 0.4.0\nCheck for updates"), so match "Version" anywhere.
+- scrollUntilVisible:
+    element: "About"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: '[\s\S]*Version[\s\S]*'

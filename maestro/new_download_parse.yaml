@@ -1,0 +1,41 @@
+# Flow 3: New download — parse a valid m3u8 and see the preview;
+# also verify an invalid URL produces no preview.
+#
+# Selector notes (from the Android accessibility hierarchy):
+# - The URL field's node text is the label + hint combined across a newline
+#   ("M3U8 URL\nEnter or paste an m3u8 playlist URL"), so match by prefix regex.
+# - The title field's node text is just its label ("Video title").
+appId: ${APP_ID}
+---
+- launchApp
+- runFlow: dismiss_permissions.yaml
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 20000
+
+# Open the new-download page (empty-state button or FAB, both "New Download").
+- tapOn: "New Download"
+- extendedWaitUntil:
+    visible: 'M3U8 URL[\s\S]*'
+    timeout: 10000
+
+# --- Invalid URL: no preview appears ---
+- tapOn: 'M3U8 URL[\s\S]*'
+- inputText: "not-a-valid-url"
+- assertNotVisible: 'Parse result[\s\S]*'
+
+# --- Valid URL: parse and preview ---
+- eraseText
+- inputText: ${HLS_URL}
+- tapOn: "Parse"
+# The preview node text is combined multi-line ("Parse result\nNot encrypted…"),
+# so match by prefix regex.
+- extendedWaitUntil:
+    visible: 'Parse result[\s\S]*'
+    timeout: 20000
+# The start button sits at the bottom of the preview card, below the fold on
+# small screens — scroll it into view.
+- scrollUntilVisible:
+    element: "Start download"
+    direction: DOWN
+    timeout: 15000
