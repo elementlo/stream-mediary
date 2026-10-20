@@ -75,12 +75,22 @@ Mediary 可以独立使用（手动粘贴 `.m3u8` 地址），但配合官方 Ch
 ## 📱 产品截图
 
 <p align="center">
+  <sub><b>☀️ 亮色</b></sub>
   <table>
     <tr>
-      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home.png" alt="Android 首页" width="200" /></td>
-      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home.png" alt="iOS 首页" width="200" /></td>
-      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home.png" alt="macOS 首页" width="300" /></td>
-      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home.png" alt="Windows 首页" width="300" /></td>
+      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home-light.png" alt="Android 首页（亮色）" width="200" /></td>
+      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home-light.png" alt="iOS 首页（亮色）" width="200" /></td>
+      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home-light.png" alt="macOS 首页（亮色）" width="300" /></td>
+      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home-light.png" alt="Windows 首页（亮色）" width="300" /></td>
+    </tr>
+  </table>
+  <sub><b>🌙 暗色</b></sub>
+  <table>
+    <tr>
+      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home-dark.png" alt="Android 首页（暗色）" width="200" /></td>
+      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home-dark.png" alt="iOS 首页（暗色）" width="200" /></td>
+      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home-dark.png" alt="macOS 首页（暗色）" width="300" /></td>
+      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home-dark.png" alt="Windows 首页（暗色）" width="300" /></td>
     </tr>
   </table>
 </p>

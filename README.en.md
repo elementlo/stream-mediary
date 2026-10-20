@@ -75,12 +75,22 @@ Mediary works on its own (paste an `.m3u8` URL manually), but it pairs greatly w
 ## 📱 Screenshots
 
 <p align="center">
+  <sub><b>☀️ Light</b></sub>
   <table>
     <tr>
-      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home.png" alt="Android home" width="200" /></td>
-      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home.png" alt="iOS home" width="200" /></td>
-      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home.png" alt="macOS home" width="300" /></td>
-      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home.png" alt="Windows home" width="300" /></td>
+      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home-light.png" alt="Android home (light)" width="200" /></td>
+      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home-light.png" alt="iOS home (light)" width="200" /></td>
+      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home-light.png" alt="macOS home (light)" width="300" /></td>
+      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home-light.png" alt="Windows home (light)" width="300" /></td>
+    </tr>
+  </table>
+  <sub><b>🌙 Dark</b></sub>
+  <table>
+    <tr>
+      <td align="center"><sub><b>Android</b></sub><br /><img src="docs/screenshots/android-home-dark.png" alt="Android home (dark)" width="200" /></td>
+      <td align="center"><sub><b>iOS</b></sub><br /><img src="docs/screenshots/ios-home-dark.png" alt="iOS home (dark)" width="200" /></td>
+      <td align="center"><sub><b>macOS</b></sub><br /><img src="docs/screenshots/macos-home-dark.png" alt="macOS home (dark)" width="300" /></td>
+      <td align="center"><sub><b>Windows</b></sub><br /><img src="docs/screenshots/windows-home-dark.png" alt="Windows home (dark)" width="300" /></td>
     </tr>
   </table>
 </p>
