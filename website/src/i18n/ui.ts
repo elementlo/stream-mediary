@@ -49,6 +49,9 @@ export const ui = {
 
     'screenshots.title': '产品截图',
     'screenshots.subtitle': 'Material 3 设计，亮色 / 暗色 / 跟随系统',
+    'screenshots.light': '亮色',
+    'screenshots.dark': '暗色',
+    'screenshots.toggle.aria': '切换截图主题',
     'screenshots.android': 'Android',
     'screenshots.ios': 'iOS',
     'screenshots.macos': 'macOS',
@@ -161,6 +164,9 @@ export const ui = {
 
     'screenshots.title': 'Screenshots',
     'screenshots.subtitle': 'Material 3 design — light, dark and system theme',
+    'screenshots.light': 'Light',
+    'screenshots.dark': 'Dark',
+    'screenshots.toggle.aria': 'Toggle screenshot theme',
     'screenshots.android': 'Android',
     'screenshots.ios': 'iOS',
     'screenshots.macos': 'macOS',
