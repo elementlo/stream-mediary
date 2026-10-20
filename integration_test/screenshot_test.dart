@@ -5,24 +5,39 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:stream_mediary/app.dart';
 
-/// Captures a screenshot of the app's home page (the "downloads" tab).
+/// Captures a home-page screenshot with a live demo download in flight.
 ///
-/// Run via the driver so the image is written to disk:
+/// The app must be built with these dart-defines:
+/// - `SCREENSHOT_DEMO=true` — seeds a fake in-progress task, forces the zh
+///   locale and skips network side effects (update check, board prefetch).
+/// - `SCREENSHOT_THEME=light|dark` — forces the theme. Read synchronously by
+///   `ThemeModeNotifier.build`, so no settings I/O is awaited in-test (which
+///   would hang under the fake-async test zone).
+///
+/// NOTE: `takeScreenshot()` hangs on some emulator GPUs (the surface
+/// conversion never completes). The reliable path that actually produces the
+/// committed shots is OS-level capture — see `tool/screenshot_mobile.sh`
+/// (adb screencap / simctl io screenshot). This test is kept as the
+/// integration_test reference path.
+///
+/// One run produces one shot; run twice (light, then dark):
 ///
 /// ```bash
 /// flutter drive \
 ///   --driver=test_driver/integration_test.dart \
 ///   --target=integration_test/screenshot_test.dart \
 ///   -d <device-id> \
+///   --dart-define=SCREENSHOT_DEMO=true \
+///   --dart-define=SCREENSHOT_THEME=light \
 ///   --dart-define=SCREENSHOT_PLATFORM=android
 /// ```
 ///
-/// The `SCREENSHOT_PLATFORM` define controls the output file name prefix
-/// (e.g. `android-home.png`). It defaults to the host OS name.
+/// Output: `docs/screenshots/<platform>-home-<theme>.png`.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  const theme = String.fromEnvironment('SCREENSHOT_THEME', defaultValue: 'light');
 
-  testWidgets('capture home page screenshot', (tester) async {
+  testWidgets('capture home page screenshot ($theme)', (tester) async {
     // Give the app a stable, presentation-friendly surface size.
     tester.view.physicalSize = const Size(1170, 2532); // iPhone-ish portrait
     tester.view.devicePixelRatio = 3.0;
@@ -36,9 +51,11 @@ void main() {
     // inside the test, after the first pump (see SDK extended_test example).
     await binding.convertFlutterSurfaceToImage();
 
-    // Let fonts, theme and the first frame settle.
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    // Let fonts, theme, the demo-task seed and the first frames settle.
+    // No pumpAndSettle: the segment bar pulses forever while downloading.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 400));
 
-    await binding.takeScreenshot('home');
+    await binding.takeScreenshot('home-$theme');
   }, timeout: const Timeout(Duration(minutes: 2)));
 }

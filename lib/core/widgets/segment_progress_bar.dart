@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/mediary_colors.dart';
+import '../utils/screenshot_mode.dart';
 
 /// The signature Mediary component: a progress bar drawn as discrete segments.
 ///
@@ -175,6 +176,18 @@ class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   )..repeat(reverse: true);
+
+  @override
+  void initState() {
+    super.initState();
+    // Freeze the pulse at full opacity for screenshot captures: an infinite
+    // animation keeps the raster thread busy and blocks the native
+    // captureScreenshot round-trip (and makes shots non-deterministic).
+    if (kScreenshotDemo) {
+      _controller.stop();
+      _controller.value = 1;
+    }
+  }
 
   @override
   void dispose() {

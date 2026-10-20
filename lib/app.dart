@@ -10,7 +10,9 @@ import 'core/platform/desktop_window_service.dart';
 import 'core/platform/download_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/screenshot_mode.dart';
 import 'core/widgets/desktop_window_frame.dart';
+import 'engine/task/task_state.dart';
 import 'features/update/update_dialog.dart';
 import 'providers/app_providers.dart';
 
@@ -34,6 +36,9 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
     super.initState();
     DownloadLinkService.instance.addListener(_openDownloadLink);
     WidgetsBinding.instance.addPostFrameCallback((_) => _openDownloadLink());
+    if (kScreenshotDemo) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _seedDemoTask());
+    }
     // Before the desktop tray "quit" tears the process down, cancel in-flight
     // downloads and the queue-policy timer so native teardown is not blocked
     // waiting on them (which made the window hang after the icon disappeared).
@@ -51,6 +56,26 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
   void dispose() {
     DownloadLinkService.instance.removeListener(_openDownloadLink);
     super.dispose();
+  }
+
+  /// Injects a fake in-progress download so the home page shows a live task
+  /// card instead of the empty state. Screenshot demo mode only.
+  void _seedDemoTask() {
+    if (!mounted) return;
+    ref.read(taskListProvider.notifier).seedDemoTask(
+      TaskViewModel(
+        id: 'screenshot-demo',
+        title: 'Big Buck Bunny 1080p',
+        url: 'https://example.com/hls/master.m3u8',
+        state: TaskState.downloading,
+        doneSegments: 31,
+        totalSegments: 48,
+        downloadedBytes: 348 * 1024 * 1024,
+        totalBytes: 512 * 1024 * 1024,
+        bytesPerSecond: 4.2 * 1024 * 1024,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
   }
 
   void _openDownloadLink() {
@@ -90,14 +115,14 @@ class _StreamMediaryAppState extends ConsumerState<StreamMediaryApp> {
     // Warm the board cache right after the first frame so opening the board
     // later renders instantly even on a cold install. Errors are swallowed
     // here; the board page surfaces them when the user actually visits.
-    if (!_boardPrefetchStarted) {
+    if (!_boardPrefetchStarted && !kScreenshotDemo) {
       _boardPrefetchStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(boardPrefetchProvider.future).ignore();
       });
     }
 
-    if (!_updateCheckStarted && !Platform.isIOS) {
+    if (!_updateCheckStarted && !Platform.isIOS && !kScreenshotDemo) {
       _updateCheckStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startUpdateCheck();

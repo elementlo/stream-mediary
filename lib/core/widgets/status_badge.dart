@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../engine/task/task_state.dart';
 import '../theme/design_tokens.dart';
 import '../theme/mediary_colors.dart';
+import '../utils/screenshot_mode.dart';
 
 /// Visual identity of a task state.
 ///
@@ -193,6 +194,16 @@ class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   )..repeat(reverse: true);
+
+  @override
+  void initState() {
+    super.initState();
+    // Freeze the pulse for screenshot captures (see SegmentProgressBar).
+    if (kScreenshotDemo) {
+      _controller.stop();
+      _controller.value = 1;
+    }
+  }
 
   @override
   void dispose() {

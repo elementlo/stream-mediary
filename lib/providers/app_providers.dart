@@ -17,6 +17,7 @@ import '../engine/download_engine.dart';
 import '../engine/engine_events.dart';
 import '../engine/engine_store.dart';
 import '../engine/task/task_state.dart';
+import '../core/utils/screenshot_mode.dart';
 import '../features/update/update_service.dart';
 import 'queue_policy_coordinator.dart';
 import 'completion_notifications.dart';
@@ -237,6 +238,17 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
   StreamSubscription<List<Task>>? _dbSub;
   StreamSubscription<EngineEvent>? _eventSub;
 
+  /// Fake task injected in screenshot demo mode (see `screenshot_mode.dart`).
+  /// Kept out of the database; re-merged on every rebuild so DB snapshots
+  /// never drop it. Null in production builds.
+  TaskViewModel? _demoTask;
+
+  /// Seeds a presentation-only task into the list. Screenshot demo mode only.
+  void seedDemoTask(TaskViewModel task) {
+    _demoTask = task;
+    state = {...state, task.id: task};
+  }
+
   @override
   Map<String, TaskViewModel> build() {
     final db = ref.watch(appDatabaseProvider);
@@ -301,6 +313,8 @@ class TaskListNotifier extends Notifier<Map<String, TaskViewModel>> {
           diskFull: prev.diskFull,
         );
       }
+      final demo = _demoTask;
+      if (demo != null) next[demo.id] = demo;
       state = next;
     });
 
@@ -437,6 +451,9 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
+    // Screenshot captures force a theme via dart-define.
+    final forced = screenshotThemeMode;
+    if (forced != null) return forced;
     _load();
     return ThemeMode.system;
   }
@@ -444,6 +461,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   Future<void> _load() async {
     final settings = ref.read(settingsRepositoryProvider);
     final mode = await settings.themeMode();
+    if (screenshotThemeMode != null) return;
     state = _parse(mode);
   }
 
@@ -472,12 +490,15 @@ final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(
 class LocaleNotifier extends Notifier<Locale?> {
   @override
   Locale? build() {
+    // Screenshots are captured in Chinese regardless of the host locale.
+    if (kScreenshotDemo) return const Locale('zh');
     _load();
     return null;
   }
 
   Future<void> _load() async {
     final settings = ref.read(settingsRepositoryProvider);
+    if (kScreenshotDemo) return;
     state = _parse(await settings.locale());
   }
 
